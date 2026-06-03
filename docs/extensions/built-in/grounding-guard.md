@@ -64,9 +64,9 @@ Only runs when RAG sources are present. No sources means no verification (no-op)
 
 ## Prerequisites
 
-The grounding guard requires RAG source plumbing -- specifically, `ragSources` must be present on the [`GuardrailOutputPayload`](https://github.com/framersai/agentos/blob/master/src/safety/guardrails/IGuardrailService.ts). This is populated automatically by AgentOS when RAG retrieval is performed for a request.
+The grounding guard requires RAG source plumbing -- specifically, `ragSources` must be present on the [`GuardrailOutputPayload`](https://github.com/framerslab/agentos/blob/master/src/safety/guardrails/IGuardrailService.ts). This is populated automatically by AgentOS when RAG retrieval is performed for a request.
 
-The `ragSources` field contains `RagRetrievedChunk[]` from the [`RetrievalAugmentor`](https://github.com/framersai/agentos/blob/master/src/cognition/rag/RetrievalAugmentor.ts), threaded from the GMI through the response stream to the guardrail layer. When no RAG retrieval was performed, the field is undefined and the guardrail is a no-op.
+The `ragSources` field contains `RagRetrievedChunk[]` from the [`RetrievalAugmentor`](https://github.com/framerslab/agentos/blob/master/src/cognition/rag/RetrievalAugmentor.ts), threaded from the GMI through the response stream to the guardrail layer. When no RAG retrieval was performed, the field is undefined and the guardrail is a no-op.
 
 ---
 
@@ -240,7 +240,7 @@ On stream completion, a comprehensive check runs:
 
 ## Configuration
 
-### [`GroundingGuardOptions`](https://github.com/framersai/agentos-ext-grounding-guard/blob/master/src/types.ts)
+### [`GroundingGuardOptions`](https://github.com/framerslab/agentos-ext-grounding-guard/blob/master/src/types.ts)
 
 | Option                   | Type                                     | Default                                | Description                                                                                                               |
 | ------------------------ | ---------------------------------------- | -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
@@ -288,7 +288,7 @@ Agent: Let me verify this synthesized answer is grounded in the sources.
   }
 ```
 
-The tool accepts `sources: string[]` (plain text) for simplicity. These are wrapped as synthetic [`RagRetrievedChunk`](https://github.com/framersai/agentos/blob/master/src/cognition/rag/IRetrievalAugmentor.ts) objects internally.
+The tool accepts `sources: string[]` (plain text) for simplicity. These are wrapped as synthetic [`RagRetrievedChunk`](https://github.com/framerslab/agentos/blob/master/src/cognition/rag/IRetrievalAugmentor.ts) objects internally.
 
 ---
 
@@ -311,7 +311,7 @@ The tool accepts `sources: string[]` (plain text) for simplicity. These are wrap
 | Per-stream sentence buffer            | ~1KB per stream | First TEXT_DELTA      |
 | **Total**                             | **~40MB**       | --                    |
 
-The NLI model is lazy-loaded and shared via [`ISharedServiceRegistry`](https://github.com/framersai/agentos/blob/master/src/extensions/ISharedServiceRegistry.ts). If another extension uses the same model, zero additional memory.
+The NLI model is lazy-loaded and shared via [`ISharedServiceRegistry`](https://github.com/framerslab/agentos/blob/master/src/extensions/ISharedServiceRegistry.ts). If another extension uses the same model, zero additional memory.
 
 ---
 

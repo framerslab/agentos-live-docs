@@ -41,7 +41,7 @@ await agentos.initialize({
 
 ## Usage
 
-See [examples](https://github.com/framersai/agentos-extensions/tree/master/registry/curated/auth/examples) for complete integration patterns.
+See [examples](https://github.com/framerslab/agentos-extensions/tree/master/registry/curated/auth/examples) for complete integration patterns.
 
 ## Author
 

@@ -25,7 +25,7 @@ displayed_sidebar: guideSidebar
 #### Planning & Orchestration
 
 - [**Orchestration Guide**](/features/orchestration-guide) — Graphs, workflows, missions, voice nodes, checkpointing, YAML authoring
-- [**Unified Orchestration Layer**](/features/unified-orchestration) — One runtime, three authoring APIs ([`AgentGraph`](https://github.com/framersai/agentos/blob/master/src/orchestration/builders/AgentGraph.ts), `workflow()`, `mission()`)
+- [**Unified Orchestration Layer**](/features/unified-orchestration) — One runtime, three authoring APIs ([`AgentGraph`](https://github.com/framerslab/agentos/blob/master/src/orchestration/builders/AgentGraph.ts), `workflow()`, `mission()`)
 - [**AgentGraph**](/features/agent-graph) — Full graph builder with typed nodes, conditional edges, and subgraphs
 - [**workflow() DSL**](/features/workflow-dsl) — Deterministic DAG pipelines with branching and parallel joins
 - [**mission() API**](/features/mission-api) — Goal-first orchestration driven by the PlanningEngine
@@ -94,10 +94,10 @@ displayed_sidebar: guideSidebar
 | Resource    | Link                                                                   |
 | ----------- | ---------------------------------------------------------------------- |
 | Website     | [agentos.sh](https://agentos.sh)                                       |
-| GitHub      | [framersai/agentos](https://github.com/framersai/agentos)              |
+| GitHub      | [framerslab/agentos](https://github.com/framerslab/agentos)              |
 | npm         | [@framers/agentos](https://www.npmjs.com/package/@framers/agentos)     |
-| Issues      | [GitHub Issues](https://github.com/framersai/agentos/issues)           |
-| Discussions | [GitHub Discussions](https://github.com/framersai/agentos/discussions) |
+| Issues      | [GitHub Issues](https://github.com/framerslab/agentos/issues)           |
+| Discussions | [GitHub Discussions](https://github.com/framerslab/agentos/discussions) |
 
 ---
 

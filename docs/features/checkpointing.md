@@ -4,7 +4,7 @@ sidebar_position: 6
 displayed_sidebar: guideSidebar
 ---
 
-The AgentOS Unified Orchestration Layer has built-in support for checkpoints, resume after failure, and time-travel debugging via the [`ICheckpointStore`](https://github.com/framersai/agentos/blob/master/src/orchestration/checkpoint/ICheckpointStore.ts) interface. [`InMemoryCheckpointStore`](https://github.com/framersai/agentos/blob/master/src/orchestration/checkpoint/InMemoryCheckpointStore.ts) is the default implementation; swap in a persistent store by passing your own implementation to `compile({ checkpointStore })`.
+The AgentOS Unified Orchestration Layer has built-in support for checkpoints, resume after failure, and time-travel debugging via the [`ICheckpointStore`](https://github.com/framerslab/agentos/blob/master/src/orchestration/checkpoint/ICheckpointStore.ts) interface. [`InMemoryCheckpointStore`](https://github.com/framerslab/agentos/blob/master/src/orchestration/checkpoint/InMemoryCheckpointStore.ts) is the default implementation; swap in a persistent store by passing your own implementation to `compile({ checkpointStore })`.
 
 ## ICheckpointStore
 
@@ -30,8 +30,8 @@ interface ICheckpointStore {
 
 | Store | Import path | Use case |
 |---|---|---|
-| [`InMemoryCheckpointStore`](https://github.com/framersai/agentos/blob/master/src/orchestration/checkpoint/InMemoryCheckpointStore.ts) | `@framers/agentos/orchestration/checkpoint` | Development, testing, ephemeral runs |
-| Custom | Implement [`ICheckpointStore`](https://github.com/framersai/agentos/blob/master/src/orchestration/checkpoint/ICheckpointStore.ts) | Postgres, Redis, object storage, or any durable backend |
+| [`InMemoryCheckpointStore`](https://github.com/framerslab/agentos/blob/master/src/orchestration/checkpoint/InMemoryCheckpointStore.ts) | `@framers/agentos/orchestration/checkpoint` | Development, testing, ephemeral runs |
+| Custom | Implement [`ICheckpointStore`](https://github.com/framerslab/agentos/blob/master/src/orchestration/checkpoint/ICheckpointStore.ts) | Postgres, Redis, object storage, or any durable backend |
 
 ```typescript
 import {
@@ -91,7 +91,7 @@ Control when checkpoints are persisted:
 |---|---|
 | `every_node` | Persist after every node completes. Maximum durability. Used by `workflow()` by default. |
 | `explicit` | Persist only for nodes with `checkpoint: 'before'`, `'after'`, or `'both'`. |
-| `none` | Never persist. Lowest overhead. Used by [`AgentGraph`](https://github.com/framersai/agentos/blob/master/src/orchestration/builders/AgentGraph.ts) by default. |
+| `none` | Never persist. Lowest overhead. Used by [`AgentGraph`](https://github.com/framerslab/agentos/blob/master/src/orchestration/builders/AgentGraph.ts) by default. |
 
 ```typescript
 // Graph-wide policy
@@ -191,7 +191,7 @@ Common uses:
 
 ## Memory Consistency and Checkpointing
 
-The [`MemoryConsistencyMode`](https://github.com/framersai/agentos/blob/master/src/orchestration/ir/types.ts) interacts with checkpointing:
+The [`MemoryConsistencyMode`](https://github.com/framerslab/agentos/blob/master/src/orchestration/ir/types.ts) interacts with checkpointing:
 
 | Mode | Memory snapshot saved? | On resume |
 |---|---|---|

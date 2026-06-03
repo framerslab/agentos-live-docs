@@ -34,6 +34,7 @@ import {
 | `performOCR()` | Extract text from images | `await performOCR({ imagePath: './doc.png' })` |
 | `embedText()` | Generate embeddings | `await embedText({ input: ['hello'] })` |
 | `agent()` | Multi-turn sessions with memory | `const a = agent({ provider: 'openai' })` |
+| `souledAgent()` | Soul-file agent whose long-term memory is its `memory/` wiki | `await souledAgent({ provider: 'anthropic', soul: '~/.agentos/agents/aria' })` |
 | `agency()` | Multi-agent teams | `const team = agency({ agents: {...}, strategy: 'parallel' })` |
 
 All functions accept `provider` as a top-level key.
@@ -129,7 +130,7 @@ console.log(usage.totalTokens);
 forms:
 
 - A named high-level tool map
-- An [`ExternalToolRegistry`](https://github.com/framersai/agentos/blob/master/src/api/runtime/externalToolRegistry.ts) (`Record`, `Map`, or iterable)
+- An [`ExternalToolRegistry`](https://github.com/framerslab/agentos/blob/master/src/api/runtime/externalToolRegistry.ts) (`Record`, `Map`, or iterable)
 - A prompt-only `ToolDefinitionForLLM[]`
 
 External registries are exposed to the model and executed when called.
@@ -225,9 +226,9 @@ Use:
 See [Agency API](/features/agency-api) and [Streaming Semantics](/architecture/streaming-semantics)
 for the full contract.
 
-## [`QueryRouter`](https://github.com/framersai/agentos/blob/master/src/orchestration/pipeline/query/QueryRouter.ts)
+## [`QueryRouter`](https://github.com/framerslab/agentos/blob/master/src/orchestration/pipeline/query/QueryRouter.ts)
 
-Use [`QueryRouter`](https://github.com/framersai/agentos/blob/master/src/orchestration/pipeline/query/QueryRouter.ts) when you want grounded answers over a local markdown corpus
+Use [`QueryRouter`](https://github.com/framerslab/agentos/blob/master/src/orchestration/pipeline/query/QueryRouter.ts) when you want grounded answers over a local markdown corpus
 without booting the full AgentOS runtime.
 
 ```ts
@@ -250,7 +251,7 @@ console.log(result.fallbacksUsed);
 await router.close();
 ```
 
-`router.getCorpusStats()` returns a [`QueryRouterCorpusStats`](https://github.com/framersai/agentos/blob/master/src/orchestration/pipeline/query/types.ts) snapshot that tells
+`router.getCorpusStats()` returns a [`QueryRouterCorpusStats`](https://github.com/framerslab/agentos/blob/master/src/orchestration/pipeline/query/types.ts) snapshot that tells
 you what is actually live in the current host:
 
 - corpus size: `configuredPathCount`, `chunkCount`, `topicCount`, `sourceCount`
@@ -310,8 +311,8 @@ console.log(result.videos[0]?.url);
 
 ## `analyzeVideo()`
 
-`analyzeVideo()` auto-creates a [`VisionPipeline`](https://github.com/framersai/agentos/blob/master/src/io/vision/VisionPipeline.ts), uses the structured
-[`VideoAnalyzer`](https://github.com/framersai/agentos/blob/master/src/io/media/video/VideoAnalyzer.ts) pipeline under the hood, and auto-wires STT when a supported
+`analyzeVideo()` auto-creates a [`VisionPipeline`](https://github.com/framerslab/agentos/blob/master/src/io/vision/VisionPipeline.ts), uses the structured
+[`VideoAnalyzer`](https://github.com/framerslab/agentos/blob/master/src/io/media/video/VideoAnalyzer.ts) pipeline under the hood, and auto-wires STT when a supported
 speech provider credential is available (`OPENAI_API_KEY`, `DEEPGRAM_API_KEY`,
 `ASSEMBLYAI_API_KEY`, or Azure Speech env vars).
 
@@ -518,7 +519,7 @@ console.log(await session.usage());
 ```
 
 `agent({ tools })` accepts the same three forms as `generateText({ tools })`
-and `streamText({ tools })`: named tool maps, [`ExternalToolRegistry`](https://github.com/framersai/agentos/blob/master/src/api/runtime/externalToolRegistry.ts)
+and `streamText({ tools })`: named tool maps, [`ExternalToolRegistry`](https://github.com/framerslab/agentos/blob/master/src/api/runtime/externalToolRegistry.ts)
 (`Record`, `Map`, or iterable), and prompt-only `ToolDefinitionForLLM[]`.
 
 ### Per-agent identity via SOUL.md
@@ -526,7 +527,7 @@ and `streamText({ tools })`: named tool maps, [`ExternalToolRegistry`](https://g
 Pass a `soul:` option to load identity, voice, hard limits, and HEXACO scores from a markdown workspace. The runtime injects `SOUL.md` body as the FIRST system message (before `instructions`, `chainOfThought`, or skills) and parses YAML frontmatter into structured persona config.
 
 ```ts
-// Workspace path — loads SOUL.md + companion files (STYLE.md, IDENTITY.md, AGENTS.md, MEMORY.md)
+// Workspace path — loads SOUL.md + companion files (STYLE.md, IDENTITY.md, AGENTS.md, memory/)
 agent({ provider: 'anthropic', soul: '~/.agentos/agents/aria' });
 
 // Direct file path — loads only SOUL.md
@@ -536,15 +537,37 @@ agent({ provider: 'openai', soul: './personas/aria.soul.md' });
 agent({ provider: 'openai', soul: { content: SOUL_MARKDOWN_STRING } });
 ```
 
-The HEXACO frontmatter (`hexaco: { honestyHumility, emotionality, ... }`) flows into the same `PersonaDriftMechanism` and [`PersonaOverlayManager`](https://github.com/framersai/agentos/blob/master/src/cognition/substrate/persona_overlays/PersonaOverlayManager.ts) as inline `personality:` config. See [SOUL_FILES.md](/features/soul-files) for the full 6-file workspace spec.
+The HEXACO frontmatter (`hexaco: { honestyHumility, emotionality, ... }`) flows into the same `PersonaDriftMechanism` and [`PersonaOverlayManager`](https://github.com/framerslab/agentos/blob/master/src/cognition/substrate/persona_overlays/PersonaOverlayManager.ts) as inline `personality:` config. See [SOUL_FILES.md](/features/soul-files) for the full 6-file workspace spec.
+
+### `souledAgent()`: soul plus a `memory/` wiki
+
+`agent({ soul })` loads identity but leaves long-term memory to you. `souledAgent()` is the async factory that wires the whole loop in one call: it loads the soul, opens one `Memory` store under the workspace's `memory/.store/`, and attaches the soul's `memory/` markdown wiki as the agent's long-term memory.
+
+```ts
+import { souledAgent } from '@framers/agentos';
+
+const aria = await souledAgent({
+  provider: 'anthropic',
+  model: 'claude-sonnet-4-6',
+  soul: '~/.agentos/agents/aria',
+});
+```
+
+What it wires:
+
+- **Read:** the `memory/index.md` catalog is injected into the system prelude, and the agent opens any page on demand with the `read_memory_page` tool.
+- **Capture:** conversation the agent observes is written to the same store as episodic traces.
+- **Fold:** those traces are merged into entity/concept pages when memory consolidates. `souledAgent` runs this on the agent's `close()`; call `await aria.memory.compileWiki()` to fold mid-session. Merges integrate new facts without clobbering human edits.
+
+One `Memory` facade backs both the live memory and the wiki, so the markdown stays the source of truth and the vector/graph index is rebuilt from it. `souledAgent()` accepts every `agent()` option and returns the same `Agent`, plus `agent.memory` (the store) when the soul resolves to a workspace directory. An inline soul (`{ content }`) has no workspace, so it falls back to a plain `agent()`. Closing the agent also closes the store.
 
 Runnable examples in the package source:
 
-- [`packages/agentos/examples/high-level-api.mjs`](https://github.com/framersai/agentos/blob/master/examples/high-level-api.mjs)
-- [`packages/agentos/examples/generate-image.mjs`](https://github.com/framersai/agentos/blob/master/examples/generate-image.mjs)
-- [`packages/agentos/examples/agentos-config-tools.mjs`](https://github.com/framersai/agentos/blob/master/examples/agentos-config-tools.mjs)
+- [`packages/agentos/examples/high-level-api.mjs`](https://github.com/framerslab/agentos/blob/master/examples/high-level-api.mjs)
+- [`packages/agentos/examples/generate-image.mjs`](https://github.com/framerslab/agentos/blob/master/examples/generate-image.mjs)
+- [`packages/agentos/examples/agentos-config-tools.mjs`](https://github.com/framerslab/agentos/blob/master/examples/agentos-config-tools.mjs)
 
-## Full runtime: [`AgentOS`](https://github.com/framersai/agentos/blob/master/src/api/AgentOS.ts)
+## Full runtime: [`AgentOS`](https://github.com/framerslab/agentos/blob/master/src/api/AgentOS.ts)
 
 ```ts
 import { AgentOS, AgentOSResponseChunkType } from '@framers/agentos';
@@ -585,13 +608,13 @@ for await (const chunk of agent.processRequest({
 helpers: named tool maps, `ExternalToolRegistry` (`Record`, `Map`, or
 iterable), and prompt-only `ToolDefinitionForLLM[]`. AgentOS normalizes those
 inputs during `initialize(...)` and registers them into the shared
-[`ToolOrchestrator`](https://github.com/framersai/agentos/blob/master/src/core/tools/ToolOrchestrator.ts), so direct `processRequest()` turns can plan against and
+[`ToolOrchestrator`](https://github.com/framerslab/agentos/blob/master/src/core/tools/ToolOrchestrator.ts), so direct `processRequest()` turns can plan against and
 execute them without helper wrappers. If a config-registered tool collides with
 an extension or pack tool name, the config tool wins at registration time.
 
 If those external tool calls are AgentOS-registered tools, prefer
 `processRequestWithRegisteredTools(...)`. It executes the registered tools with
-the correct live-turn [`ToolExecutionContext`](https://github.com/framersai/agentos/blob/master/src/core/tools/ITool.ts) and resumes the stream for you:
+the correct live-turn [`ToolExecutionContext`](https://github.com/framerslab/agentos/blob/master/src/core/tools/ITool.ts) and resumes the stream for you:
 
 ```ts
 import {
@@ -648,7 +671,7 @@ stream with `resumeExternalToolRequest(...)`:
 
 If the pending tool calls are AgentOS-registered tools, prefer
 `resumeExternalToolRequestWithRegisteredTools(...)`. It executes the registered
-tools with the correct resume-time [`ToolExecutionContext`](https://github.com/framersai/agentos/blob/master/src/core/tools/ITool.ts) and then resumes the
+tools with the correct resume-time [`ToolExecutionContext`](https://github.com/framerslab/agentos/blob/master/src/core/tools/ITool.ts) and then resumes the
 stream for you.
 
 ```ts
@@ -695,7 +718,7 @@ original process exits.
 ## Guidance
 
 - Show high-level examples first in README and landing guides.
-- Keep low-level [`AgentOS`](https://github.com/framersai/agentos/blob/master/src/api/AgentOS.ts) examples in architecture, advanced usage, extensions, workflows, and runtime-control docs.
+- Keep low-level [`AgentOS`](https://github.com/framerslab/agentos/blob/master/src/api/AgentOS.ts) examples in architecture, advanced usage, extensions, workflows, and runtime-control docs.
 - Document both layers explicitly. They are complementary, not competing.
 - Keep `generateImage()` provider-agnostic at the API boundary, but expose provider-specific knobs through `providerOptions` when needed.
 - Do not force downstream libraries to adopt `agent()` unless the helper reaches feature parity with their runtime needs.

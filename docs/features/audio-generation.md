@@ -11,7 +11,7 @@ AgentOS provides provider-agnostic APIs for generating music and sound effects f
 | `generateMusic()` | Full-length musical compositions from text prompts |
 | `generateSFX()` | Short sound effects from text descriptions |
 
-Both APIs support automatic provider detection, fallback chains via [`FallbackAudioProxy`](https://github.com/framersai/agentos/blob/master/src/io/media/audio/FallbackAudioProxy.ts), progress callbacks, and per-call provider preference overrides.
+Both APIs support automatic provider detection, fallback chains via [`FallbackAudioProxy`](https://github.com/framerslab/agentos/blob/master/src/io/media/audio/FallbackAudioProxy.ts), progress callbacks, and per-call provider preference overrides.
 
 ## Providers
 
@@ -36,7 +36,7 @@ Both APIs support automatic provider detection, fallback chains via [`FallbackAu
 | **Fal** | `FAL_API_KEY` | `fal-audio` | Various SFX models |
 | **AudioGen Local** | (none) | `audiogen-local` | Local via HuggingFace Transformers.js |
 
-Provider resolution follows priority order (top of table = highest priority). When multiple providers are configured, a [`FallbackAudioProxy`](https://github.com/framersai/agentos/blob/master/src/io/media/audio/FallbackAudioProxy.ts) wraps the chain for automatic failover.
+Provider resolution follows priority order (top of table = highest priority). When multiple providers are configured, a [`FallbackAudioProxy`](https://github.com/framerslab/agentos/blob/master/src/io/media/audio/FallbackAudioProxy.ts) wraps the chain for automatic failover.
 
 ## `generateMusic()`
 
@@ -68,7 +68,7 @@ const result = await generateMusic({
 });
 ```
 
-### [`GenerateMusicOptions`](https://github.com/framersai/agentos/blob/master/src/api/generateMusic.ts)
+### [`GenerateMusicOptions`](https://github.com/framerslab/agentos/blob/master/src/api/generateMusic.ts)
 
 | Option | Type | Description |
 |---|---|---|
@@ -77,12 +77,12 @@ const result = await generateMusic({
 | `model` | `string` | Model override within the provider |
 | `durationSec` | `number` | Desired output duration in seconds |
 | `negativePrompt` | `string` | Musical elements to avoid |
-| `outputFormat` | [`AudioOutputFormat`](https://github.com/framersai/agentos/blob/master/src/io/media/audio/types.ts) | `"mp3"` / `"wav"` / `"flac"` / `"ogg"` / `"aac"` |
+| `outputFormat` | [`AudioOutputFormat`](https://github.com/framerslab/agentos/blob/master/src/io/media/audio/types.ts) | `"mp3"` / `"wav"` / `"flac"` / `"ogg"` / `"aac"` |
 | `seed` | `number` | Seed for reproducible generation |
 | `timeoutMs` | `number` | Maximum wait time in milliseconds |
 | `n` | `number` | Number of clips to generate (default: 1) |
-| `onProgress` | `(event) => void` | Progress callback with [`AudioProgressEvent`](https://github.com/framersai/agentos/blob/master/src/io/media/audio/types.ts) |
-| `providerPreferences` | [`MediaProviderPreference`](https://github.com/framersai/agentos/blob/master/src/io/media/ProviderPreferences.ts) | Reorder or filter the fallback chain |
+| `onProgress` | `(event) => void` | Progress callback with [`AudioProgressEvent`](https://github.com/framerslab/agentos/blob/master/src/io/media/audio/types.ts) |
+| `providerPreferences` | [`MediaProviderPreference`](https://github.com/framerslab/agentos/blob/master/src/io/media/ProviderPreferences.ts) | Reorder or filter the fallback chain |
 | `apiKey` | `string` | Override the API key |
 
 ## `generateSFX()`
@@ -99,7 +99,7 @@ const result = await generateSFX({
 console.log(result.audio[0].url);
 ```
 
-### [`GenerateSFXOptions`](https://github.com/framersai/agentos/blob/master/src/api/generateSFX.ts)
+### [`GenerateSFXOptions`](https://github.com/framerslab/agentos/blob/master/src/api/generateSFX.ts)
 
 | Option | Type | Description |
 |---|---|---|
@@ -107,12 +107,12 @@ console.log(result.audio[0].url);
 | `provider` | `string` | Provider ID (`"elevenlabs-sfx"`, `"stable-audio"`, etc.) |
 | `model` | `string` | Model override within the provider |
 | `durationSec` | `number` | Desired output duration (SFX: typically 1-15s) |
-| `outputFormat` | [`AudioOutputFormat`](https://github.com/framersai/agentos/blob/master/src/io/media/audio/types.ts) | `"mp3"` / `"wav"` / `"flac"` / `"ogg"` / `"aac"` |
+| `outputFormat` | [`AudioOutputFormat`](https://github.com/framerslab/agentos/blob/master/src/io/media/audio/types.ts) | `"mp3"` / `"wav"` / `"flac"` / `"ogg"` / `"aac"` |
 | `seed` | `number` | Seed for reproducible generation |
 | `timeoutMs` | `number` | Maximum wait time in milliseconds |
 | `n` | `number` | Number of clips to generate (default: 1) |
-| `onProgress` | `(event) => void` | Progress callback with [`AudioProgressEvent`](https://github.com/framersai/agentos/blob/master/src/io/media/audio/types.ts) |
-| `providerPreferences` | [`MediaProviderPreference`](https://github.com/framersai/agentos/blob/master/src/io/media/ProviderPreferences.ts) | Reorder or filter the fallback chain |
+| `onProgress` | `(event) => void` | Progress callback with [`AudioProgressEvent`](https://github.com/framerslab/agentos/blob/master/src/io/media/audio/types.ts) |
+| `providerPreferences` | [`MediaProviderPreference`](https://github.com/framerslab/agentos/blob/master/src/io/media/ProviderPreferences.ts) | Reorder or filter the fallback chain |
 | `apiKey` | `string` | Override the API key |
 
 ## Result types
@@ -129,7 +129,7 @@ interface GenerateMusicResult {
 }
 ```
 
-Each [`GeneratedAudio`](https://github.com/framersai/agentos/blob/master/src/io/media/audio/types.ts) object contains:
+Each [`GeneratedAudio`](https://github.com/framerslab/agentos/blob/master/src/io/media/audio/types.ts) object contains:
 
 ```typescript
 interface GeneratedAudio {

@@ -4,7 +4,7 @@ sidebar_position: 13.5
 displayed_sidebar: guideSidebar
 ---
 
-The `@framers/agentos-ext-github` extension provides 26 GitHub tools that give agents full programmatic access to repositories, issues, pull requests, files, branches, releases, and CI/CD workflows. It also includes a [`GitHubRepoIndexer`](https://github.com/framersai/agentos-extensions/blob/master/registry/curated/integrations/github/src/GitHubRepoIndexer.ts) for RAG-ready codebase ingestion.
+The `@framers/agentos-ext-github` extension provides 26 GitHub tools that give agents full programmatic access to repositories, issues, pull requests, files, branches, releases, and CI/CD workflows. It also includes a [`GitHubRepoIndexer`](https://github.com/framerslab/agentos-extensions/blob/master/registry/curated/integrations/github/src/GitHubRepoIndexer.ts) for RAG-ready codebase ingestion.
 
 ## Installation
 
@@ -95,7 +95,7 @@ The extension resolves a GitHub token in priority order:
 
 ## GitHubRepoIndexer
 
-The [`GitHubRepoIndexer`](https://github.com/framersai/agentos-extensions/blob/master/registry/curated/integrations/github/src/GitHubRepoIndexer.ts) walks a repository tree, extracts documentation and source files, splits them by markdown headings, and returns structured [`IndexedChunk`](https://github.com/framersai/agentos-extensions/blob/master/registry/curated/integrations/github/src/GitHubRepoIndexer.ts) arrays suitable for vector-store ingestion.
+The [`GitHubRepoIndexer`](https://github.com/framerslab/agentos-extensions/blob/master/registry/curated/integrations/github/src/GitHubRepoIndexer.ts) walks a repository tree, extracts documentation and source files, splits them by markdown headings, and returns structured [`IndexedChunk`](https://github.com/framerslab/agentos-extensions/blob/master/registry/curated/integrations/github/src/GitHubRepoIndexer.ts) arrays suitable for vector-store ingestion.
 
 ```typescript
 import { GitHubRepoIndexer } from '@framers/agentos-ext-github';
@@ -103,7 +103,7 @@ import { GitHubRepoIndexer } from '@framers/agentos-ext-github';
 const indexer = new GitHubRepoIndexer(githubService);
 
 // Index a single repository
-const result = await indexer.indexRepo({ owner: 'framersai', repo: 'agentos' });
+const result = await indexer.indexRepo({ owner: 'framerslab', repo: 'agentos' });
 console.log(`${result.chunks.length} chunks from ${result.filesScanned} files`);
 
 // Index the ecosystem (default repos)
@@ -117,22 +117,22 @@ for (const r of results) {
 
 The indexer ships with a default list of ecosystem repositories that are indexed automatically when `indexEcosystem()` is called without arguments:
 
-- `framersai/agentos`
+- `framerslab/agentos`
 - `jddunn/wunderland`
-- `framersai/agentos-live-docs`
+- `framerslab/agentos-live-docs`
 - `jddunn/wunderland-live-docs`
 
-### [`IndexedChunk`](https://github.com/framersai/agentos-extensions/blob/master/registry/curated/integrations/github/src/GitHubRepoIndexer.ts)
+### [`IndexedChunk`](https://github.com/framerslab/agentos-extensions/blob/master/registry/curated/integrations/github/src/GitHubRepoIndexer.ts)
 
 ```typescript
 interface IndexedChunk {
-  heading: string;     // e.g. "github:framersai/agentos:README.md#Installation"
+  heading: string;     // e.g. "github:framerslab/agentos:README.md#Installation"
   content: string;     // Chunk text content, ready for embedding
   sourcePath: string;  // Source path within the repo
 }
 ```
 
-### [`IndexResult`](https://github.com/framersai/agentos-extensions/blob/master/registry/curated/integrations/github/src/GitHubRepoIndexer.ts)
+### [`IndexResult`](https://github.com/framerslab/agentos-extensions/blob/master/registry/curated/integrations/github/src/GitHubRepoIndexer.ts)
 
 ```typescript
 interface IndexResult {
@@ -153,21 +153,21 @@ An agent can review a pull request end-to-end by chaining tools:
 ```typescript
 // 1. List open PRs
 const prs = await agent.callTool('github_pr_list', {
-  owner: 'framersai',
+  owner: 'framerslab',
   repo: 'agentos',
   state: 'open',
 });
 
 // 2. Get the diff for the first PR
 const diff = await agent.callTool('github_pr_diff', {
-  owner: 'framersai',
+  owner: 'framerslab',
   repo: 'agentos',
   number: prs[0].number,
 });
 
 // 3. Submit a review
 await agent.callTool('github_pr_review', {
-  owner: 'framersai',
+  owner: 'framerslab',
   repo: 'agentos',
   number: prs[0].number,
   event: 'COMMENT',
@@ -182,7 +182,7 @@ An agent can explore a repository's structure and content:
 ```typescript
 // Read a specific file
 const readme = await agent.callTool('github_file_read', {
-  owner: 'framersai',
+  owner: 'framerslab',
   repo: 'agentos',
   path: 'README.md',
 });
@@ -195,7 +195,7 @@ const results = await agent.callTool('github_search', {
 
 // Index repository content for RAG retrieval
 await agent.callTool('github_repo_index', {
-  owner: 'framersai',
+  owner: 'framerslab',
   repo: 'agentos',
 });
 ```
@@ -205,7 +205,7 @@ await agent.callTool('github_repo_index', {
 ```typescript
 // Create an issue
 await agent.callTool('github_issue_create', {
-  owner: 'framersai',
+  owner: 'framerslab',
   repo: 'agentos',
   title: 'Add WebM output support to video pipeline',
   body: 'The video pipeline currently only supports MP4 output...',
@@ -214,7 +214,7 @@ await agent.callTool('github_issue_create', {
 
 // Update issue state
 await agent.callTool('github_issue_update', {
-  owner: 'framersai',
+  owner: 'framerslab',
   repo: 'agentos',
   number: 42,
   state: 'closed',
@@ -226,14 +226,14 @@ await agent.callTool('github_issue_update', {
 ```typescript
 // List recent workflow runs
 const runs = await agent.callTool('github_actions_list', {
-  owner: 'framersai',
+  owner: 'framerslab',
   repo: 'agentos',
   workflow_id: 'ci.yml',
 });
 
 // Trigger a workflow
 await agent.callTool('github_actions_trigger', {
-  owner: 'framersai',
+  owner: 'framerslab',
   repo: 'agentos',
   workflow_id: 'release.yml',
   ref: 'master',
@@ -257,4 +257,4 @@ const pack = createExtensionPack({
 // pack.onActivate() initialises the GitHubService
 ```
 
-All 26 tools share a single [`GitHubService`](https://github.com/framersai/agentos-extensions/blob/master/registry/curated/integrations/github/src/GitHubService.ts) instance that handles authentication, rate limiting, and request batching.
+All 26 tools share a single [`GitHubService`](https://github.com/framerslab/agentos-extensions/blob/master/registry/curated/integrations/github/src/GitHubService.ts) instance that handles authentication, rate limiting, and request batching.

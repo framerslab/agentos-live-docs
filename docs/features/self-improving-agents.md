@@ -8,7 +8,7 @@ AgentOS includes a bounded self-improvement system that lets agents adapt their 
 
 ## Configuration
 
-Self-improvement is controlled by the [`SelfImprovementConfig`](https://github.com/framersai/agentos/blob/master/src/cognition/emergent/SelfImprovementConfig.ts) interface, disabled by default:
+Self-improvement is controlled by the [`SelfImprovementConfig`](https://github.com/framerslab/agentos/blob/master/src/cognition/emergent/SelfImprovementConfig.ts) interface, disabled by default:
 
 ```typescript
 import { AgentOS } from '@framers/agentos';
@@ -143,7 +143,7 @@ The evaluation model defaults to the cheapest configured text model (e.g. `gpt-4
 
 ## PersonalityMutationStore
 
-Mutations are persisted to a SQLite-backed [`PersonalityMutationStore`](https://github.com/framersai/agentos/blob/master/src/cognition/emergent/AdaptPersonalityTool.ts) with Ebbinghaus-style strength decay:
+Mutations are persisted to a SQLite-backed [`PersonalityMutationStore`](https://github.com/framerslab/agentos/blob/master/src/cognition/emergent/AdaptPersonalityTool.ts) with Ebbinghaus-style strength decay:
 
 ```typescript
 import { PersonalityMutationStore } from '@framers/agentos/emergent';
@@ -171,7 +171,7 @@ const { decayed, pruned } = await store.decayAll(0.05);
 ### Decay lifecycle
 
 1. Each mutation starts with `strength = 1.0`.
-2. The [`ConsolidationLoop`](https://github.com/framersai/agentos/blob/master/src/cognition/memory/pipeline/consolidation/ConsolidationLoop.ts) calls `store.decayAll(rate)` each cycle.
+2. The [`ConsolidationLoop`](https://github.com/framerslab/agentos/blob/master/src/cognition/memory/pipeline/consolidation/ConsolidationLoop.ts) calls `store.decayAll(rate)` each cycle.
 3. Each cycle subtracts `rate` (default 0.05) from every mutation's strength.
 4. Mutations whose strength drops to 0.1 or below are pruned (deleted).
 5. Mutations that the agent reinforces by repeated adaptation stay strong.

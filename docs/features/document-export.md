@@ -67,7 +67,7 @@ interface DocumentExportExtensionOptions {
 | **hasSideEffects** | `true` |
 | **requiredCapabilities** | `capability:document_export` |
 
-Accepts [`DocumentExportInput`](https://github.com/framersai/agentos-extensions/blob/master/registry/curated/productivity/document-export/src/types.ts) and returns [`DocumentExportOutput`](https://github.com/framersai/agentos-extensions/blob/master/registry/curated/productivity/document-export/src/types.ts):
+Accepts [`DocumentExportInput`](https://github.com/framerslab/agentos-extensions/blob/master/registry/curated/productivity/document-export/src/types.ts) and returns [`DocumentExportOutput`](https://github.com/framerslab/agentos-extensions/blob/master/registry/curated/productivity/document-export/src/types.ts):
 
 ```typescript
 interface DocumentExportInput {
@@ -114,7 +114,7 @@ interface DocumentSuggestOutput {
 
 ## Generator APIs
 
-Each format has a dedicated stateless generator class. All generators accept [`DocumentContent`](https://github.com/framersai/agentos-extensions/blob/master/registry/curated/productivity/document-export/src/types.ts) and return a `Buffer`.
+Each format has a dedicated stateless generator class. All generators accept [`DocumentContent`](https://github.com/framerslab/agentos-extensions/blob/master/registry/curated/productivity/document-export/src/types.ts) and return a `Buffer`.
 
 ### PdfGenerator
 
@@ -138,7 +138,7 @@ fs.writeFileSync('report.pdf', buffer);
 - Section headings (H1/H2/H3) with proportional sizing
 - Inline markdown: `**bold**`, `*italic*`, `[link](url)` with clickable hyperlinks
 - Styled tables with accent-coloured headers, alternating row stripes, auto page-break with repeated headers
-- Charts rendered as titled data tables via [`ChartRenderer`](https://github.com/framersai/agentos-extensions/blob/master/registry/curated/productivity/document-export/src/generators/ChartRenderer.ts)
+- Charts rendered as titled data tables via [`ChartRenderer`](https://github.com/framerslab/agentos-extensions/blob/master/registry/curated/productivity/document-export/src/generators/ChartRenderer.ts)
 - Remote image fetching with timeout and base64 data URI support
 - Bulleted and numbered lists
 - Key-value definition tables
@@ -219,7 +219,7 @@ fs.writeFileSync('data.xlsx', buffer);
 
 ## ChartRenderer
 
-Converts [`ChartSpec`](https://github.com/framersai/agentos-extensions/blob/master/registry/curated/productivity/document-export/src/types.ts) objects to tabular representations for PDF and DOCX embedding. Used internally by [`PdfGenerator`](https://github.com/framersai/agentos-extensions/blob/master/registry/curated/productivity/document-export/src/generators/PdfGenerator.ts) and [`DocxGenerator`](https://github.com/framersai/agentos-extensions/blob/master/registry/curated/productivity/document-export/src/generators/DocxGenerator.ts).
+Converts [`ChartSpec`](https://github.com/framerslab/agentos-extensions/blob/master/registry/curated/productivity/document-export/src/types.ts) objects to tabular representations for PDF and DOCX embedding. Used internally by [`PdfGenerator`](https://github.com/framerslab/agentos-extensions/blob/master/registry/curated/productivity/document-export/src/generators/PdfGenerator.ts) and [`DocxGenerator`](https://github.com/framerslab/agentos-extensions/blob/master/registry/curated/productivity/document-export/src/generators/DocxGenerator.ts).
 
 ```typescript
 import { ChartRenderer } from '@framers/agentos-ext-document-export';

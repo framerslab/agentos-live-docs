@@ -4,6 +4,80 @@ sidebar_position: 7
 displayed_sidebar: guideSidebar
 ---
 
+## <small>0.9.35 (2026-06-03)</small>
+
+* fix(memory): correct attachMemoryWiki test import path ([b902134355864b732c981dea41abd66808eeba71](https://github.com/framerslab/agentos/commit/b902134355864b732c981dea41abd66808eeba71))
+* fix(memory): guard empty wiki prelude and correct tool test type import ([9448ed060441747c6e67394bce8de10d7c354b52](https://github.com/framerslab/agentos/commit/9448ed060441747c6e67394bce8de10d7c354b52))
+* fix(segmentation): align Replicate provider with live model schemas (mask_prompt, individual_masks, version resolution) ([87ec853c5f483bbcb4e2a5ca9930d076f7fb126c](https://github.com/framerslab/agentos/commit/87ec853c5f483bbcb4e2a5ca9930d076f7fb126c))
+* fix(segmentation): clamp crop padding at edges, guard malformed modelId and zero dimensions ([e8d4a78d887cf7b08c0e02fc0d03d35dc05ff0a9](https://github.com/framerslab/agentos/commit/e8d4a78d887cf7b08c0e02fc0d03d35dc05ff0a9))
+* docs(personas): document memory wiki directory model ([a8f50e1cca5a25a3b4b02bad607e001ff06dd797](https://github.com/framerslab/agentos/commit/a8f50e1cca5a25a3b4b02bad607e001ff06dd797))
+* docs(segmentation): add gated live-smoke example ([b327fc19e642109b34e69db2816abb1010806902](https://github.com/framerslab/agentos/commit/b327fc19e642109b34e69db2816abb1010806902))
+* docs(segmentation): document segment() and consumer round-trips ([b432baddb4b85889dc0e98f9d3199ddbe5e065ac](https://github.com/framerslab/agentos/commit/b432baddb4b85889dc0e98f9d3199ddbe5e065ac))
+* feat(agent): add souledAgent factory wiring soul, memory, and wiki ([f235dbdcaa9aa1fbb12541898729a7a31972a11a](https://github.com/framerslab/agentos/commit/f235dbdcaa9aa1fbb12541898729a7a31972a11a))
+* feat(agent): inject memory wiki index into system prelude ([7cb5e731de52244b0a4d2b08d540dd7d271a248c](https://github.com/framerslab/agentos/commit/7cb5e731de52244b0a4d2b08d540dd7d271a248c))
+* feat(memory): add attachMemoryWiki wiring helper ([3021eeb59d9ff908675987a202816d88bff8cac8](https://github.com/framerslab/agentos/commit/3021eeb59d9ff908675987a202816d88bff8cac8))
+* feat(memory): add incremental wiki indexing with per-page dedupe ([30ff088e77deaad74142bb97d8aee33bba4fe6c5](https://github.com/framerslab/agentos/commit/30ff088e77deaad74142bb97d8aee33bba4fe6c5))
+* feat(memory): add read_memory_page tool ([9e33d9b2c72b9fc5addf0150a4ece257f787f633](https://github.com/framerslab/agentos/commit/9e33d9b2c72b9fc5addf0150a4ece257f787f633))
+* feat(memory): add recentTraces time-window query ([03e3ac24dc8b8ddb90ff7a16cd32f465c5293700](https://github.com/framerslab/agentos/commit/03e3ac24dc8b8ddb90ff7a16cd32f465c5293700))
+* feat(memory): add wiki compiler with merge-not-clobber and loop guard ([10e492de57b32d27f7afeb7fbb087482b1a6a825](https://github.com/framerslab/agentos/commit/10e492de57b32d27f7afeb7fbb087482b1a6a825))
+* feat(memory): add wiki module barrel export ([0770c7e57fdab79a861145bec2c328908f1e923c](https://github.com/framerslab/agentos/commit/0770c7e57fdab79a861145bec2c328908f1e923c))
+* feat(memory): add wiki store filesystem read/write ([a00f492cad734d7304b262588bf971e6ca8f819f](https://github.com/framerslab/agentos/commit/a00f492cad734d7304b262588bf971e6ca8f819f))
+* feat(memory): export memory wiki surface from public API ([5555cec3c6d6474ff91b37ff2832b8bdc63f52fc](https://github.com/framerslab/agentos/commit/5555cec3c6d6474ff91b37ff2832b8bdc63f52fc))
+* feat(memory): wire compileWiki into facade and consolidation ([229496c9d2a7e2690d5273abb85617707f9e9666](https://github.com/framerslab/agentos/commit/229496c9d2a7e2690d5273abb85617707f9e9666))
+* feat(personas): resolve memory wiki dir in soul loader ([ac7ca67a4e0f946998c6bc90872900ae0c1ba5ee](https://github.com/framerslab/agentos/commit/ac7ca67a4e0f946998c6bc90872900ae0c1ba5ee))
+* feat(segmentation): add core types and typed errors ([507f30ee2f2cff456af992339e504de94aa02877](https://github.com/framerslab/agentos/commit/507f30ee2f2cff456af992339e504de94aa02877))
+* feat(segmentation): add segment() helper with normalization and mode validation ([ea8783acdab3274dbfcb3ce5cad173a1402fbffe](https://github.com/framerslab/agentos/commit/ea8783acdab3274dbfcb3ce5cad173a1402fbffe))
+* feat(segmentation): compute tight mask bounding box ([e97bb02e4296367542aaad00744cdc268dbabdfe](https://github.com/framerslab/agentos/commit/e97bb02e4296367542aaad00744cdc268dbabdfe))
+* feat(segmentation): cropRegion alpha-cut for sprites and region embedding ([b8aafe8fdd3e44353baec298c429e458f38fa1b4](https://github.com/framerslab/agentos/commit/b8aafe8fdd3e44353baec298c429e458f38fa1b4))
+* feat(segmentation): maskToEditMask bridge into editImage masks ([571b5d9e440d32355b2b4e7eb9519f765f786d73](https://github.com/framerslab/agentos/commit/571b5d9e440d32355b2b4e7eb9519f765f786d73))
+* feat(segmentation): provider registry with register/resolve/reset ([5f3f8f27db932fe2c56db4ab9a246c186956b501](https://github.com/framerslab/agentos/commit/5f3f8f27db932fe2c56db4ab9a246c186956b501))
+* feat(segmentation): public exports, round-trip coverage, and sharp type-stub completion ([c5b27538f947769fcaec972931ce51e992320ef2](https://github.com/framerslab/agentos/commit/c5b27538f947769fcaec972931ce51e992320ef2))
+* feat(segmentation): Replicate provider with SAM2/GroundedSAM input mapping and mask decode ([ec1b11ab96d8f4fd98a9c75c2b92bbd4734b6a6a](https://github.com/framerslab/agentos/commit/ec1b11ab96d8f4fd98a9c75c2b92bbd4734b6a6a))
+* feat(segmentation): resolve exactly-one prompt mode ([7a72e8e5ecff54fb62a9ae125fd936d507a4c65a](https://github.com/framerslab/agentos/commit/7a72e8e5ecff54fb62a9ae125fd936d507a4c65a))
+* test(segmentation): cover Replicate polling, failure, legacy endpoint, filtering ([72680074d4457f8b7dd8743676d983000d049421](https://github.com/framerslab/agentos/commit/72680074d4457f8b7dd8743676d983000d049421))
+
+## <small>0.9.34 (2026-06-03)</small>
+
+* docs: add SUPPORT and CITATION, correct LLM provider count to 11 ([56e9a207a6117b75a4f4b678816843ed315d5a51](https://github.com/framerslab/agentos/commit/56e9a207a6117b75a4f4b678816843ed315d5a51))
+* docs: link all project guides from the README ([3c52eb8bf5c76bf5c8fc3f7773c51b5d4d6fe16b](https://github.com/framerslab/agentos/commit/3c52eb8bf5c76bf5c8fc3f7773c51b5d4d6fe16b))
+* docs: list Frame's Deepgram Startup Program membership in Sponsors ([7dd673917a1d11a4f41e3646dcde4d8737a1103c](https://github.com/framerslab/agentos/commit/7dd673917a1d11a4f41e3646dcde4d8737a1103c))
+* docs: note Frame's Deepgram Startup Program membership in footer ([70508aa0999113091155226d74b6a41b5d3a5aa6](https://github.com/framerslab/agentos/commit/70508aa0999113091155226d74b6a41b5d3a5aa6))
+* docs: retitle Sponsors section to Startups & Partnerships ([cd17cd20ba13125c6f7e9a6d7f2a8b6032f2b8ab](https://github.com/framerslab/agentos/commit/cd17cd20ba13125c6f7e9a6d7f2a8b6032f2b8ab))
+* docs: tabulate Startups & Partnerships with Deepgram logo, drop footer dup ([b3ecee4906e6277ad23cadbd472c4c9884012d68](https://github.com/framerslab/agentos/commit/b3ecee4906e6277ad23cadbd472c4c9884012d68))
+* feat(memory): add non-destructive memory dir migration ([333825cec9b9e6f3bb7d2341a74848c918133845](https://github.com/framerslab/agentos/commit/333825cec9b9e6f3bb7d2341a74848c918133845))
+* feat(memory): add soul memory wiki types ([f5e4fc61a8dd8733a8a6b744ef8ab3ecf6fffec0](https://github.com/framerslab/agentos/commit/f5e4fc61a8dd8733a8a6b744ef8ab3ecf6fffec0))
+* feat(memory): add wiki page codec and catalog renderer ([4ca0bee944ff79233134b86bcb08b6c2db46c432](https://github.com/framerslab/agentos/commit/4ca0bee944ff79233134b86bcb08b6c2db46c432))
+
+## <small>0.9.33 (2026-06-02)</small>
+
+* fix(voice): clamp Aura text chunking to max chars; per-format duration + opus mime ([a57263dfef1e8fc4dfc68f3739465d4629d62ee1](https://github.com/framerslab/agentos/commit/a57263dfef1e8fc4dfc68f3739465d4629d62ee1))
+* docs: add contribution, provider, sponsorship, and maintainer governance ([6b783084d9a82650679eba7a2523fa622101793f](https://github.com/framerslab/agentos/commit/6b783084d9a82650679eba7a2523fa622101793f))
+
+## <small>0.9.32 (2026-06-02)</small>
+
+* Merge remote-tracking branch 'origin/master' ([85240a30dc136be1da679bc45a722efb09d07b95](https://github.com/framerslab/agentos/commit/85240a30dc136be1da679bc45a722efb09d07b95))
+* feat(speech): register Deepgram Aura as a core TTS provider ([048c7b1f575e779097fbae0ddc5cb3bf26417e3c](https://github.com/framerslab/agentos/commit/048c7b1f575e779097fbae0ddc5cb3bf26417e3c))
+* feat(voice): add Deepgram Aura batch TTS provider ([47359757862df3eaf96e4f5085089a0f29c2a4d7](https://github.com/framerslab/agentos/commit/47359757862df3eaf96e4f5085089a0f29c2a4d7))
+* feat(voice): add Deepgram Aura streaming TTS provider ([ed53ce2a17e117e0bf40a5e384fa7348edb9f643](https://github.com/framerslab/agentos/commit/ed53ce2a17e117e0bf40a5e384fa7348edb9f643))
+* feat(voice): export Deepgram Aura providers ([5ddcd343215ab5c7d0ffaae19eaddc452d6b6ebc](https://github.com/framerslab/agentos/commit/5ddcd343215ab5c7d0ffaae19eaddc452d6b6ebc))
+* feat(voice): prefer Deepgram Aura TTS in the env-built chain ([f00e2fe06863c8b5ae2f53c7edf8eaccec1b3b9e](https://github.com/framerslab/agentos/commit/f00e2fe06863c8b5ae2f53c7edf8eaccec1b3b9e))
+
+## <small>0.9.31 (2026-06-01)</small>
+
+* chore: finish framersai -> framerslab (bare refs, github.io, api owners) ([777ba71f3d49405e83cd1f95d04ccc3800b81758](https://github.com/framerslab/agentos/commit/777ba71f3d49405e83cd1f95d04ccc3800b81758))
+* chore: point github URLs to framerslab org ([fa00178f051a79e0b8853c3cd11aecb4da33cf20](https://github.com/framerslab/agentos/commit/fa00178f051a79e0b8853c3cd11aecb4da33cf20))
+* chore: rename to @framers npm scope and framerslab org/handle ([2b69dcfceb2e34a3b28ba4c2f5e95283cbc45baf](https://github.com/framerslab/agentos/commit/2b69dcfceb2e34a3b28ba4c2f5e95283cbc45baf))
+* fix(openai): guard response_format on fallback so a primary provider's structured-output payload can't reach OpenAI malformed ([5b107d42416605719ca4d2e4f8a67bdbabb77a96](https://github.com/framerslab/agentos/commit/5b107d42416605719ca4d2e4f8a67bdbabb77a96))
+* fix(openai): validate json_schema name+schema fields before forwarding to OpenAI ([e8c2fe3c7c8d99d2bd404f1a13343e436b0012a3](https://github.com/framerslab/agentos/commit/e8c2fe3c7c8d99d2bd404f1a13343e436b0012a3))
+
+## <small>0.9.30 (2026-05-31)</small>
+
+* fix(api): size generateObject maxTokens from string .max() + correct stale Sonnet outputTokenLimit metadata ([3af26b8dc622f573357e4f2fd70045d54d5f4664](https://github.com/framersai/agentos/commit/3af26b8dc622f573357e4f2fd70045d54d5f4664))
+* schemaTokenEstimate: size string budgets from .max(), raise ceiling to 32k ([89ca01a1ecf042e8f4abe8ebf2d3d366dcb1b858](https://github.com/framersai/agentos/commit/89ca01a1ecf042e8f4abe8ebf2d3d366dcb1b858))
+* docs: update build attribution to Frame ([2d4470dd5b222a183d8365298be25b438bf533cb](https://github.com/framersai/agentos/commit/2d4470dd5b222a183d8365298be25b438bf533cb))
+* docs(rag): incremental vector ingestion guide + skills/agentos-skills publication entry ([57573573e8f13c91ecdbf6f527c129c135c5357e](https://github.com/framersai/agentos/commit/57573573e8f13c91ecdbf6f527c129c135c5357e))
+* chore(docs): linkify symbol references across guides ([b38f6bc9522e377b06de456aebf44e9306d24a02](https://github.com/framersai/agentos/commit/b38f6bc9522e377b06de456aebf44e9306d24a02))
+
 ## <small>0.9.29 (2026-05-30)</small>
 
 * Merge branch 'master' of https://github.com/framersai/agentos ([8b54850223cbd04fd478254b56d25993ec943d2f](https://github.com/framersai/agentos/commit/8b54850223cbd04fd478254b56d25993ec943d2f))

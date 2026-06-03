@@ -6,7 +6,7 @@ displayed_sidebar: guideSidebar
 
 The agents people actually use don't live in one window. A useful research assistant gets pinged on Slack during the workday, on Telegram on the weekend, and over email when someone forwards a thread for it to summarise. Each platform has its own ergonomics, its own rate limits, its own message-shape quirks, its own auth model. The work of integrating each one is real, and writing it once per agent is the thing that stops most projects at "demo on Discord."
 
-The channel layer is the boundary that makes this someone else's problem. Every external platform sits behind a single [`IChannelAdapter`](https://github.com/framersai/agentos/blob/master/src/channels/IChannelAdapter.ts) interface; your agent code emits and receives [`ChannelMessage`](https://github.com/framersai/agentos/blob/master/src/io/channels/types.ts) objects, and the adapter handles serialization, auth, reconnection, and platform-specific edge cases. Twelve adapters ship in-tree (`src/channels/adapters/`); 37 curated extension packs cover the rest of the messaging, social, and publishing surface. Same shape on either side of the boundary — same [`ChannelMessage`](https://github.com/framersai/agentos/blob/master/src/io/channels/types.ts) envelope, same [`ChannelRouter`](https://github.com/framersai/agentos/blob/master/src/io/channels/ChannelRouter.ts) for routing inbound traffic to the right agent, same code path for sending replies back out.
+The channel layer is the boundary that makes this someone else's problem. Every external platform sits behind a single [`IChannelAdapter`](https://github.com/framerslab/agentos/blob/master/src/channels/IChannelAdapter.ts) interface; your agent code emits and receives [`ChannelMessage`](https://github.com/framerslab/agentos/blob/master/src/io/channels/types.ts) objects, and the adapter handles serialization, auth, reconnection, and platform-specific edge cases. Twelve adapters ship in-tree (`src/channels/adapters/`); 37 curated extension packs cover the rest of the messaging, social, and publishing surface. Same shape on either side of the boundary — same [`ChannelMessage`](https://github.com/framerslab/agentos/blob/master/src/io/channels/types.ts) envelope, same [`ChannelRouter`](https://github.com/framerslab/agentos/blob/master/src/io/channels/ChannelRouter.ts) for routing inbound traffic to the right agent, same code path for sending replies back out.
 
 ```
 User (Discord / Telegram / etc.)
@@ -17,7 +17,7 @@ Your Agent (AgentOS)
 ```
 
 Channels are registered as `messaging-channel` extensions and managed by the
-[`ChannelRouter`](https://github.com/framersai/agentos/blob/master/src/io/channels/ChannelRouter.ts), which handles load balancing, health checks, and fallback.
+[`ChannelRouter`](https://github.com/framerslab/agentos/blob/master/src/io/channels/ChannelRouter.ts), which handles load balancing, health checks, and fallback.
 
 ```
 User (Discord / Telegram / etc.)
@@ -114,7 +114,7 @@ export DISCORD_GUILD_ID=your-server-id   # optional: restrict to one guild
 **3. Register the adapter**
 
 Each channel ships its own `<Channel>Service` (transport client) and
-`<Channel>ChannelAdapter` (the [`IChannelAdapter`](https://github.com/framersai/agentos/blob/master/src/io/channels/IChannelAdapter.ts) implementation). The
+`<Channel>ChannelAdapter` (the [`IChannelAdapter`](https://github.com/framerslab/agentos/blob/master/src/io/channels/IChannelAdapter.ts) implementation). The
 adapter takes the service in its constructor:
 
 ```typescript
@@ -146,7 +146,7 @@ router.onMessage(async (message, binding, session) => {
 ```
 
 > **Recommended: registry pattern.** For multi-channel apps, use
-> [`createCuratedManifest`](https://github.com/framersai/agentos-extensions-registry)
+> [`createCuratedManifest`](https://github.com/framerslab/agentos-extensions-registry)
 > from `@framers/agentos-extensions-registry` — it instantiates each
 > channel's `Service` + `ChannelAdapter` from your env vars and registers
 > them with the router automatically.
@@ -292,7 +292,7 @@ router.registerAdapter(whatsapp);
 
 ## Custom Channel Adapter
 
-Implement [`IChannelAdapter`](https://github.com/framersai/agentos/blob/master/src/io/channels/IChannelAdapter.ts) to add any platform not in the built-in set:
+Implement [`IChannelAdapter`](https://github.com/framerslab/agentos/blob/master/src/io/channels/IChannelAdapter.ts) to add any platform not in the built-in set:
 
 ```typescript
 import type {
@@ -442,7 +442,7 @@ await router.broadcast(
 ```
 
 For social media broadcast (Twitter, Bluesky, LinkedIn, etc.), see
-[SOCIAL_POSTING.md](/features/social-posting) which provides the [`MultiChannelPostTool`](https://github.com/framersai/agentos-extensions/blob/master/registry/curated/tools/multi-channel-post/src/MultiChannelPostTool.ts)
+[SOCIAL_POSTING.md](/features/social-posting) which provides the [`MultiChannelPostTool`](https://github.com/framerslab/agentos-extensions/blob/master/registry/curated/tools/multi-channel-post/src/MultiChannelPostTool.ts)
 with content adaptation per platform.
 
 ---

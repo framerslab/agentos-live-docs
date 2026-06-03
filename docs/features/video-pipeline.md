@@ -14,7 +14,7 @@ AgentOS provides a provider-agnostic video pipeline covering generation (text-to
 
 ## Providers
 
-Video generation is backed by three provider adapters, each implementing the [`IVideoGenerator`](https://github.com/framersai/agentos/blob/master/src/io/media/video/IVideoGenerator.ts) interface:
+Video generation is backed by three provider adapters, each implementing the [`IVideoGenerator`](https://github.com/framerslab/agentos/blob/master/src/io/media/video/IVideoGenerator.ts) interface:
 
 | Provider | Env Var | Default Model | Capabilities |
 |---|---|---|---|
@@ -22,7 +22,7 @@ Video generation is backed by three provider adapters, each implementing the [`I
 | **Replicate** | `REPLICATE_API_TOKEN` | `klingai/kling-v1` | text-to-video, image-to-video |
 | **Fal** | `FAL_API_KEY` | varies | text-to-video |
 
-When multiple providers are configured, a [`FallbackVideoProxy`](https://github.com/framersai/agentos/blob/master/src/io/media/video/FallbackVideoProxy.ts) wraps the chain so that a transient failure on the primary provider automatically retries on the next available backend.
+When multiple providers are configured, a [`FallbackVideoProxy`](https://github.com/framerslab/agentos/blob/master/src/io/media/video/FallbackVideoProxy.ts) wraps the chain so that a transient failure on the primary provider automatically retries on the next available backend.
 
 ## `generateVideo()`
 
@@ -50,7 +50,7 @@ const i2v = await generateVideo({
 });
 ```
 
-### [`GenerateVideoOptions`](https://github.com/framersai/agentos/blob/master/src/api/generateVideo.ts)
+### [`GenerateVideoOptions`](https://github.com/framerslab/agentos/blob/master/src/api/generateVideo.ts)
 
 | Option | Type | Description |
 |---|---|---|
@@ -59,16 +59,16 @@ const i2v = await generateVideo({
 | `provider` | `string` | Provider ID (`"runway"`, `"replicate"`, `"fal"`) |
 | `model` | `string` | Model override (e.g. `"gen3a_turbo"`) |
 | `durationSec` | `number` | Desired output duration in seconds |
-| `aspectRatio` | [`VideoAspectRatio`](https://github.com/framersai/agentos/blob/master/src/io/media/video/types.ts) | Output aspect ratio (`"16:9"`, `"9:16"`, `"1:1"`, etc.) |
+| `aspectRatio` | [`VideoAspectRatio`](https://github.com/framerslab/agentos/blob/master/src/io/media/video/types.ts) | Output aspect ratio (`"16:9"`, `"9:16"`, `"1:1"`, etc.) |
 | `resolution` | `string` | Output resolution (e.g. `"1280x720"`) |
 | `negativePrompt` | `string` | Content to avoid |
 | `seed` | `number` | Seed for reproducible generation |
 | `timeoutMs` | `number` | Maximum wait time in milliseconds |
-| `onProgress` | `(event) => void` | Progress callback with [`VideoProgressEvent`](https://github.com/framersai/agentos/blob/master/src/io/media/video/types.ts) |
-| `providerPreferences` | [`MediaProviderPreference`](https://github.com/framersai/agentos/blob/master/src/io/media/ProviderPreferences.ts) | Reorder or filter the fallback chain |
+| `onProgress` | `(event) => void` | Progress callback with [`VideoProgressEvent`](https://github.com/framerslab/agentos/blob/master/src/io/media/video/types.ts) |
+| `providerPreferences` | [`MediaProviderPreference`](https://github.com/framerslab/agentos/blob/master/src/io/media/ProviderPreferences.ts) | Reorder or filter the fallback chain |
 | `apiKey` | `string` | Override the API key |
 
-### [`GenerateVideoResult`](https://github.com/framersai/agentos/blob/master/src/api/generateVideo.ts)
+### [`GenerateVideoResult`](https://github.com/framerslab/agentos/blob/master/src/api/generateVideo.ts)
 
 ```typescript
 interface GenerateVideoResult {
@@ -80,7 +80,7 @@ interface GenerateVideoResult {
 }
 ```
 
-Each [`GeneratedVideo`](https://github.com/framersai/agentos/blob/master/src/io/media/video/types.ts) contains `url`, optional `base64`, `mimeType`, `durationSec`, `width`, `height`, and `thumbnailUrl`.
+Each [`GeneratedVideo`](https://github.com/framerslab/agentos/blob/master/src/io/media/video/types.ts) contains `url`, optional `base64`, `mimeType`, `durationSec`, `width`, `height`, and `thumbnailUrl`.
 
 ## `analyzeVideo()`
 
@@ -105,7 +105,7 @@ for (const scene of analysis.scenes ?? []) {
 console.log(analysis.ragChunkIds);
 ```
 
-### [`AnalyzeVideoOptions`](https://github.com/framersai/agentos/blob/master/src/api/analyzeVideo.ts)
+### [`AnalyzeVideoOptions`](https://github.com/framerslab/agentos/blob/master/src/api/analyzeVideo.ts)
 
 | Option | Type | Default | Description |
 |---|---|---|---|
@@ -116,7 +116,7 @@ console.log(analysis.ragChunkIds);
 | `maxFrames` | `number` | - | Maximum frames to sample |
 | `sceneThreshold` | `number` | `0.3` | Scene change sensitivity (0-1) |
 | `transcribeAudio` | `boolean` | `true` | Transcribe audio track via STT |
-| `descriptionDetail` | [`DescriptionDetail`](https://github.com/framersai/agentos/blob/master/src/io/media/video/types.ts) | `'detailed'` | `'brief'` / `'detailed'` / `'exhaustive'` |
+| `descriptionDetail` | [`DescriptionDetail`](https://github.com/framerslab/agentos/blob/master/src/io/media/video/types.ts) | `'detailed'` | `'brief'` / `'detailed'` / `'exhaustive'` |
 | `maxScenes` | `number` | `100` | Cap on detected scenes |
 | `indexForRAG` | `boolean` | `false` | Index results into the RAG vector store |
 | `onProgress` | `(event) => void` | - | Progress callback |
@@ -169,7 +169,7 @@ Multiple methods are combined by taking the maximum diff score across all method
 
 ### Scene boundary types
 
-Each [`SceneBoundary`](https://github.com/framersai/agentos/blob/master/src/io/vision/types.ts) includes a `cutType` classification:
+Each [`SceneBoundary`](https://github.com/framerslab/agentos/blob/master/src/io/vision/types.ts) includes a `cutType` classification:
 
 - `hard-cut` -- Abrupt frame-to-frame change
 - `dissolve` -- Cross-dissolve / superimposition
@@ -180,19 +180,19 @@ Each [`SceneBoundary`](https://github.com/framersai/agentos/blob/master/src/io/v
 
 ## Types reference
 
-### [`VideoAspectRatio`](https://github.com/framersai/agentos/blob/master/src/io/media/video/types.ts)
+### [`VideoAspectRatio`](https://github.com/framerslab/agentos/blob/master/src/io/media/video/types.ts)
 
 ```typescript
 type VideoAspectRatio = '1:1' | '16:9' | '9:16' | '4:3' | '3:4' | '21:9' | (string & {});
 ```
 
-### [`VideoOutputFormat`](https://github.com/framersai/agentos/blob/master/src/io/media/video/types.ts)
+### [`VideoOutputFormat`](https://github.com/framerslab/agentos/blob/master/src/io/media/video/types.ts)
 
 ```typescript
 type VideoOutputFormat = 'mp4' | 'webm' | 'gif';
 ```
 
-### [`VideoProgressEvent`](https://github.com/framersai/agentos/blob/master/src/io/media/video/types.ts)
+### [`VideoProgressEvent`](https://github.com/framerslab/agentos/blob/master/src/io/media/video/types.ts)
 
 ```typescript
 interface VideoProgressEvent {
@@ -203,7 +203,7 @@ interface VideoProgressEvent {
 }
 ```
 
-### [`VideoAnalysisProgressEvent`](https://github.com/framersai/agentos/blob/master/src/io/media/video/types.ts)
+### [`VideoAnalysisProgressEvent`](https://github.com/framerslab/agentos/blob/master/src/io/media/video/types.ts)
 
 ```typescript
 interface VideoAnalysisProgressEvent {

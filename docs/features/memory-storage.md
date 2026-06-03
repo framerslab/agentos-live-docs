@@ -11,7 +11,7 @@ description: 'Single brain.sqlite per agent — 12-table schema, WAL mode, FTS5 
 
 ## Overview
 
-The [`Brain`](https://github.com/framersai/agentos/blob/master/src/cognition/memory/retrieval/store/Brain.ts) class manages a single WAL-mode SQLite database that contains all memory subsystem data. One file holds everything an agent has ever learned, ingested, or been told:
+The [`Brain`](https://github.com/framerslab/agentos/blob/master/src/cognition/memory/retrieval/store/Brain.ts) class manages a single WAL-mode SQLite database that contains all memory subsystem data. One file holds everything an agent has ever learned, ingested, or been told:
 
 ```
 ~/.agentos/agents/{name}/brain.sqlite
@@ -308,7 +308,7 @@ The parent directory must already exist; the SQLite file is created if absent.
 
 ### SQLite Export (VACUUM INTO)
 
-The [`SqliteExporter`](https://github.com/framersai/agentos/blob/master/src/cognition/memory/io/SqliteExporter.ts) uses SQLite's `VACUUM INTO` command to produce a clean, defragmented copy of the brain database:
+The [`SqliteExporter`](https://github.com/framerslab/agentos/blob/master/src/cognition/memory/io/SqliteExporter.ts) uses SQLite's `VACUUM INTO` command to produce a clean, defragmented copy of the brain database:
 
 ```ts
 await mem.export('./backup.sqlite', { format: 'sqlite' });

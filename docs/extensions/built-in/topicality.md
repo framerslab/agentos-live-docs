@@ -33,7 +33,7 @@ Topics are defined as structured descriptors with name, description, and example
 npm install @framers/agentos-ext-topicality
 ```
 
-Requires an embedding provider to be configured in AgentOS (e.g., OpenAI embeddings via [`AIModelProviderManager`](https://github.com/framersai/agentos/blob/master/src/core/llm/providers/AIModelProviderManager.ts)), or a custom `embeddingFn` can be injected for testing.
+Requires an embedding provider to be configured in AgentOS (e.g., OpenAI embeddings via [`AIModelProviderManager`](https://github.com/framerslab/agentos/blob/master/src/core/llm/providers/AIModelProviderManager.ts)), or a custom `embeddingFn` can be injected for testing.
 
 ---
 
@@ -126,7 +126,7 @@ const billingTopic: TopicDescriptor = {
 
 ## TopicEmbeddingIndex
 
-The [`TopicEmbeddingIndex`](https://github.com/framersai/agentos-extensions/blob/master/registry/curated/safety/topicality/src/TopicEmbeddingIndex.ts) pre-computes embeddings for all topic descriptors. Built lazily on first evaluation:
+The [`TopicEmbeddingIndex`](https://github.com/framerslab/agentos-extensions/blob/master/registry/curated/safety/topicality/src/TopicEmbeddingIndex.ts) pre-computes embeddings for all topic descriptors. Built lazily on first evaluation:
 
 1. Embed `[description, ...examples]` as a batch for each topic
 2. Compute centroid (component-wise average) of all embeddings per topic
@@ -140,7 +140,7 @@ The centroid approach gives better coverage than embedding a single description 
 
 ## TopicDriftTracker
 
-The [`TopicDriftTracker`](https://github.com/framersai/agentos-extensions/blob/master/registry/curated/safety/topicality/src/TopicDriftTracker.ts) detects gradual off-topic steering across multiple conversation turns using an exponential moving average (EMA) of message embeddings.
+The [`TopicDriftTracker`](https://github.com/framerslab/agentos-extensions/blob/master/registry/curated/safety/topicality/src/TopicDriftTracker.ts) detects gradual off-topic steering across multiple conversation turns using an exponential moving average (EMA) of message embeddings.
 
 ### EMA Formula
 
@@ -215,7 +215,7 @@ const pack = createTopicalityGuardrail({
 | `forbiddenAction`      | `'flag' \| 'block'`                        | `'block'` | Action when a message matches a forbidden topic.                                                                             |
 | `enableDriftDetection` | `boolean`                                  | `true`    | Enable session-aware topic drift detection.                                                                                  |
 | `drift`                | `Partial<DriftConfig>`                     | —         | Drift detection configuration overrides.                                                                                     |
-| `embeddingFn`          | `(texts: string[]) => Promise<number[][]>` | —         | Custom embedding function. If omitted, resolves [`EmbeddingManager`](https://github.com/framersai/agentos/blob/master/src/cognition/rag/EmbeddingManager.ts) from [`ISharedServiceRegistry`](https://github.com/framersai/agentos/blob/master/src/extensions/ISharedServiceRegistry.ts).                            |
+| `embeddingFn`          | `(texts: string[]) => Promise<number[][]>` | —         | Custom embedding function. If omitted, resolves [`EmbeddingManager`](https://github.com/framerslab/agentos/blob/master/src/cognition/rag/EmbeddingManager.ts) from [`ISharedServiceRegistry`](https://github.com/framerslab/agentos/blob/master/src/extensions/ISharedServiceRegistry.ts).                            |
 | `guardrailScope`       | `'input' \| 'output' \| 'both'`            | `'input'` | Defaults to input-only because topicality checks user messages, not agent responses.                                         |
 
 ### `DriftConfig`

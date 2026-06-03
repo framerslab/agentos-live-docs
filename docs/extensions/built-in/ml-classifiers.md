@@ -46,7 +46,7 @@ It detects:
 - **Prompt injection** -- paraphrased, obfuscated, and indirect injection attacks (via `protectai/deberta-v3-small-prompt-injection-v2`)
 - **Jailbreak** -- role-play attacks, system prompt extraction, constraint bypasses (via `meta-llama/PromptGuard-86M`)
 
-All models run via `@huggingface/transformers` with ONNX Runtime. Models are INT8 quantized by default for ~50% smaller footprint with minimal accuracy loss. Lazy-loaded on first use via [`ISharedServiceRegistry`](https://github.com/framersai/agentos/blob/master/src/extensions/ISharedServiceRegistry.ts).
+All models run via `@huggingface/transformers` with ONNX Runtime. Models are INT8 quantized by default for ~50% smaller footprint with minimal accuracy loss. Lazy-loaded on first use via [`ISharedServiceRegistry`](https://github.com/framerslab/agentos/blob/master/src/extensions/ISharedServiceRegistry.ts).
 
 ---
 
@@ -161,7 +161,7 @@ Default thresholds: block jailbreak > 0.8, flag jailbreak > 0.5 OR injection > 0
 
 ## IContentClassifier Interface
 
-Add custom classifiers by implementing the [`IContentClassifier`](https://github.com/framersai/agentos-extensions/blob/master/registry/curated/safety/ml-classifiers/src/IContentClassifier.ts) interface:
+Add custom classifiers by implementing the [`IContentClassifier`](https://github.com/framerslab/agentos-extensions/blob/master/registry/curated/safety/ml-classifiers/src/IContentClassifier.ts) interface:
 
 ```typescript
 interface IContentClassifier {
@@ -223,7 +223,7 @@ Token count is estimated at ~4 characters per token (standard for English text).
 
 ## Streaming Modes
 
-The guardrail supports three streaming modes, all implemented within the [`IGuardrailService`](https://github.com/framersai/agentos/blob/master/src/safety/guardrails/IGuardrailService.ts) contract:
+The guardrail supports three streaming modes, all implemented within the [`IGuardrailService`](https://github.com/framerslab/agentos/blob/master/src/safety/guardrails/IGuardrailService.ts) contract:
 
 ### Non-blocking (default)
 
@@ -256,7 +256,7 @@ const pack = createMLClassifierGuardrail({
 | `modelCacheDir`     | `string`                                   | `~/.wunderland/models/` | Model cache directory (Node.js only).                                                                 |
 | `quantized`         | `boolean`                                  | `true`                  | Use INT8 quantized models for lower memory.                                                           |
 | `runtime`           | `'node' \| 'browser' \| 'edge' \| 'auto'`  | `'auto'`                | Runtime environment hint. Auto-detected if omitted.                                                   |
-| `browser`           | [`BrowserConfig`](https://github.com/framersai/agentos-extensions/blob/master/registry/curated/system/browser-automation/src/BrowserService.ts)                            | —                       | Browser-specific configuration (Web Worker, cache strategy).                                          |
+| `browser`           | [`BrowserConfig`](https://github.com/framerslab/agentos-extensions/blob/master/registry/curated/system/browser-automation/src/BrowserService.ts)                            | —                       | Browser-specific configuration (Web Worker, cache strategy).                                          |
 | `chunkSize`         | `number`                                   | `200`                   | Tokens per sliding window chunk.                                                                      |
 | `contextSize`       | `number`                                   | `50`                    | Context overlap tokens carried forward.                                                               |
 | `maxEvaluations`    | `number`                                   | `100`                   | Max evaluations per stream.                                                                           |
@@ -349,7 +349,7 @@ Agent: I'll check this user comment for safety before posting.
 | SlidingWindowBuffer state            | ~1KB per stream | First TEXT_DELTA          |
 | **Total (all 3 models, 10 streams)** | **~98MB**       | --                        |
 
-All models are lazy-loaded. If only toxicity is enabled, memory cost is ~33MB. Models are shared across extensions via [`ISharedServiceRegistry`](https://github.com/framersai/agentos/blob/master/src/extensions/ISharedServiceRegistry.ts) -- if another extension uses the same model, zero additional memory.
+All models are lazy-loaded. If only toxicity is enabled, memory cost is ~33MB. Models are shared across extensions via [`ISharedServiceRegistry`](https://github.com/framerslab/agentos/blob/master/src/extensions/ISharedServiceRegistry.ts) -- if another extension uses the same model, zero additional memory.
 
 ---
 
