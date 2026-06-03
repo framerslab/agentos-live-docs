@@ -665,7 +665,7 @@ const config = (githubStars: number): Config => ({
           ],
         },
       ],
-      copyright: `Copyright \u00A9 ${new Date().getFullYear()} <a href="https://frame.dev" target="_blank" rel="noopener noreferrer" style="color: #00C896;">Framers Lab, Inc.</a>. Open source under Apache 2.0.`,
+      copyright: `Copyright \u00A9 ${new Date().getFullYear()} <a href="https://frame.dev" target="_blank" rel="noopener noreferrer" style="color: #00C896;">Framers Lab, Inc.</a>. Open source under Apache 2.0.<br/>Frame is a member of the <a href="https://deepgram.com/startups" target="_blank" rel="noopener noreferrer" style="color: #00C896;">Deepgram Startup Program</a>.`,
     },
     prism: {
       theme: prismThemes.github,
