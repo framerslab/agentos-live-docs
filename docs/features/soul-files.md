@@ -54,10 +54,8 @@ and graph index is rebuilt from it.
 
 Pages are markdown with YAML frontmatter and `[[wikilinks]]`. The agent reads
 `index.md` from its prelude, then opens any page with the `read_memory_page` tool.
-The LLM folds new conversation into pages when memory consolidates: a
-[`souledAgent`](/getting-started/high-level-api) runs this on the agent's `close()`,
-and `agent.memory.compileWiki()` triggers it mid-session. Merges integrate new facts
-rather than clobbering human edits; git versions every change.
+On the consolidation tick and at session end, the LLM folds new traces into pages,
+merging rather than clobbering human edits; git versions every change.
 
 A legacy single-file `MEMORY.md` auto-migrates into `memory/index.md` on first load
 and is left untouched on disk.
@@ -170,7 +168,7 @@ work identically whether the persona was loaded from JSON or from SOUL.md.
 ## Migrating from JSON Personas
 
 The legacy [`IPersonaDefinition`](https://github.com/framerslab/agentos/blob/master/src/cognition/substrate/personas/IPersonaDefinition.ts) JSON format works alongside SOUL.md — they
-both produce the same `IPersonaDefinition` runtime object. To migrate:
+both produce the same [`IPersonaDefinition`](https://github.com/framersai/agentos/blob/master/src/cognition/substrate/personas/IPersonaDefinition.ts) runtime object. To migrate:
 
 ```ts
 import { renderSoulMarkdown } from '@framers/agentos/cognition/substrate/personas/SoulLoader';

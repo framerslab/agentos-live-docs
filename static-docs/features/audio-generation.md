@@ -142,7 +142,7 @@ interface GeneratedAudio {
 }
 ```
 
-## `AudioProgressEvent`
+## [`AudioProgressEvent`](https://github.com/framersai/agentos/blob/master/src/io/media/audio/types.ts)
 
 ```typescript
 interface AudioProgressEvent {

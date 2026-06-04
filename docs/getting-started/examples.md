@@ -757,7 +757,7 @@ Workspace layout (per agent):
 ├── STYLE.md      # voice, syntax, vocabulary patterns (optional)
 ├── IDENTITY.md   # display card: name, role, agent-ID (optional)
 ├── AGENTS.md     # procedural rules (optional)
-├── memory/       # long-term memory wiki: index.md + entities/ + concepts/ + log/ (auto-managed)
+├── MEMORY.md     # long-term facts (auto-managed)
 └── examples/     # good-outputs.md + bad-outputs.md (optional)
 ```
 
@@ -820,23 +820,6 @@ const reply = await aria.generate('I need help with my invoice.');
 ```
 
 The HEXACO frontmatter flows into the same `PersonaDriftMechanism` and [`PersonaOverlayManager`](https://github.com/framerslab/agentos/blob/master/src/cognition/substrate/persona_overlays/PersonaOverlayManager.ts) as inline `personality:` config — both paths produce identical runtime behavior. See [SOUL_FILES.md](/features/soul-files) for the full 6-file workspace spec.
-
-For an agent whose long-term memory **is** its `memory/` wiki, use `souledAgent()` instead of `agent()`. It injects `memory/index.md` into the prelude, adds the `read_memory_page` tool, and folds new conversation into entity/concept pages:
-
-```typescript
-import { souledAgent } from '@framers/agentos';
-
-const aria = await souledAgent({ provider: 'anthropic', soul: '~/.agentos/agents/aria' });
-
-const reply = await aria.generate('I need help with my invoice.');
-
-// Fold this session's conversation into the wiki mid-session
-// (also runs automatically on close()):
-await aria.memory?.compileWiki();
-await aria.close();
-```
-
-See [High-Level API](/getting-started/high-level-api) for the full `souledAgent()` reference.
 
 ---
 
@@ -1041,13 +1024,13 @@ npx tsx examples/<file>.mjs
 | [`agency-shared-memory.mjs`](https://github.com/framerslab/agentos/blob/master/examples/agency-shared-memory.mjs) | Three agents share one cognitive memory store and one RAG corpus across a sequential run | [`agency`](https://github.com/framerslab/agentos/blob/master/src/api/agency.ts), `memory: { shared: true }`, `rag: { ... }` |
 | [`emergent-hierarchical-spawning.mjs`](https://github.com/framerslab/agentos/blob/master/examples/emergent-hierarchical-spawning.mjs) | Hierarchical agency that mints a specialist at runtime when the static roster falls short | [`agency`](https://github.com/framerslab/agentos/blob/master/src/api/agency.ts), `emergent`, `spawn_specialist`, [`EmergentAgentJudge`](https://github.com/framerslab/agentos/blob/master/src/cognition/emergent/EmergentAgentJudge.ts) |
 | [`agency-graph.mjs`](https://github.com/framerslab/agentos/blob/master/examples/agency-graph.mjs) | Multi-agent agency with graph strategy | [`agency`](https://github.com/framerslab/agentos/blob/master/src/api/agency.ts), graph edges, parallel execution |
-| [`agency-streaming.mjs`](https://github.com/framerslab/agentos/blob/master/examples/agency-streaming.mjs) | Streaming agency output with real-time chunks | `agency`, `onChunk` callbacks |
+| [`agency-streaming.mjs`](https://github.com/framerslab/agentos/blob/master/examples/agency-streaming.mjs) | Streaming agency output with real-time chunks | [`agency`](https://github.com/framersai/agentos/blob/master/src/api/agency.ts), `onChunk` callbacks |
 | [`agent-graph.mjs`](https://github.com/framerslab/agentos/blob/master/examples/agent-graph.mjs) | AgentGraph runtime with typed nodes and edges | [`AgentGraph`](https://github.com/framerslab/agentos/blob/master/src/orchestration/builders/AgentGraph.ts), node definitions, edge routing |
 | [`agent-communication-bus.mjs`](https://github.com/framerslab/agentos/blob/master/examples/agent-communication-bus.mjs) | Inter-agent messaging via communication bus | [`AgentCommunicationBus`](https://github.com/framerslab/agentos/blob/master/src/agents/agency/AgentCommunicationBus.ts), pub/sub topics |
 | [`workflow-dsl.mjs`](https://github.com/framerslab/agentos/blob/master/examples/workflow-dsl.mjs) | Declarative workflow definitions | [`workflow`](https://github.com/framerslab/agentos/blob/master/src/orchestration/builders/WorkflowBuilder.ts), sequential/parallel/conditional steps |
 | [`mission-api.mjs`](https://github.com/framerslab/agentos/blob/master/examples/mission-api.mjs) | Self-expanding mission orchestration with planner | [`mission`](https://github.com/framerslab/agentos/blob/master/src/orchestration/builders/MissionBuilder.ts), goal decomposition, fact-checking |
 | [`multi-agent-workflow.mjs`](https://github.com/framerslab/agentos/blob/master/examples/multi-agent-workflow.mjs) | Coordinated multi-agent pipeline with handoffs | Multi-agent, handoff protocol |
-| [`query-router.mjs`](https://github.com/framerslab/agentos/blob/master/examples/query-router.mjs) | Intent-based routing to specialized agents | `QueryRouter`, route definitions |
+| [`query-router.mjs`](https://github.com/framerslab/agentos/blob/master/examples/query-router.mjs) | Intent-based routing to specialized agents | [`QueryRouter`](https://github.com/framersai/agentos/blob/master/src/orchestration/pipeline/query/QueryRouter.ts), route definitions |
 | [`query-router-host-hooks.mjs`](https://github.com/framerslab/agentos/blob/master/examples/query-router-host-hooks.mjs) | Query router with host lifecycle hooks | `QueryRouter`, `onRoute`, `onFallback` hooks |
 | [`generate-image.mjs`](https://github.com/framerslab/agentos/blob/master/examples/generate-image.mjs) | Image generation across providers | `generateImage`, provider selection |
 | [`agentos-config-tools.mjs`](https://github.com/framerslab/agentos/blob/master/examples/agentos-config-tools.mjs) | Full AgentOS runtime with tool registration | [`AgentOS`](https://github.com/framerslab/agentos/blob/master/src/api/AgentOS.ts), `processRequest`, custom tools |
@@ -1061,7 +1044,7 @@ npx tsx examples/<file>.mjs
 - [ORCHESTRATION.md](/features/orchestration-guide) — graphs, workflows, missions
 - [CHANNELS.md](/features/channels) — channel setup
 - [SOCIAL_POSTING.md](/features/social-posting) — social media publishing
-- [HIGH_LEVEL_API.md](/getting-started/high-level-api) — `AgentOS`, helper wrappers, and runtime tool registration
+- [HIGH_LEVEL_API.md](/getting-started/high-level-api) — [`AgentOS`](https://github.com/framersai/agentos/blob/master/src/api/AgentOS.ts), helper wrappers, and runtime tool registration
 - [COGNITIVE_MEMORY.md](/features/cognitive-memory) — memory system
 - [COGNITIVE_MEMORY.md#mechanism-implementation-reference](/features/cognitive-memory#mechanism-implementation-reference) — 8 neuroscience-backed mechanisms (implementation reference)
 - [IMAGE_GENERATION.md](/features/image-generation) — image provider setup
