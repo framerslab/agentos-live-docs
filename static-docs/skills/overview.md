@@ -71,7 +71,7 @@ const snapshot = await createCuratedSkillSnapshot({ skills: ['github', 'weather'
 
 If you don’t want to inject all skill prompt content up front, use the **skills tools** from the engine:
 
-- `@framers/agentos/skills` (via [`SkillRegistry`](https://github.com/framersai/agentos/blob/master/src/cognition/skills/SkillRegistry.ts)): exposes `skills_list`, `skills_read`, `skills_status`, `skills_enable`, `skills_install`
+- `@framers/agentos/skills` (via [`SkillRegistry`](https://github.com/framerslab/agentos/blob/master/src/cognition/skills/SkillRegistry.ts)): exposes `skills_list`, `skills_read`, `skills_status`, `skills_enable`, `skills_install`
 - Skill content (the actual SKILL.md files) ships in `@framers/agentos-skills`
 
 This enables a “lazy” flow where the model can:

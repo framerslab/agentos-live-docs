@@ -182,6 +182,7 @@ const config = (githubStars: number): Config => ({
           sameAs: [
             'https://frame.dev',
             'https://github.com/framerslab',
+            'https://www.linkedin.com/company/framerslab',
             'https://www.npmjs.com/package/@framers/agentos',
             'https://wilds.ai/discord',
             'https://wilds.ai',
