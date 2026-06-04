@@ -4,6 +4,31 @@ sidebar_position: 7
 displayed_sidebar: guideSidebar
 ---
 
+## <small>0.9.40 (2026-06-04)</small>
+
+* fix(agency): mark the optional ws dynamic import with @vite-ignore ([c7f64e737942d771917cdd6fcfa13d1f8a678d44](https://github.com/framerslab/agentos/commit/c7f64e737942d771917cdd6fcfa13d1f8a678d44))
+* test: fix standalone-CI test infra after the src reorg ([027613a04e750a4b70a955d8ec9e566ba2d58a8c](https://github.com/framerslab/agentos/commit/027613a04e750a4b70a955d8ec9e566ba2d58a8c))
+
+## <small>0.9.39 (2026-06-04)</small>
+
+* test: repoint root-level test imports to the reorganized src layout ([ae98e2570edeeabc07e955a869d36b70d80bb507](https://github.com/framerslab/agentos/commit/ae98e2570edeeabc07e955a869d36b70d80bb507))
+* fix(query-router): load platform-corpus from the correct depth after the src reorg ([d6a65bf4552157c548c979d61b0ca873d71464ac](https://github.com/framerslab/agentos/commit/d6a65bf4552157c548c979d61b0ca873d71464ac))
+
+## <small>0.9.38 (2026-06-04)</small>
+
+* test: skip sibling-sourced corpus and catalog assertions in standalone CI ([b216a67a4e9d5f2c8fd8f20895f50506c519e025](https://github.com/framerslab/agentos/commit/b216a67a4e9d5f2c8fd8f20895f50506c519e025))
+* fix(memory): map Postgres INTEGER columns to BIGINT and drop the FTS _tsv shadow column on cross-backend export ([93ded0a36733b866b9858c2f3b201cc02c23a96a](https://github.com/framerslab/agentos/commit/93ded0a36733b866b9858c2f3b201cc02c23a96a))
+* Merge remote-tracking branch 'origin/master' ([bf4da023b70c7d8369da6da1bb17c507b4519525](https://github.com/framerslab/agentos/commit/bf4da023b70c7d8369da6da1bb17c507b4519525))
+* docs: linkify symbols to GitHub source references ([e7ac937f7133eba0ddeeb873eea607f97739790d](https://github.com/framerslab/agentos/commit/e7ac937f7133eba0ddeeb873eea607f97739790d))
+
+## <small>0.9.37 (2026-06-04)</small>
+
+* fix(agent): stop double-counting session/agent usage when the ledger is enabled; repair knowledge-corpus paths + generate it for tests; fix voice-pipeline mock constructor ([6622d455f9fd74a4f26ef53fead7ee19a3658ee3](https://github.com/framerslab/agentos/commit/6622d455f9fd74a4f26ef53fead7ee19a3658ee3))
+* test: correct generateText vi.mock paths so the mock applies (query/vision/emergent/video) ([829f989e4545280e0bf798da6c92176155306141](https://github.com/framerslab/agentos/commit/829f989e4545280e0bf798da6c92176155306141))
+* test: fix stale audio exclude paths and guard monorepo-root docs-alignment tests for standalone CI ([b7cf9dd8e7c3421cb4273cfae8290f214b38645b](https://github.com/framerslab/agentos/commit/b7cf9dd8e7c3421cb4273cfae8290f214b38645b))
+* test: fix stale io-reorg vi.mock paths (media/video, hearing, voice-pipeline, otel) and stale CLI model-id assertions ([aeb5b0f25ba72140596198b2ab060d8e803fcf85](https://github.com/framerslab/agentos/commit/aeb5b0f25ba72140596198b2ab060d8e803fcf85))
+* build: allow native dep build scripts in CI (better-sqlite3, sharp, bcrypt, tesseract.js) ([e92b6ccb12da61ed395a334aa110bfb140874aba](https://github.com/framerslab/agentos/commit/e92b6ccb12da61ed395a334aa110bfb140874aba))
+
 ## <small>0.9.36 (2026-06-03)</small>
 
 * test: externalize sharp in vitest so the native module loads in CI ([5d439a9f5bb4b47d8ab1c0500ff4b90b4038a097](https://github.com/framerslab/agentos/commit/5d439a9f5bb4b47d8ab1c0500ff4b90b4038a097))
