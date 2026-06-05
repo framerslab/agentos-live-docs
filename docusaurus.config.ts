@@ -654,6 +654,7 @@ const config = (githubStars: number): Config => ({
             { label: 'Twitter', href: 'https://x.com/rabbitholewun' },
             { label: 'LinkedIn', href: 'https://www.linkedin.com/company/framerslab' },
             { label: 'npm', href: 'https://www.npmjs.com/package/@framers/agentos' },
+            { label: 'Sponsor', href: 'https://agentos.sh/en/partners' },
           ],
         },
         {
