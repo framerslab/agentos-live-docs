@@ -20,26 +20,26 @@ jobs:
     steps:
       # Mirror the monorepo layout so relative paths (../../packages/agentos) resolve
       - name: Checkout agentos-live-docs
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           path: apps/agentos-live-docs
 
       - name: Checkout agentos (source for docs + TypeDoc)
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           repository: framersai/agentos
           path: packages/agentos
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Checkout agentos-extensions (source for extension docs)
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           repository: framersai/agentos-extensions
           path: packages/agentos-extensions
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: 20
           cache: npm
