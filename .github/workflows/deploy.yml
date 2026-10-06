@@ -2,7 +2,7 @@ name: Deploy Docusaurus to GitHub Pages
 
 on:
   push:
-    branches: [master, main]
+    branches: [master]
   # Pull requests run the build job only, so the strict build checks every change before it
   # merges. The deploy job and the artifact upload are skipped for them.
   pull_request:
@@ -62,8 +62,9 @@ jobs:
           NODE_OPTIONS: --max-old-space-size=8192
           # PAT used by docusaurus.config.ts to fetch the live GitHub
           # star count for the hero badge at build time. Falls back to
-          # a hardcoded count if missing or if the call fails.
-          GH_PAT: ${{ secrets.GH_PAT }}
+          # a hardcoded count if missing or if the call fails. Pull request
+          # builds do not receive it: they run code the pull request changed.
+          GH_PAT: ${{ github.event_name != 'pull_request' && secrets.GH_PAT || '' }}
 
       - name: Upload artifact
         if: github.event_name != 'pull_request'

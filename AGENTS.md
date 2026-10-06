@@ -96,7 +96,7 @@ Before a pull request merges, every unresolved thread from a review bot, includi
 
 ## Security
 
-Never commit API keys or tokens. The build reads one optional secret, `GH_PAT`, for the star count on the home page; without it the count falls back to a fixed number. Report vulnerabilities privately as the [security policy](https://github.com/framerslab/agentos-live-docs/blob/master/.github/SECURITY.md) describes.
+Never commit API keys or tokens. The build reads one optional secret, `GH_PAT`, for the star count on the home page; without it the count falls back to a fixed number. Pull request builds do not receive it. Report vulnerabilities privately as the [security policy](https://github.com/framerslab/agentos-live-docs/blob/master/.github/SECURITY.md) describes.
 
 ## Do not
 
