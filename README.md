@@ -72,6 +72,16 @@ graph TD
 
 Deployed via GitHub Actions on push to `master`. The workflow checks out the `agentos` and `agentos-extensions` repos, symlinks them as `packages/`, then builds and deploys to GitHub Pages.
 
+## Contributing and support
+
+| Guide | What |
+|---|---|
+| [Contributing](https://github.com/framerslab/agentos-live-docs/blob/master/CONTRIBUTING.md) | Where each page's source lives, development setup, pull request rules, review threads, contribution licensing |
+| [Agent instructions](https://github.com/framerslab/agentos-live-docs/blob/master/AGENTS.md) | Commands and conventions for coding agents |
+| [Code of Conduct](https://github.com/framerslab/agentos-live-docs/blob/master/.github/CODE_OF_CONDUCT.md) | Community standards |
+| [Security Policy](https://github.com/framerslab/agentos-live-docs/blob/master/.github/SECURITY.md) | Reporting vulnerabilities privately |
+| [Support](https://github.com/framerslab/agentos-live-docs/blob/master/SUPPORT.md) | Where to get help |
+
 ## License
 
 MIT
