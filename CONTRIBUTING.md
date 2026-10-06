@@ -67,7 +67,7 @@ npm ci
 npm run build
 ```
 
-CI ([`deploy.yml`](https://github.com/framerslab/agentos-live-docs/blob/master/.github/workflows/deploy.yml)) runs one job, "build", on every pull request, on every push to `master` and on a manual run. It checks out the three repositories in that layout, taking agentos and agentos-extensions at their `master`. Then, in order: `pnpm install --frozen-lockfile --ignore-scripts` in `packages/agentos` so TypeDoc can resolve types (agentos installs with pnpm from its lockfile), `npm ci` here, and `npm run build` here with an 8 GB Node heap (`NODE_OPTIONS=--max-old-space-size=8192`).
+CI ([`deploy.yml`](https://github.com/framerslab/agentos-live-docs/blob/master/.github/workflows/deploy.yml)) runs one job, "build", on every pull request, on every push to `master`, daily and on a manual run. It checks out the three repositories in that layout, taking agentos and agentos-extensions at their `master`. Then, in order: `pnpm install --frozen-lockfile --ignore-scripts` in `packages/agentos` so TypeDoc can resolve types (agentos installs with pnpm from its lockfile), `npm ci` here, and `npm run build` here with an 8 GB Node heap (`NODE_OPTIONS=--max-old-space-size=8192`).
 
 `npm run build` runs `clean:cache` and `pull-docs` first, then `docusaurus build`. The build is strict: a broken link or a broken Markdown link stops it. The build job takes about 25 minutes in CI.
 
@@ -101,9 +101,9 @@ Write the subject in the imperative mood and keep each commit to one change.
 
 ## Deployment
 
-A push to `master`, including a merged pull request, builds the site and deploys it to GitHub Pages. A maintainer can also start the workflow by hand, which rebuilds from the latest agentos and agentos-extensions and deploys.
+A push to `master`, including a merged pull request, builds the site and deploys it to GitHub Pages. The workflow also runs daily at 07:23 UTC, and a maintainer can start it by hand. Every run builds from the latest agentos and agentos-extensions.
 
-The workflow has no trigger from other repositories. A change merged in agentos or agentos-extensions reaches the site at the next deploy: the next push to `master` here or the next manual run.
+Nothing in agentos or agentos-extensions can start the workflow, so a change merged there reaches the site at the next deploy, which the daily run provides. After a deploy the workflow commits `deployed-sources.json`, which names the agentos and agentos-extensions commits the live site was built from.
 
 ## Automated review threads
 

@@ -6,6 +6,10 @@ on:
   # Pull requests run the build job only, so the strict build checks every change before it
   # merges. The deploy job and the artifact upload are skipped for them.
   pull_request:
+  # Most pages are copied in from agentos and agentos-extensions when the site builds, and
+  # nothing in those repositories can start this workflow. The daily run picks their changes up.
+  schedule:
+    - cron: '23 7 * * *'
   workflow_dispatch:
 
 permissions:
@@ -19,6 +23,9 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    outputs:
+      agentos_sha: ${{ steps.sources.outputs.agentos_sha }}
+      extensions_sha: ${{ steps.sources.outputs.extensions_sha }}
     steps:
       # Mirror the monorepo layout so relative paths (../../packages/agentos) resolve
       - name: Checkout agentos-live-docs
@@ -39,6 +46,12 @@ jobs:
           repository: framerslab/agentos-extensions
           path: packages/agentos-extensions
           token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Note the source commits
+        id: sources
+        run: |
+          echo "agentos_sha=$(git -C packages/agentos rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          echo "extensions_sha=$(git -C packages/agentos-extensions rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
       - name: Setup Node.js
         uses: actions/setup-node@v5
@@ -94,3 +107,59 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+
+  # Records which agentos and agentos-extensions commits the live site was built from. The
+  # commit is also the repository activity that keeps the daily run enabled: GitHub disables
+  # scheduled workflows in a public repository after 60 days without any. The file is rewritten
+  # when a source commit changed, and otherwise once its date is 30 days old.
+  record-sources:
+    if: github.event_name != 'pull_request'
+    needs: [build, deploy]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: master
+
+      - name: Update deployed-sources.json
+        env:
+          AGENTOS_SHA: ${{ needs.build.outputs.agentos_sha }}
+          EXTENSIONS_SHA: ${{ needs.build.outputs.extensions_sha }}
+        run: |
+          set -euo pipefail
+          file=deployed-sources.json
+          for sha in "$AGENTOS_SHA" "$EXTENSIONS_SHA"; do
+            case "$sha" in
+              ""|*[!0-9a-f]*) echo "::error::The build job did not pass both source commits."; exit 1 ;;
+            esac
+          done
+          today=$(date -u +%F)
+          # A missing or unreadable file reads as empty values, so it is written again.
+          old_agentos=""; old_extensions=""; old_date=""
+          if [ -f "$file" ]; then
+            old_agentos=$(jq -r '.agentos // ""' "$file" 2>/dev/null || true)
+            old_extensions=$(jq -r '."agentos-extensions" // ""' "$file" 2>/dev/null || true)
+            old_date=$(jq -r '.recorded // ""' "$file" 2>/dev/null || true)
+          fi
+          old_epoch=0
+          if [ -n "$old_date" ]; then
+            old_epoch=$(date -u -d "$old_date" +%s 2>/dev/null || echo 0)
+          fi
+          age_days=$(( ( $(date -u -d "$today" +%s) - old_epoch ) / 86400 ))
+          if [ "$old_agentos" = "$AGENTOS_SHA" ] && [ "$old_extensions" = "$EXTENSIONS_SHA" ] && [ "$age_days" -lt 30 ]; then
+            echo "Sources unchanged since $old_date; nothing to record."
+            exit 0
+          fi
+          jq -n --arg a "$AGENTOS_SHA" --arg e "$EXTENSIONS_SHA" --arg d "$today" \
+            '{agentos: $a, "agentos-extensions": $e, recorded: $d}' > "$file"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "$file"
+          git commit -m "chore: record the sources of the deployed site"
+          # master can move while the site builds; replay the one commit on top and push again.
+          git push origin HEAD:master || {
+            git pull --rebase origin master
+            git push origin HEAD:master
+          }

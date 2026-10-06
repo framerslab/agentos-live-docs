@@ -22,6 +22,7 @@ The Docusaurus 3 site behind [docs.agentos.sh](https://docs.agentos.sh): guides,
 - `vendored-docs/`: copies of source files the build does not find in its three checkouts, at the path the manifest names
 - `docs/`: the documentation landing page (`docs/index.md`), the pages the manifest lists with `siteDoc(...)`, and build output (pulled pages, `docs/api/`, `docs/paracosm/`)
 - `.github/workflows/deploy.yml`: the build and the deploy
+- `deployed-sources.json`: the agentos and agentos-extensions commits the live site was built from, written by the deploy workflow
 - `.github/workflows/links.yml`: the link check for the contributor files
 
 ## Which files to edit
@@ -54,7 +55,7 @@ packages/agentos-extensions/   framerslab/agentos-extensions
 
 CI runs the commands below, and its result decides. Run any of them locally to check a change before you push.
 
-CI runs (job "build" in [`.github/workflows/deploy.yml`](https://github.com/framerslab/agentos-live-docs/blob/master/.github/workflows/deploy.yml)) on every pull request, every push to `master` and every manual run, in order:
+CI runs (job "build" in [`.github/workflows/deploy.yml`](https://github.com/framerslab/agentos-live-docs/blob/master/.github/workflows/deploy.yml)) on every pull request, every push to `master`, daily and on every manual run, in order:
 
 1. `pnpm install --frozen-lockfile --ignore-scripts` in `packages/agentos` (TypeDoc needs the types; agentos installs with pnpm 10 from its lockfile)
 2. `npm ci` in this repository
@@ -88,7 +89,7 @@ To run one test file: `node --test scripts/pull-docs-links.test.mjs`.
 
 ## Deployment
 
-A push to `master` builds the site and deploys it to GitHub Pages. A pull request builds and does not deploy. A manual run of the workflow rebuilds from the latest agentos and agentos-extensions and deploys. The workflow has no trigger from other repositories, so a change merged in agentos or agentos-extensions reaches the site at the next deploy.
+A push to `master` builds the site and deploys it to GitHub Pages. A pull request builds and does not deploy. The workflow also runs daily and on a manual start. Every run builds from the latest agentos and agentos-extensions, so a change merged there reaches the site at the next run. After a deploy the workflow commits `deployed-sources.json`, which names the two source commits the live site was built from.
 
 ## Automated review threads
 
@@ -104,3 +105,4 @@ Never commit API keys or tokens. The build reads one optional secret, `GH_PAT`, 
 - Commit `build/`, `.docusaurus/` or the changes a local build makes under `docs/`.
 - Add a Markdown file under `docs/` that the manifest does not list: the build deletes it.
 - Change `static/CNAME` or the deploy workflow without a maintainer.
+- Edit `deployed-sources.json` by hand.
