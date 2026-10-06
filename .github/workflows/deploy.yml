@@ -47,9 +47,16 @@ jobs:
           cache: npm
           cache-dependency-path: apps/agentos-live-docs/package-lock.json
 
+      # agentos installs with pnpm from its committed pnpm-lock.yaml, as its own CI does. npm
+      # resolves the tree afresh and stops on a peer range that pnpm accepts with a warning.
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          version: 10
+
       - name: Install agentos deps (for TypeDoc type resolution)
         working-directory: packages/agentos
-        run: npm install --ignore-scripts
+        run: pnpm install --frozen-lockfile --ignore-scripts
 
       - name: Install docs site deps
         working-directory: apps/agentos-live-docs
