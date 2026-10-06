@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 580" role="img" aria-labelledby="forge-title forge-desc" font-family="Inter, system-ui, -apple-system, sans-serif">
   <title id="forge-title">AgentOS forge_tool runtime forging loop</title>
-  <desc id="forge-desc">A vertical flow showing how an agent forges a new tool at runtime. The agent calls forge_tool, which goes to a Build stage offering two creation modes (Compose: chain existing tools via ComposableToolBuilder; Sandbox: hardened node:vm via SandboxedToolForge). The forged tool then runs through a Test stage that executes test cases and validates the output schema, then a Judge stage where an LLM-as-judge reviews code safety, test correctness, and determinism. If approved, the tool is registered at the session tier and is immediately available. If rejected, the reason is returned to the agent.</desc>
+  <desc id="forge-desc">A vertical flow showing how an agent forges a new tool at runtime. The agent calls forge_tool, which goes to a Build stage offering two creation modes (Compose: chain existing tools via ComposableToolBuilder; Sandbox: in-process node:vm via SandboxedToolForge). The forged tool then runs through a Test stage that executes test cases and validates the output schema, then a Judge stage where an LLM-as-judge reviews code safety, test correctness, and determinism. If approved, the tool is registered at the session tier and is immediately available. If rejected, the reason is returned to the agent.</desc>
 
   <defs>
     <style>
@@ -61,12 +61,12 @@
   <!-- Sub-card: Compose -->
   <rect x="120" y="194" width="316" height="34" rx="6" class="pill"/>
   <text x="134" y="215" class="pill-text">compose</text>
-  <text x="200" y="215" class="stage-text">→ ComposableToolBuilder · chains existing tools, no sandbox needed</text>
+  <text x="200" y="215" class="stage-text">ComposableToolBuilder · chains tools</text>
 
   <!-- Sub-card: Sandbox -->
   <rect x="444" y="194" width="316" height="34" rx="6" class="pill"/>
   <text x="458" y="215" class="pill-text">sandbox</text>
-  <text x="524" y="215" class="stage-text">→ SandboxedToolForge · hardened node:vm context</text>
+  <text x="520" y="215" class="stage-text">SandboxedToolForge · in-process node:vm</text>
 
   <line class="arrow-line" x1="440" y1="234" x2="440" y2="262" marker-end="url(#forge-arrow)"/>
 
