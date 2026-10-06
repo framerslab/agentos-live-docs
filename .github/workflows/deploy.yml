@@ -3,15 +3,17 @@ name: Deploy Docusaurus to GitHub Pages
 on:
   push:
     branches: [master, main]
+  # Pull requests run the build job only, so the strict build checks every change before it
+  # merges. The deploy job and the artifact upload are skipped for them.
+  pull_request:
   workflow_dispatch:
 
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
 concurrency:
-  group: pages
+  # Each pull request builds in its own group, so a pull request never cancels a deploy.
+  group: ${{ github.event_name == 'pull_request' && format('pages-pr-{0}', github.event.pull_request.number) || 'pages' }}
   cancel-in-progress: true
 
 jobs:
@@ -27,14 +29,14 @@ jobs:
       - name: Checkout agentos (source for docs + TypeDoc)
         uses: actions/checkout@v5
         with:
-          repository: framersai/agentos
+          repository: framerslab/agentos
           path: packages/agentos
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Checkout agentos-extensions (source for extension docs)
         uses: actions/checkout@v5
         with:
-          repository: framersai/agentos-extensions
+          repository: framerslab/agentos-extensions
           path: packages/agentos-extensions
           token: ${{ secrets.GITHUB_TOKEN }}
 
@@ -64,13 +66,19 @@ jobs:
           GH_PAT: ${{ secrets.GH_PAT }}
 
       - name: Upload artifact
+        if: github.event_name != 'pull_request'
         uses: actions/upload-pages-artifact@v3
         with:
           path: apps/agentos-live-docs/build
 
   deploy:
+    if: github.event_name != 'pull_request'
     needs: build
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}

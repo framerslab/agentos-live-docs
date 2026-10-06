@@ -1,0 +1,22 @@
+name: Bug report
+description: Something on the site is wrong or broken.
+labels: [bug]
+body:
+  - type: input
+    id: url
+    attributes:
+      label: Page
+      description: The address of the page.
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: What is wrong
+      description: What you saw and what you expected to see.
+    validations:
+      required: true
+  - type: input
+    id: browser
+    attributes:
+      label: Browser and device
