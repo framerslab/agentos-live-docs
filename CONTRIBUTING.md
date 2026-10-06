@@ -45,7 +45,7 @@ Keep that order. The sidebar comes from the manifest, and Docusaurus stops the b
 
 ## Development setup
 
-You need Node.js 20, the version CI uses, and npm.
+You need Node.js 20, the version CI uses, npm, and pnpm 10 for the agentos checkout.
 
 The build reads two other repositories through relative paths, so the three checkouts sit in the layout CI creates:
 
@@ -61,13 +61,13 @@ cd agentos-docs
 git clone https://github.com/framerslab/agentos-live-docs.git apps/agentos-live-docs
 git clone https://github.com/framerslab/agentos.git packages/agentos
 git clone https://github.com/framerslab/agentos-extensions.git packages/agentos-extensions
-(cd packages/agentos && npm install --ignore-scripts)
+(cd packages/agentos && pnpm install --frozen-lockfile --ignore-scripts)
 cd apps/agentos-live-docs
 npm ci
 npm run build
 ```
 
-CI ([`deploy.yml`](https://github.com/framerslab/agentos-live-docs/blob/master/.github/workflows/deploy.yml)) runs one job, "build", on every pull request, on every push to `master` and on a manual run. It checks out the three repositories in that layout, taking agentos and agentos-extensions at their `master`. Then, in order: `npm install --ignore-scripts` in `packages/agentos` so TypeDoc can resolve types, `npm ci` here, and `npm run build` here with an 8 GB Node heap (`NODE_OPTIONS=--max-old-space-size=8192`).
+CI ([`deploy.yml`](https://github.com/framerslab/agentos-live-docs/blob/master/.github/workflows/deploy.yml)) runs one job, "build", on every pull request, on every push to `master` and on a manual run. It checks out the three repositories in that layout, taking agentos and agentos-extensions at their `master`. Then, in order: `pnpm install --frozen-lockfile --ignore-scripts` in `packages/agentos` so TypeDoc can resolve types (agentos installs with pnpm from its lockfile), `npm ci` here, and `npm run build` here with an 8 GB Node heap (`NODE_OPTIONS=--max-old-space-size=8192`).
 
 `npm run build` runs `clean:cache` and `pull-docs` first, then `docusaurus build`. The build is strict: a broken link or a broken Markdown link stops it. The build job takes about 25 minutes in CI.
 

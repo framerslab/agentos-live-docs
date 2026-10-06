@@ -40,7 +40,7 @@ A new page written for the site goes in `static-docs/`, and its `staticDoc(...)`
 
 ## Toolchain
 
-CI uses Node 20 and npm, with a committed `package-lock.json`. Docusaurus 3, React 18, TypeScript, TypeDoc with `docusaurus-plugin-typedoc`.
+CI uses Node 20 and npm, with a committed `package-lock.json`, and installs the agentos checkout with pnpm 10 from agentos's own lockfile. Docusaurus 3, React 18, TypeScript, TypeDoc with `docusaurus-plugin-typedoc`.
 
 The build reads agentos and agentos-extensions through relative paths, so the checkouts sit in this layout:
 
@@ -56,7 +56,7 @@ CI runs the commands below, and its result decides. Run any of them locally to c
 
 CI runs (job "build" in [`.github/workflows/deploy.yml`](https://github.com/framerslab/agentos-live-docs/blob/master/.github/workflows/deploy.yml)) on every pull request, every push to `master` and every manual run, in order:
 
-1. `npm install --ignore-scripts` in `packages/agentos` (TypeDoc needs the types)
+1. `pnpm install --frozen-lockfile --ignore-scripts` in `packages/agentos` (TypeDoc needs the types; agentos installs with pnpm 10 from its lockfile)
 2. `npm ci` in this repository
 3. `npm run build` in this repository, with `NODE_OPTIONS=--max-old-space-size=8192` (runs `clean:cache` and `pull-docs`, then `docusaurus build`)
 
