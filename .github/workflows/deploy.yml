@@ -75,6 +75,11 @@ jobs:
         working-directory: apps/agentos-live-docs
         run: npm ci
 
+      # The publication manifest and pull contract, link rewriting and the search manifest plugin.
+      - name: Check the publication contract
+        working-directory: apps/agentos-live-docs
+        run: npm run test:publication
+
       - name: Build site
         working-directory: apps/agentos-live-docs
         run: npm run build

@@ -59,15 +59,15 @@ CI runs (job "build" in [`.github/workflows/deploy.yml`](https://github.com/fram
 
 1. `pnpm install --frozen-lockfile --ignore-scripts` in `packages/agentos` (TypeDoc needs the types; agentos installs with pnpm 10 from its lockfile)
 2. `npm ci` in this repository
-3. `npm run build` in this repository, with `NODE_OPTIONS=--max-old-space-size=8192` (runs `clean:cache` and `pull-docs`, then `docusaurus build`)
+3. `npm run test:publication` in this repository: the `node --test` suites (the publication manifest and pull contract, link rewriting, the search manifest plugin)
+4. `npm run build` in this repository, with `NODE_OPTIONS=--max-old-space-size=8192` (runs `clean:cache` and `pull-docs`, then `docusaurus build`)
 
 The build is strict: a broken link or a broken Markdown link stops it. The build job takes about 25 minutes.
 
 Available scripts that CI does not run:
 
 - `npm run start:guides`, `npm run build:guides`: guide pages only, without the API reference, the Paracosm reference, local search and the search manifest, and without stopping on broken links
-- `npm run test:publication`: the `node --test` suites
-- `npm run verify:publication`: those suites, `pull-docs --check`, then the strict build
+- `npm run verify:publication`: the `node --test` suites with `AGENTOS_DOCS_STRICT=1`, `pull-docs --check`, then the strict build
 - `npm run typecheck`: `tsc --noEmit` over `src/` and `docusaurus.config.ts`
 
 To run one test file: `node --test scripts/pull-docs-links.test.mjs`.

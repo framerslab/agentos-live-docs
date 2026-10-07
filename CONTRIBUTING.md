@@ -67,7 +67,7 @@ npm ci
 npm run build
 ```
 
-CI ([`deploy.yml`](https://github.com/framerslab/agentos-live-docs/blob/master/.github/workflows/deploy.yml)) runs one job, "build", on every pull request, on every push to `master`, daily and on a manual run. It checks out the three repositories in that layout, taking agentos and agentos-extensions at their `master`. Then, in order: `pnpm install --frozen-lockfile --ignore-scripts` in `packages/agentos` so TypeDoc can resolve types (agentos installs with pnpm from its lockfile), `npm ci` here, and `npm run build` here with an 8 GB Node heap (`NODE_OPTIONS=--max-old-space-size=8192`).
+CI ([`deploy.yml`](https://github.com/framerslab/agentos-live-docs/blob/master/.github/workflows/deploy.yml)) runs one job, "build", on every pull request, on every push to `master`, daily and on a manual run. It checks out the three repositories in that layout, taking agentos and agentos-extensions at their `master`. Then, in order: `pnpm install --frozen-lockfile --ignore-scripts` in `packages/agentos` so TypeDoc can resolve types (agentos installs with pnpm from its lockfile), `npm ci` here, `npm run test:publication` here (the `node --test` suites: the manifest and pull contract, link rewriting and the search manifest plugin), and `npm run build` here with an 8 GB Node heap (`NODE_OPTIONS=--max-old-space-size=8192`).
 
 `npm run build` runs `clean:cache` and `pull-docs` first, then `docusaurus build`. The build is strict: a broken link or a broken Markdown link stops it. The build job takes about 25 minutes in CI.
 
@@ -79,8 +79,7 @@ Scripts that CI does not run:
 
 | Command | What it does |
 |---|---|
-| `npm run test:publication` | Runs the `node --test` suites: the manifest and pull contract, link rewriting and the search manifest plugin. |
-| `npm run verify:publication` | Runs those suites, then `pull-docs --check`, then the strict build. |
+| `npm run verify:publication` | Runs the `node --test` suites with `AGENTOS_DOCS_STRICT=1`, then `pull-docs --check`, then the strict build. |
 | `npm run typecheck` | Type-checks `src/` and `docusaurus.config.ts` with `tsc --noEmit`. |
 
 To run one test file: `node --test scripts/pull-docs-links.test.mjs`.
