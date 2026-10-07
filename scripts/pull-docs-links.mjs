@@ -24,8 +24,9 @@ function toAgentosSourceBlob(hrefPath) {
   if (path.startsWith('packages/agentos/src/')) {
     return `${AGENTOS_BLOB_BASE}${path.slice('packages/agentos/'.length)}`;
   }
-  if (path.startsWith('../src/')) {
-    return `${AGENTOS_BLOB_BASE}${path.slice(3)}`;
+  const relativeSrc = path.match(/^(?:\.\.\/)+src\/(.+)$/);
+  if (relativeSrc?.[1]) {
+    return `${AGENTOS_BLOB_BASE}src/${relativeSrc[1]}`;
   }
   if (path.startsWith('./src/')) {
     return `${AGENTOS_BLOB_BASE}${path.slice(2)}`;
