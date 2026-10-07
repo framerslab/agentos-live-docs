@@ -64,6 +64,8 @@ const exactLinkRewrites = {
   './security-pipeline.md': '/features/human-in-the-loop',
   '../src/core/tools/ITool.ts': '/api/interfaces/ITool',
   '../src/extensions/ExtensionManager.ts': '/api/classes/ExtensionManager',
+  '../../src/core/tools/ITool.ts': '/api/interfaces/ITool',
+  '../../src/extensions/ExtensionManager.ts': '/api/classes/ExtensionManager',
 };
 
 // ── Helpers ──────────────────────────────────────────────────────────
