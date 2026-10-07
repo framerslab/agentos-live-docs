@@ -363,7 +363,9 @@ const config = (githubStars: number): Config => ({
           { from: '/docs/PLANNING_ENGINE', to: '/features/planning-engine' },
           { from: '/docs/PLATFORM_SUPPORT', to: '/architecture/platform-support' },
           { from: '/docs/RAG_MEMORY_CONFIGURATION', to: '/features/rag-memory' },
-          { from: '/docs/RECURSIVE_SELF_BUILDING_AGENTS', to: '/features/recursive-self-building' },
+          // The self-building page was retired for the self-extension concept page (agentos #100).
+          { from: '/docs/RECURSIVE_SELF_BUILDING_AGENTS', to: '/architecture/self-extension' },
+          { from: '/features/recursive-self-building', to: '/architecture/self-extension' },
           { from: '/docs/RELEASING', to: '/getting-started/releasing' },
           { from: '/docs/RFC_EXTENSION_STANDARDS', to: '/extensions/extension-standards' },
           { from: '/docs/SQL_STORAGE_QUICKSTART', to: '/features/sql-storage' },
