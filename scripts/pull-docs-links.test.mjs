@@ -16,12 +16,13 @@ const options = {
 };
 
 test('rewriteMarkdownLinks rewrites moved docs case-insensitively', () => {
-  const input = 'See [Getting Started](./GETTING_STARTED.md), [Deep Research](./deep-research.md), and [Streaming](./STREAMING_SEMANTICS.md).';
+  // ./hyde-retrieval.md differs from the source file HYDE_RETRIEVAL.md in case and separator.
+  const input = 'See [Getting Started](./GETTING_STARTED.md), [HyDE Retrieval](./hyde-retrieval.md), and [Streaming](./STREAMING_SEMANTICS.md).';
   const output = rewriteMarkdownLinks(input, options);
 
   assert.equal(
     output,
-    'See [Getting Started](/getting-started), [Deep Research](/features/deep-research), and [Streaming](/architecture/streaming-semantics).',
+    'See [Getting Started](/getting-started), [HyDE Retrieval](/features/hyde-retrieval), and [Streaming](/architecture/streaming-semantics).',
   );
 });
 
