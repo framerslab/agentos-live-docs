@@ -86,3 +86,13 @@ test('rewriteMarkdownLinks preserves explicit exact rewrites', () => {
 
   assert.equal(output, 'See [Security Pipeline](/features/human-in-the-loop).');
 });
+
+test('rewriteMarkdownLinks turns relative source links of any depth into repository links', () => {
+  const input = 'See [`src/api/agency.ts`](../../src/api/agency.ts) and [`src/api/hitl.ts`](../src/api/hitl.ts).';
+  const output = rewriteMarkdownLinks(input, options);
+
+  assert.equal(
+    output,
+    'See [`src/api/agency.ts`](https://github.com/framerslab/agentos/blob/master/src/api/agency.ts) and [`src/api/hitl.ts`](https://github.com/framerslab/agentos/blob/master/src/api/hitl.ts).',
+  );
+});
