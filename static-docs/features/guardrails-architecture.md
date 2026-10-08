@@ -17,7 +17,7 @@ sidebar_position: 7
 
 # Guardrails Architecture
 
-The guardrail system runs every user message and every LLM output chunk through a two-phase dispatcher. Input guardrails fire before the orchestrator sees the message; output guardrails fire on each streaming chunk before it reaches the client. Each guardrail returns one of four verdicts (`ALLOW`, `SANITIZE`, `BLOCK`, `FLAG`); the dispatcher composes the verdicts deterministically and never fails silently on internal error.
+The guardrail system runs every user message, and the stream `processRequest()` returns, through a two-phase dispatcher. Input guardrails run before the orchestrator sees the message. Output guardrails run on the chunks of that stream before they reach the client: every guardrail evaluates the chunks that carry `isFinal: true` (the `FINAL_RESPONSE`, an `ERROR`), a guardrail with `evaluateStreamingChunks: true` also evaluates each `TEXT_DELTA`, and every other chunk passes through unevaluated. Each guardrail returns one of four verdicts (`ALLOW`, `SANITIZE`, `BLOCK`, `FLAG`), and the dispatcher composes them in a fixed order. A guardrail that throws, or runs past its `timeoutMs`, is skipped with a logged warning; with `failClosed: true` in its config, it blocks instead.
 
 This page documents the internals. For recipe-style usage of the shipped guardrail packs (PII, ML classifiers, topicality, code safety, grounding), see [Guardrails System](/features/guardrails).
 
@@ -25,7 +25,7 @@ This page documents the internals. For recipe-style usage of the shipped guardra
 
 ## Request Lifecycle
 
-Every user message and LLM response passes through the guardrail dispatcher. Input guardrails run before the orchestrator sees the message; output guardrails run on each streaming chunk as it leaves the LLM.
+Every user message passes through the input guardrails before the orchestrator sees it. The chunks of the `processRequest()` stream pass through the output guardrails before they reach the client. The streams that `handleToolResult()`, `handleToolResults()` and `resumeExternalToolRequest()` return, which continue a turn after an external tool call, do not pass through output guardrails.
 
 ```mermaid
 flowchart LR
@@ -42,11 +42,11 @@ flowchart LR
     I --> J[Client]
 ```
 
-The three possible verdicts are:
+The four possible verdicts are:
 
 - **ALLOW** — content passes through unchanged.
 - **SANITIZE** — content is modified in-place (e.g., PII replaced with `[PERSON]`) and the modified version continues downstream.
-- **BLOCK** — content is rejected. For input, an error response is returned immediately. For output, the stream is terminated with an `ERROR` chunk.
+- **BLOCK** — content is rejected. For input, an error response is returned immediately. For output, the dispatcher yields one `ERROR` chunk, whose code is the guardrail's `reasonCode` or `GUARDRAIL_BLOCKED`, and the stream ends.
 - **FLAG** — content passes through unchanged, but metadata is attached for downstream logging and auditing.
 
 ---
@@ -87,49 +87,43 @@ flowchart TD
 
 ## Streaming Chunk Lifecycle
 
-Output guardrails evaluate each chunk as it arrives from the LLM. A `BLOCK` verdict on any chunk terminates the entire stream. `SYSTEM_PROGRESS` chunks are passed through without evaluation.
+A guardrail with `evaluateStreamingChunks: true` evaluates each `TEXT_DELTA` as it arrives, up to its `maxStreamingEvaluations`; every guardrail evaluates each chunk that carries `isFinal: true`. A `BLOCK` verdict on an evaluated chunk ends the stream with an `ERROR` chunk. `TOOL_CALL_REQUEST`, `SYSTEM_PROGRESS`, `METADATA_UPDATE` and every other chunk with `isFinal: false` pass through without evaluation.
 
 ```mermaid
 sequenceDiagram
-    participant LLM
+    participant Stream as processRequest() stream
     participant Dispatcher
-    participant Guardrail
+    participant Guardrail as Guardrail with streaming evaluation
     participant Client
 
-    LLM->>Dispatcher: TEXT_DELTA (chunk 1)
+    Stream->>Dispatcher: TEXT_DELTA (chunk 1)
     Dispatcher->>Guardrail: evaluateOutput({chunk, ragSources})
     Guardrail-->>Dispatcher: null (allow)
     Dispatcher->>Client: TEXT_DELTA (chunk 1)
 
-    LLM->>Dispatcher: TEXT_DELTA (chunk 2)
-    Dispatcher->>Guardrail: evaluateOutput({chunk, ragSources})
-    Guardrail-->>Dispatcher: BLOCK (violation!)
-    Dispatcher->>Client: ERROR chunk
-    Note over Client: Stream terminated
+    Stream->>Dispatcher: TOOL_CALL_REQUEST, isFinal false
+    Dispatcher->>Client: TOOL_CALL_REQUEST, not evaluated
 
-    LLM->>Dispatcher: TOOL_CALL_REQUEST
-    Dispatcher->>Guardrail: evaluateOutput({chunk})
-    Guardrail-->>Dispatcher: null (allow)
-    Dispatcher->>Client: TOOL_CALL_REQUEST
-
-    LLM->>Dispatcher: FINAL_RESPONSE
+    Stream->>Dispatcher: FINAL_RESPONSE, isFinal true
     Dispatcher->>Guardrail: evaluateOutput({chunk, ragSources})
-    Guardrail-->>Dispatcher: FLAG (warning)
-    Dispatcher->>Client: FINAL_RESPONSE + metadata
+    Guardrail-->>Dispatcher: FLAG
+    Dispatcher->>Client: FINAL_RESPONSE + metadata.guardrail.output
+
+    Note over Dispatcher,Client: A BLOCK on any evaluated chunk yields one ERROR chunk, and the stream ends
 ```
 
 ---
 
 ## Chunk Types
 
-| Type                   | Key Fields                                         | When It Appears                        |
-| ---------------------- | -------------------------------------------------- | -------------------------------------- |
-| `TEXT_DELTA`           | `textDelta`, `isFinal: false`                      | Each token/word as LLM generates       |
-| `FINAL_RESPONSE`       | `finalResponseText`, `ragSources`, `isFinal: true` | Complete response at end of stream     |
-| `TOOL_CALL_REQUEST`    | `toolCalls: [{id, name, arguments}]`               | LLM wants to call a tool               |
-| `TOOL_RESULT_EMISSION` | `toolCallId`, `toolName`, `toolResult`, `isSuccess` | The result of an external tool call, when the host returns it; results of tools the runtime runs itself are not on this stream |
-| `SYSTEM_PROGRESS`      | `message`, `progressPercentage`                    | Status updates (ignored by guardrails) |
-| `ERROR`                | `code`, `message`                                  | Error (including guardrail blocks)     |
+| Type                   | Key Fields                                                                    | When It Appears                                                                                                                  | Output guardrails                                                       |
+| ---------------------- | ----------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| `TEXT_DELTA`           | `textDelta`, `isFinal: false`                                                 | Each text delta the model streams                                                                                                | Evaluated by guardrails with `evaluateStreamingChunks: true`            |
+| `FINAL_RESPONSE`       | `finalResponseText`, `ragSources`, `usage`, `error`, `isFinal: true`          | The turn's response, at the end of the stream                                                                                    | Evaluated by every guardrail                                            |
+| `TOOL_CALL_REQUEST`    | `toolCalls: [{id, name, arguments}]`, `executionMode`, `requiresExternalToolResult` | The model asks for tools; `processRequest()` returns after a request the host must execute (`executionMode: 'external'`) | Not evaluated                                                           |
+| `TOOL_RESULT_EMISSION` | `toolCallId`, `toolName`, `toolResult`, `isSuccess`, `errorMessage`           | The result of an external tool call, when the host returns it; results of tools the runtime runs itself are not on this stream  | Not evaluated: it arrives on the streams that continue the turn, which skip output guardrails |
+| `SYSTEM_PROGRESS`      | `message`, `progressPercentage`                                               | Status updates                                                                                                                   | Not evaluated                                                           |
+| `ERROR`                | `code`, `message`, `isFinal: true`                                            | An error, a guardrail block included                                                                                             | Evaluated by every guardrail, except the `ERROR` a block produces       |
 
 ---
 
