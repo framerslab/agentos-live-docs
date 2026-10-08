@@ -17,7 +17,7 @@ sidebar_position: 7
 
 # Guardrails Architecture
 
-The guardrail system runs every user message, and the stream `processRequest()` returns, through a two-phase dispatcher. Input guardrails run before the orchestrator sees the message. Output guardrails run on the chunks of that stream before they reach the client: every guardrail evaluates the chunks that carry `isFinal: true` (the `FINAL_RESPONSE`, an `ERROR`), a guardrail with `evaluateStreamingChunks: true` also evaluates each `TEXT_DELTA`, and every other chunk passes through unevaluated. Each guardrail returns one of four verdicts (`ALLOW`, `SANITIZE`, `BLOCK`, `FLAG`), and the dispatcher composes them in a fixed order. A guardrail that throws, or runs past its `timeoutMs`, is skipped with a logged warning; with `failClosed: true` in its config, it blocks instead.
+The guardrail system runs every user message, and the turn's output stream that `processRequest()` returns, through a two-phase dispatcher. Input guardrails run before the orchestrator sees the message. Output guardrails run on the chunks of the turn's stream before they reach the client: every guardrail evaluates the chunks that carry `isFinal: true` (the `FINAL_RESPONSE`, an `ERROR` the turn yields), a guardrail with `evaluateStreamingChunks: true` also evaluates each `TEXT_DELTA`, and every other chunk passes through unevaluated. The `ERROR` that `processRequest()` yields when an exception reaches its own `catch` is not on the turn's stream and is not evaluated. Each guardrail returns one of four verdicts (`ALLOW`, `SANITIZE`, `BLOCK`, `FLAG`), and the dispatcher composes them in a fixed order. A guardrail that throws, or runs past its `timeoutMs`, is skipped with a logged warning; with `failClosed: true` in its config, it blocks instead.
 
 This page documents the internals. For recipe-style usage of the shipped guardrail packs (PII, ML classifiers, topicality, code safety, grounding), see [Guardrails System](/features/guardrails).
 
@@ -25,7 +25,7 @@ This page documents the internals. For recipe-style usage of the shipped guardra
 
 ## Request Lifecycle
 
-Every user message passes through the input guardrails before the orchestrator sees it. The chunks of the `processRequest()` stream pass through the output guardrails before they reach the client. The streams that `handleToolResult()`, `handleToolResults()` and `resumeExternalToolRequest()` return, which continue a turn after an external tool call, do not pass through output guardrails.
+Every user message passes through the input guardrails before the orchestrator sees it. The chunks of the turn's stream pass through the output guardrails before `processRequest()` yields them to the client. The streams that `handleToolResult()`, `handleToolResults()` and `resumeExternalToolRequest()` return, which continue a turn after an external tool call, do not pass through output guardrails.
 
 ```mermaid
 flowchart LR
@@ -87,7 +87,7 @@ flowchart TD
 
 ## Streaming Chunk Lifecycle
 
-A guardrail with `evaluateStreamingChunks: true` evaluates each `TEXT_DELTA` as it arrives, up to its `maxStreamingEvaluations`; every guardrail evaluates each chunk that carries `isFinal: true`. A `BLOCK` verdict on an evaluated chunk ends the stream with an `ERROR` chunk. `TOOL_CALL_REQUEST`, `SYSTEM_PROGRESS`, `METADATA_UPDATE` and every other chunk with `isFinal: false` pass through without evaluation.
+A guardrail with `evaluateStreamingChunks: true` evaluates each `TEXT_DELTA` as it arrives, up to its `maxStreamingEvaluations` for the stream; every guardrail evaluates each chunk that carries `isFinal: true`. The dispatcher counts streaming evaluations by the guardrail object's `id` property: sanitizers (`canSanitize: true`) without an `id` share one count, so one can use up the limit of another. Give each streaming sanitizer an `id`. A `BLOCK` verdict on an evaluated chunk ends the stream with an `ERROR` chunk. `TOOL_CALL_REQUEST`, `SYSTEM_PROGRESS`, `METADATA_UPDATE` and every other chunk with `isFinal: false` pass through without evaluation.
 
 ```mermaid
 sequenceDiagram
@@ -123,7 +123,7 @@ sequenceDiagram
 | `TOOL_CALL_REQUEST`    | `toolCalls: [{id, name, arguments}]`, `executionMode`, `requiresExternalToolResult` | The model asks for tools; `processRequest()` returns after a request the host must execute (`executionMode: 'external'`) | Not evaluated                                                           |
 | `TOOL_RESULT_EMISSION` | `toolCallId`, `toolName`, `toolResult`, `isSuccess`, `errorMessage`           | The result of an external tool call, when the host returns it; results of tools the runtime runs itself are not on this stream  | Not evaluated: it arrives on the streams that continue the turn, which skip output guardrails |
 | `SYSTEM_PROGRESS`      | `message`, `progressPercentage`                                               | Status updates                                                                                                                   | Not evaluated                                                           |
-| `ERROR`                | `code`, `message`, `isFinal: true`                                            | An error, a guardrail block included                                                                                             | Evaluated by every guardrail, except the `ERROR` a block produces       |
+| `ERROR`                | `code`, `message`, `isFinal: true`                                            | An error, a guardrail block included                                                                                             | Evaluated by every guardrail when the turn yields it; not the `ERROR` a block produces, nor the one `processRequest()` yields from its own `catch` |
 
 ---
 
