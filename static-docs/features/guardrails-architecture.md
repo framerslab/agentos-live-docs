@@ -127,8 +127,8 @@ sequenceDiagram
 | `TEXT_DELTA`           | `textDelta`, `isFinal: false`                      | Each token/word as LLM generates       |
 | `FINAL_RESPONSE`       | `finalResponseText`, `ragSources`, `isFinal: true` | Complete response at end of stream     |
 | `TOOL_CALL_REQUEST`    | `toolCalls: [{id, name, arguments}]`               | LLM wants to call a tool               |
-| `TOOL_RESULT_EMISSION` | `toolCallId`, `result`                             | Tool execution result                  |
-| `SYSTEM_PROGRESS`      | `progressMessage`                                  | Status updates (ignored by guardrails) |
+| `TOOL_RESULT_EMISSION` | `toolCallId`, `toolName`, `toolResult`, `isSuccess` | The result of an external tool call, when the host returns it; results of tools the runtime runs itself are not on this stream |
+| `SYSTEM_PROGRESS`      | `message`, `progressPercentage`                    | Status updates (ignored by guardrails) |
 | `ERROR`                | `code`, `message`                                  | Error (including guardrail blocks)     |
 
 ---
