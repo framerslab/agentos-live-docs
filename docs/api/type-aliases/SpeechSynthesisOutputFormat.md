@@ -1,5 +1,0 @@
-# Type Alias: SpeechSynthesisOutputFormat
-
-> **SpeechSynthesisOutputFormat** = `"mp3"` \| `"opus"` \| `"aac"` \| `"flac"` \| `"wav"` \| `"pcm"` \| `string` & `object`
-
-Defined in: [packages/agentos/src/io/speech/types.ts:8](https://github.com/framersai/agentos/blob/63ed327fe991cbf5fe1e01bca76416a3aaa76167/src/io/speech/types.ts#L8)

@@ -1,5 +1,0 @@
-# Type Alias: AgentOSResponse
-
-> **AgentOSResponse** = [`AgentOSTextDeltaChunk`](../interfaces/AgentOSTextDeltaChunk.md) \| [`AgentOSSystemProgressChunk`](../interfaces/AgentOSSystemProgressChunk.md) \| [`AgentOSToolCallRequestChunk`](../interfaces/AgentOSToolCallRequestChunk.md) \| [`AgentOSToolResultEmissionChunk`](../interfaces/AgentOSToolResultEmissionChunk.md) \| [`AgentOSUICommandChunk`](../interfaces/AgentOSUICommandChunk.md) \| [`AgentOSFinalResponseChunk`](../interfaces/AgentOSFinalResponseChunk.md) \| [`AgentOSErrorChunk`](../interfaces/AgentOSErrorChunk.md) \| [`AgentOSMetadataUpdateChunk`](../interfaces/AgentOSMetadataUpdateChunk.md) \| [`AgentOSWorkflowUpdateChunk`](../interfaces/AgentOSWorkflowUpdateChunk.md) \| [`AgentOSAgencyUpdateChunk`](../interfaces/AgentOSAgencyUpdateChunk.md) \| [`AgentOSProvenanceEventChunk`](../interfaces/AgentOSProvenanceEventChunk.md)
-
-Defined in: [packages/agentos/src/api/types/AgentOSResponse.ts:224](https://github.com/framersai/agentos/blob/63ed327fe991cbf5fe1e01bca76416a3aaa76167/src/api/types/AgentOSResponse.ts#L224)

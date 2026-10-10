@@ -1,5 +1,0 @@
-# Type Alias: MimeTypes
-
-> **MimeTypes** = `"application/json"` \| `"application/xml"` \| `"application/x-www-form-urlencoded"` \| `"application/javascript"` \| `"application/pdf"` \| `"application/zip"` \| `"application/vnd.ms-excel"` \| `"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"` \| `"application/msword"` \| `"application/vnd.openxmlformats-officedocument.wordprocessingml.document"` \| `"application/vnd.ms-powerpoint"` \| `"application/vnd.openxmlformats-officedocument.presentationml.presentation"` \| `"application/octet-stream"` \| `"application/graphql"` \| `"text/html"` \| `"text/plain"` \| `"text/css"` \| `"text/javascript"` \| `"text/csv"` \| `"image/png"` \| `"image/jpeg"` \| `"image/gif"` \| `"image/svg+xml"` \| `"image/webp"` \| `"audio/mpeg"` \| `"audio/ogg"` \| `"audio/wav"` \| `"audio/webm"` \| `"video/mp4"` \| `"video/webm"` \| `"video/ogg"` \| `"font/woff"` \| `"font/woff2"` \| `"font/ttf"` \| `"font/otf"` \| `"multipart/form-data"` \| `string` & `object`
-
-Defined in: node\_modules/.pnpm/zod@4.3.6/node\_modules/zod/v4/core/util.d.cts:13

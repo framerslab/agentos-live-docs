@@ -33,6 +33,18 @@ jobs:
         with:
           path: apps/agentos-live-docs
 
+      # .gitignore lists the folders the build fills. A file tracked there goes stale: every build
+      # rewrites it and nobody commits the result.
+      - name: No tracked file is under an ignored path
+        working-directory: apps/agentos-live-docs
+        run: |
+          tracked=$(git ls-files -ci --exclude-standard)
+          if [ -n "$tracked" ]; then
+            echo "::error::Tracked files under paths .gitignore excludes. Untrack them (git rm --cached) or add an exception to .gitignore."
+            echo "$tracked"
+            exit 1
+          fi
+
       - name: Checkout agentos (source for docs + TypeDoc)
         uses: actions/checkout@v5
         with:
@@ -80,14 +92,6 @@ jobs:
         working-directory: apps/agentos-live-docs
         run: npm run test:publication
 
-      # PROBE (this pull request only): which tracked files under ignored paths does a clean build reproduce?
-      - name: Remove the tracked files that .gitignore excludes
-        working-directory: apps/agentos-live-docs
-        run: |
-          git ls-files -ci --exclude-standard > "$RUNNER_TEMP/tracked-ignored.txt"
-          echo "tracked files under ignored paths: $(wc -l < "$RUNNER_TEMP/tracked-ignored.txt")"
-          while IFS= read -r f; do rm -f -- "$f"; done < "$RUNNER_TEMP/tracked-ignored.txt"
-
       - name: Build site
         working-directory: apps/agentos-live-docs
         run: npm run build
@@ -98,17 +102,6 @@ jobs:
           # a hardcoded count if missing or if the call fails. Pull request
           # builds do not receive it: they run code the pull request changed.
           GH_PAT: ${{ github.event_name != 'pull_request' && secrets.GH_PAT || '' }}
-
-      - name: Report the files the build did not reproduce
-        if: always()
-        working-directory: apps/agentos-live-docs
-        run: |
-          missing=0
-          while IFS= read -r f; do
-            if [ ! -e "$f" ]; then echo "NOT REPRODUCED: $f"; missing=$((missing+1)); fi
-          done < "$RUNNER_TEMP/tracked-ignored.txt"
-          echo "not reproduced: $missing of $(wc -l < "$RUNNER_TEMP/tracked-ignored.txt")"
-          echo "changed by the build (reproduced with different content): $(git status --porcelain -- $(cut -d/ -f1-2 "$RUNNER_TEMP/tracked-ignored.txt" | sort -u) | grep -c '^ M' || true)"
 
       - name: Upload artifact
         if: github.event_name != 'pull_request'
