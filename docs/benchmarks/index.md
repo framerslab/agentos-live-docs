@@ -79,7 +79,7 @@ The harder variant. An M haystack runs to about 1.5M tokens, far past GPT-4o's 1
 | Supermemory | not published | open | reports S only |
 | MemMachine, Memoria, agentmemory, Backboard, ByteRover, Letta, Cognee | not published | various | reports S only or no LongMemEval |
 
-**Competitive with the strongest published M results in the LongMemEval paper.** At reader-Top-5 retrieval, AgentOS is +4.5 above the round-level configuration (65.7%) and 1.2 below the session-level configuration (71.4%); the paper's strongest GPT-4o result overall is 72.0% at round-level Top-10. AgentOS is the first open-source library above 65% on M with publicly reproducible methodology (per-case run JSONs at fixed seed, single-CLI reproduction). The closest published external number is AgentBrain's 71.7% from their closed-source SaaS.
+**Competitive with the strongest published M results in the LongMemEval paper.** At reader-Top-5 retrieval, AgentOS is +4.5 above the round-level configuration (65.7%) and 1.2 below the session-level configuration (71.4%); the paper's strongest GPT-4o result overall is 72.0% at round-level Top-10. AgentOS is the first open-source library above 65% on M with publicly reproducible methodology (the open-source runner reproduces the run with one CLI command; see [Reproducing](#reproducing)). The closest published external number is AgentBrain's 71.7% from their closed-source SaaS.
 
 ## LOCOMO (out-of-distribution transfer)
 
@@ -114,11 +114,11 @@ The 62.81% FPR ceiling on LOCOMO's default `gpt-4o-mini` judge means any LOCOMO 
 | Latency avg / p50 / p95 | yes | no | no | no | partial | median only | no | no |
 | Per-category breakdown | yes | no | yes | yes | yes | yes | partial | no |
 | Open-source benchmark runner | yes | yes | partial | yes | partial | yes | no | partial |
-| Per-case run JSONs at fixed seed | yes | no | no | no | no | no | no | no |
+| Per-case run JSONs at fixed seed | no | no | no | no | no | no | no | no |
 | Judge-adversarial FPR probe | yes | no | no | no | no | no | no | no |
 | Cross-vendor cross-vendor table | yes | no | no | partial | partial | yes | no | no |
 
-The full audit framework is at [Memory Benchmark Transparency Audit](https://agentos.sh/en/blog/memory-benchmark-transparency-audit). Per-case run JSONs at `seed=42` are committed under [`results/runs/`](https://github.com/framerslab/agentos-bench/tree/master/results/runs) in agentos-bench for every published number.
+The full audit framework is at [Memory Benchmark Transparency Audit](https://agentos.sh/en/blog/memory-benchmark-transparency-audit). [`results/runs/`](https://github.com/framerslab/agentos-bench/tree/master/results/runs) in agentos-bench holds a Git LFS pointer file for the run JSON behind each published number, and GitHub's LFS store holds none of those objects, so the per-case JSONs cannot be downloaded from the repository. The footnotes of [`results/LEADERBOARD.md`](https://github.com/framerslab/agentos-bench/blob/master/results/LEADERBOARD.md) give each run's file name, cost and per-category results.
 
 ## Reproducing
 
@@ -140,7 +140,8 @@ NODE_OPTIONS="--max-old-space-size=8192" node dist/cli.js run longmemeval-s \
   --embedder-model text-embedding-3-small \
   --reader-router min-cost-best-cat-2026-04-28 \
   --concurrency 5 \
-  --bootstrap-resamples 10000
+  --bootstrap-resamples 10000 \
+  --seed 42
 ```
 
 The 70.2% LongMemEval-M headline adds `--rerank-candidate-multiplier 5`, `--reader-top-k 5` and `--hyde` to the S command:
@@ -157,10 +158,11 @@ NODE_OPTIONS="--max-old-space-size=8192" node dist/cli.js run longmemeval-m \
   --embedder-model text-embedding-3-small \
   --reader-router min-cost-best-cat-2026-04-28 \
   --concurrency 5 \
-  --bootstrap-resamples 10000
+  --bootstrap-resamples 10000 \
+  --seed 42
 ```
 
-Both runs write per-case run JSONs; the bootstrap seed defaults to 42. The full bench leaderboard is at [`results/LEADERBOARD.md`](https://github.com/framerslab/agentos-bench/blob/master/results/LEADERBOARD.md) in agentos-bench.
+Both runs write a per-case run JSON under `results/runs/`. `--seed 42` fixes the bootstrap resampling behind the confidence intervals; without `--seed` the resampling draws from `Math.random`, so the intervals differ from run to run. The full bench leaderboard is at [`results/LEADERBOARD.md`](https://github.com/framerslab/agentos-bench/blob/master/results/LEADERBOARD.md) in agentos-bench.
 
 ## Related blog posts
 
