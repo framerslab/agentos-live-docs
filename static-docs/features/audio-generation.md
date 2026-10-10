@@ -74,7 +74,7 @@ const result = await generateMusic({
 |---|---|---|
 | `prompt` | `string` | Text prompt describing the desired composition (required) |
 | `provider` | `string` | Provider ID (`"suno"`, `"udio"`, `"stable-audio"`, etc.) |
-| `model` | `string` | Model id. Suno, Udio, Stable Audio and Fal use it when they are the named or first provider, Replicate only when it is the one provider in the chain; ElevenLabs ignores it, and `musicgen-local` and `audiogen-local` run their configured model whatever it says (the result's `modelId` still reports it) |
+| `model` | `string` | Model id. Suno, Udio, Stable Audio and Fal use it when they are the named or first provider, Replicate only when it is the one provider in the chain. `musicgen-local` loads `Xenova/musicgen-small` whatever it says; when `musicgen-local` is the only provider in the chain, `result.model` still names the `model` given, and in a longer chain it names `Xenova/musicgen-small` |
 | `durationSec` | `number` | Desired output duration in seconds |
 | `negativePrompt` | `string` | Musical elements to avoid; passed to the provider, which ignores it |
 | `outputFormat` | [`AudioOutputFormat`](https://github.com/framerslab/agentos/blob/master/src/io/media/audio/types.ts) | `"mp3"` / `"wav"` / `"flac"` / `"ogg"` / `"aac"`; passed to the provider, which ignores it, so the clip comes in the provider's own format |
@@ -108,7 +108,7 @@ console.log(result.audio[0].url);
 |---|---|---|
 | `prompt` | `string` | Text prompt describing the desired sound effect (required) |
 | `provider` | `string` | Provider ID (`"elevenlabs-sfx"`, `"stable-audio"`, etc.) |
-| `model` | `string` | Model id. Suno, Udio, Stable Audio and Fal use it when they are the named or first provider, Replicate only when it is the one provider in the chain; ElevenLabs ignores it, and `musicgen-local` and `audiogen-local` run their configured model whatever it says (the result's `modelId` still reports it) |
+| `model` | `string` | Model id. Stable Audio and Fal use it when they are the named or first provider, Replicate only when it is the one provider in the chain; ElevenLabs ignores it, and `audiogen-local` loads `Xenova/audiogen-medium` whatever it says (see [Local generation](#local-generation)) |
 | `durationSec` | `number` | Desired output duration (SFX: typically 1-15s) |
 | `outputFormat` | [`AudioOutputFormat`](https://github.com/framerslab/agentos/blob/master/src/io/media/audio/types.ts) | `"mp3"` / `"wav"` / `"flac"` / `"ogg"` / `"aac"`; passed to the provider, which ignores it, so the clip comes in the provider's own format |
 | `seed` | `number` | Seed for reproducible generation; passed to the provider, which ignores it |
@@ -160,7 +160,7 @@ interface AudioProgressEvent {
 
 ## Local generation
 
-Both `musicgen-local` and `audiogen-local` run on the local machine through `@huggingface/transformers`, which must be installed, and download their model on first use. No API key is required. They come last in the auto-detected chain, and with no cloud key set they are the whole chain. `musicgen-local` loads `Xenova/musicgen-small`. `audiogen-local` defaults to `Xenova/audiogen-medium`, a repository Hugging Face does not serve (Xenova publishes no AudioGen export), so every call that reaches `audiogen-local` fails, and the `model` option does not change the model it loads. A provider with a key earlier in the chain keeps a call from reaching it when that provider succeeds; when that provider fails, the chain falls through to `audiogen-local`, which fails too, and the call rejects with an `AggregateError` holding every provider's error.
+Both `musicgen-local` and `audiogen-local` run on the local machine through `@huggingface/transformers`, which must be installed, and download their model on first use. No API key is required. Without `providerPreferences` they come last in the chain, and with no cloud key set they are the whole chain. A `preferred` list keeps only the available providers it names, in its order, so it can put a local provider first or leave it out, `weights` can pick it as the first provider, and `blocked` removes it. `musicgen-local` loads `Xenova/musicgen-small`. `audiogen-local` defaults to `Xenova/audiogen-medium`, a repository Hugging Face does not serve (Xenova publishes no AudioGen export), so every call that reaches `audiogen-local` fails, and the `model` option does not change the model it loads. A provider with a key earlier in the chain keeps a call from reaching it when that provider succeeds; when that provider fails, the chain falls through to `audiogen-local`, which fails too, and the call rejects with an `AggregateError` holding every provider's error.
 
 ## Observability
 
