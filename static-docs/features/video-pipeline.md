@@ -78,7 +78,7 @@ const i2v = await generateVideo({
 interface GenerateVideoResult {
   model: string;     // e.g. "gen3a_turbo"
   provider: string;  // e.g. "runway"
-  created: number;   // Unix time in seconds, as the providers set it
+  created: number;   // Unix seconds from the built-in providers (the type's JSDoc says ms)
   videos: GeneratedVideo[];
   usage?: VideoProviderUsage;
 }
@@ -105,7 +105,7 @@ for (const scene of analysis.scenes ?? []) {
 }
 ```
 
-The analysis needs `ffmpeg` and `ffprobe` on the `PATH`. It downloads `videoUrl` (or takes `videoBuffer`), extracts frames at one frame per second, detects scene boundaries over them, and asks the vision pipeline to describe the frame nearest each scene's midpoint. With an STT provider it transcribes the audio track and attaches the transcript segments that overlap each scene. A final `generateText()` call on the default provider (temperature 0.3, 500 tokens) writes `description`: the answer to `prompt`, or a two-to-four-sentence summary without one. If that call fails, `description` joins the scene descriptions.
+The analysis needs `ffmpeg` and `ffprobe` on the `PATH`. It downloads `videoUrl` (or takes `videoBuffer`), extracts frames at one frame per second, detects scene boundaries over them, and asks the vision pipeline to describe the frame nearest each scene's midpoint. With an STT provider it transcribes the audio track, asking for `verbose_json`, and returns the text as `fullTranscript`. A scene gets a `transcript` only when the provider returns timestamped segments, and it joins the segments that overlap the scene. The OpenAI provider (picked first when `OPENAI_API_KEY` is set) answers the `verbose_json` request on `whisper-1`, which returns segments; Deepgram and AssemblyAI build them from word timings when the response carries words; Azure returns none, so with Azure only `fullTranscript` is set. A final `generateText()` call on the default provider (temperature 0.3, 500 tokens) writes `description`: the answer to `prompt`, or a two-to-four-sentence summary without one. If that call fails, `description` joins the scene descriptions.
 
 ### [`AnalyzeVideoOptions`](https://github.com/framerslab/agentos/blob/master/src/api/analyzeVideo.ts)
 
