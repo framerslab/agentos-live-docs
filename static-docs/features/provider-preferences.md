@@ -5,7 +5,7 @@ sidebar_position: 30
 
 # Provider Preferences
 
-The [`ProviderPreferences`](https://github.com/framerslab/agentos/blob/master/src/io/media/ProviderPreferences.ts) system gives callers fine-grained control over which media providers are used and in what order. It applies to image generation, video generation, and audio generation (music and SFX separately).
+The [`ProviderPreferences`](https://github.com/framerslab/agentos/blob/master/src/io/media/ProviderPreferences.ts) helpers let a caller choose which media providers a call may use and in what order. `generateImage()`, `generateVideo()`, `generateMusic()` and `generateSFX()` take one `MediaProviderPreference` per call as `providerPreferences`.
 
 ## Core types
 
@@ -39,7 +39,7 @@ interface ProviderPreferences {
 }
 ```
 
-Audio is split into `music` and `sfx` sub-modalities since music generation and sound-effect generation often use different provider backends.
+Audio is split into `music` and `sfx` because the two use different provider lists. No AgentOS function reads the grouped type: a host keeps one and passes `preferences.image`, `preferences.video`, `preferences.audio?.music` or `preferences.audio?.sfx` to the matching call.
 
 ## Resolution functions
 
@@ -63,7 +63,7 @@ resolveProviderOrder(['a', 'b', 'c'], { blocked: ['b'] });
 
 ### `selectWeightedProvider(providers, weights)`
 
-Pick a single provider from a list using optional per-provider weights. Providers not listed in the `weights` map default to weight `1`.
+Pick a single provider from a list using optional per-provider weights. Providers not listed in the `weights` map default to weight `1`, and a weight of `0` excludes a provider. Without weights, or with one provider, it returns the first. It throws on an empty list, on a negative or non-finite weight, and when every weight is `0`.
 
 ```typescript
 import { selectWeightedProvider } from '@framers/agentos';
@@ -91,7 +91,11 @@ const chain = resolveProviderChain(available, {
 
 ## Per-call overrides
 
-Every media generation function accepts a `providerPreferences` option for per-call overrides:
+`generateImage()`, `generateVideo()`, `generateMusic()` and `generateSFX()` accept a `providerPreferences` option. How far it reaches depends on what else the call names:
+
+- **No provider named** (for `generateImage()`, no `provider` and no `model`; for the others, no `provider` and no `apiKey`): the detected providers go through `resolveProviderChain()`, so `preferred`, `blocked` and `weights` all apply. When nothing is left, the call throws its "No ... provider configured" error.
+- **A provider named** (or, for video, music and SFX, an `apiKey` without a provider, which picks the first detected provider): that provider runs first whatever the preferences say, `preferred` and `blocked` filter and order only its fallbacks, and `weights` are not read.
+- **Images on the `mature` or `private-adult` policy tier** with no `provider` or `model`: the policy router's pick replaces the first provider; the preferences still shape the fallbacks.
 
 ### Image generation
 
@@ -191,10 +195,12 @@ const prefs: MediaProviderPreference = {
 
 ## How the fallback chain works
 
-1. The available providers are detected from environment variables.
-2. `resolveProviderOrder()` filters and reorders based on `preferred` and `blocked`.
-3. If `weights` are present, `selectWeightedProvider()` picks the primary.
-4. The primary provider is initialised; remaining providers become fallbacks.
-5. If the primary fails, [`FallbackVideoProxy`](https://github.com/framerslab/agentos/blob/master/src/io/media/video/FallbackVideoProxy.ts) / [`FallbackAudioProxy`](https://github.com/framerslab/agentos/blob/master/src/io/media/audio/FallbackAudioProxy.ts) transparently retries on the next provider in the chain.
+For a call that names no provider:
 
-This design is stateless and side-effect-free, so it integrates cleanly with any subsystem.
+1. The available providers are those whose environment variable is set and whose factory is registered, in a fixed order per modality. Music and SFX also list their local providers (`musicgen-local`, `audiogen-local`), which need no key. For images, a default set with `setDefaultProvider()` leads the list.
+2. `resolveProviderOrder()` filters and reorders the list with `preferred` and `blocked`.
+3. If `weights` are present, `selectWeightedProvider()` picks the primary and moves it to the front.
+4. The primary provider is initialised, then each fallback; a fallback that fails to initialise (missing credentials, for example) is left out.
+5. When a provider call throws, [`FallbackImageProxy`](https://github.com/framerslab/agentos/blob/master/src/io/media/images/FallbackImageProxy.ts), [`FallbackVideoProxy`](https://github.com/framerslab/agentos/blob/master/src/io/media/video/FallbackVideoProxy.ts) or [`FallbackAudioProxy`](https://github.com/framerslab/agentos/blob/master/src/io/media/audio/FallbackAudioProxy.ts) emits a fallback event and tries the next provider; when the last one fails, it throws an `AggregateError` with every error.
+
+The three resolution helpers keep no state; `selectWeightedProvider()` draws from `Math.random()`.
