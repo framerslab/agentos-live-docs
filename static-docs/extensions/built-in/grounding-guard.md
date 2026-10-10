@@ -29,18 +29,20 @@ flowchart TD
     C2 --> D
     C3 --> D
 
-    D -->|entailment > 0.7| E[SUPPORTED]
-    D -->|contradiction > 0.7| F[CONTRADICTED]
-    D -->|neutral| G[LLM Judge Escalation]
+    D -->|entailment ≥ 0.7| E[SUPPORTED]
+    D -->|contradiction ≥ 0.7| F[CONTRADICTED]
+    D -->|neither, with llm| G[LLM Judge Escalation]
+    D -->|neither, no llm| U[UNVERIFIABLE]
     G --> H[SUPPORTED / CONTRADICTED / UNVERIFIABLE]
 
     E --> I[Aggregate Results]
     F --> I
     H --> I
+    U --> I
 
     I -->|any contradicted| J[FLAG/BLOCK]
-    I -->|>50% unverifiable| K[FLAG]
-    I -->|all supported| L[PASS]
+    I -->|>50% unverifiable| K[FLAG/BLOCK]
+    I -->|otherwise| L[PASS]
 ```
 
 The Grounding Guard extension provides two modes of operation:
@@ -56,8 +58,8 @@ It checks each claim in the agent's response against the retrieved source chunks
 
 The verification pipeline uses two tiers:
 
-1. **Tier 1: NLI Cross-Encoder** (`cross-encoder/nli-deberta-v3-small`, ~40MB INT8) -- fast entailment/contradiction detection at ~30ms per claim-source pair
-2. **Tier 2: LLM-as-Judge** -- chain-of-thought verification for ambiguous claims (~150--500ms, only when configured)
+1. **Tier 1: NLI Cross-Encoder** (`Xenova/nli-deberta-v3-small` through transformers.js; the default 8-bit weight file is 172 MB): entailment and contradiction scores for each claim-source pair
+2. **Tier 2: LLM-as-Judge**: chain-of-thought verification for claims the NLI model leaves ambiguous, only when an `llm` function is configured
 
 Only runs when RAG sources are present. No sources means no verification (no-op).
 
@@ -77,7 +79,7 @@ The `ragSources` field contains `RagRetrievedChunk[]` from the [`RetrievalAugmen
 npm install @framers/agentos-ext-grounding-guard
 ```
 
-The NLI model requires `@huggingface/transformers` (already an AgentOS dependency):
+The NLI model requires `@huggingface/transformers` (an optional dependency of AgentOS):
 
 ```bash
 npm install @huggingface/transformers
@@ -90,7 +92,7 @@ npm install @huggingface/transformers
 ### Direct factory usage
 
 ```typescript
-import { AgentOS } from '@framers/agentos';
+import { AgentOS, generateText } from '@framers/agentos';
 import { createGroundingGuardrail } from '@framers/agentos-ext-grounding-guard';
 
 const groundingPack = createGroundingGuardrail({
@@ -98,25 +100,21 @@ const groundingPack = createGroundingGuardrail({
   contradictionThreshold: 0.7,
   maxUnverifiableRatio: 0.5,
   contradictionAction: 'flag',
-  llm: {
-    provider: 'anthropic',
-    model: 'claude-haiku-4-5-20251001',
-    apiKey: process.env.ANTHROPIC_API_KEY,
-  },
+  // Any (prompt) => Promise<string> function; used for claim decomposition and escalation.
+  llm: async (prompt) =>
+    (await generateText({ provider: 'anthropic', model: 'claude-haiku-4-5-20251001', prompt })).text,
 });
 
-const agent = new AgentOS();
-await agent.initialize({
-  ...config,
-  manifest: { packs: [{ factory: () => groundingPack }] },
+const agentos = await AgentOS.create({
+  extensionManifest: { packs: [{ factory: () => groundingPack }] },
 });
 ```
 
 ### Manifest-based loading
 
 ```typescript
-await agent.initialize({
-  manifest: {
+const agentos = await AgentOS.create({
+  extensionManifest: {
     packs: [
       {
         package: '@framers/agentos-ext-grounding-guard',
@@ -138,7 +136,7 @@ Decomposes response text into atomic factual claims for grounding verification u
 
 ### Tier 1: Heuristic Sentence Splitting
 
-For simple sentences (20 words or fewer, single clause):
+For simple sentences (20 words or fewer, with none of the conjunction signals below):
 
 1. Split on sentence boundaries (`. `, `? `, `! `, `\n`)
 2. Filter non-factual content (questions, hedges, meta-commentary, greetings, code blocks)
@@ -156,7 +154,7 @@ For simple sentences (20 words or fewer, single clause):
 
 For complex sentences (>20 words or multiple clauses):
 
-Detected by: word count > 20, independent-clause conjunctions (", and ", "; ", " while ", " however "), or 3+ numbers/proper nouns.
+Detected by: word count > 20, or one of the conjunction signals `, and `, `; `, ` while `, ` however `, ` additionally `.
 
 Sent to a lightweight LLM with a structured decomposition prompt that returns an array of atomic factual claims.
 
@@ -170,11 +168,11 @@ Verifies claims against source documents using the two-tier pipeline.
 
 ### Tier 1: NLI Cross-Encoder
 
-- **Model:** `cross-encoder/nli-deberta-v3-small` (~40MB, INT8 quantized)
-- **Input:** `pipeline({ text: claim, text_pair: source_text })`
+- **Model:** `Xenova/nli-deberta-v3-small` (`nliModelId`), loaded through transformers.js with the `dtype` weight file (`'q8'` by default)
+- **Input:** the source chunk as the premise and the claim as the hypothesis
 - **Output:** entailment / contradiction / neutral scores
 
-For each claim, all top N source chunks (default 5, sorted by relevance score) are compared in parallel. The best-matching source is returned as the attribution:
+For each claim, the top N source chunks (default 5, sorted by relevance score) are scored one after another. A best entailment at or above `entailmentThreshold` makes the claim supported, checked first; otherwise a best contradiction at or above `contradictionThreshold` makes it contradicted. The chunk behind the deciding score is returned as the attribution:
 
 ```
 Claim: "The API rate limit is 1000 req/min"
@@ -190,15 +188,9 @@ Best match: Source 1, verdict: SUPPORTED, confidence: 0.92
 
 ### Tier 2: LLM-as-Judge Escalation
 
-When NLI scores are ambiguous (neither entailment nor contradiction above threshold), the claim is escalated to an LLM with a chain-of-thought verification prompt:
+When the NLI scores are ambiguous (neither reaches its threshold) and an `llm` function is configured, the claim is escalated: the prompt gives the LLM the claim and the top sources, asks it to think step by step, and asks for a JSON object `{ verdict, confidence, reasoning }` with a verdict of supported, contradicted or unverifiable. A failed call or a reply without a valid object leaves the claim `unverifiable`.
 
-1. What does the claim assert?
-2. Does the source explicitly support, contradict, or not address this?
-3. Are there any subtle contradictions or missing context?
-
-Returns: verdict (supported/contradicted/unverifiable), confidence, and reasoning.
-
-If no source produces entailment or contradiction above threshold and no LLM is configured, the verdict is `unverifiable`.
+If no source reaches either threshold and no LLM is configured, the verdict is `unverifiable`.
 
 ---
 
@@ -210,10 +202,9 @@ During streaming, the guardrail buffers text at sentence boundaries:
 
 1. Append TEXT_DELTA to sentence buffer
 2. On sentence boundary: extract sentence, filter non-factual content
-3. For factual claims: run NLI against top-5 `ragSources`
-4. Contradiction > 0.7: FLAG immediately (fast first-pass)
-5. Entailment > 0.7: pass (supported)
-6. Neutral: defer to final phase
+3. For factual claims (when `enableStreamingChecks` is on): check the sentence against the top `maxSourcesPerClaim` `ragSources`, escalating to the LLM when one is configured and the NLI scores are ambiguous
+4. Contradicted: FLAG, or BLOCK with `contradictionAction: 'block'`, at once
+5. Otherwise: pass; the final phase checks every claim again
 
 ### Final Phase (isFinal / FINAL_RESPONSE)
 
@@ -224,7 +215,7 @@ On stream completion, a comprehensive check runs:
 3. Ambiguous claims: escalate to LLM-as-judge
 4. Aggregate results:
    - Any contradicted claim: FLAG or BLOCK (per `contradictionAction`)
-   - Unverifiable ratio > `maxUnverifiableRatio`: FLAG (per `unverifiableAction`)
+   - Unverifiable ratio > `maxUnverifiableRatio`: FLAG, or BLOCK with `unverifiableAction: 'block'`
    - All supported: pass
 
 ---
@@ -233,29 +224,30 @@ On stream completion, a comprehensive check runs:
 
 | Verdict        | Meaning                                  | Trigger                                                                     |
 | -------------- | ---------------------------------------- | --------------------------------------------------------------------------- |
-| `supported`    | Claim is entailed by at least one source | NLI entailment > threshold                                                  |
-| `contradicted` | Claim directly contradicts a source      | NLI contradiction > threshold, or LLM confirms contradiction                |
-| `unverifiable` | Claim not found in any source            | Neither entailment nor contradiction above threshold; LLM says unverifiable |
+| `supported`    | Claim is entailed by at least one source | Best NLI entailment ≥ `entailmentThreshold`, or the LLM judge says supported |
+| `contradicted` | Claim directly contradicts a source      | Best NLI contradiction ≥ `contradictionThreshold` while the best entailment stays below `entailmentThreshold`, or the LLM judge says contradicted |
+| `unverifiable` | Claim not found in any source            | Neither score reaches its threshold and no LLM, the LLM says unverifiable, the LLM call fails or its reply holds no valid object, or the NLI model could not score any pair |
 
 ---
 
 ## Configuration
 
-### [`GroundingGuardOptions`](https://github.com/framerslab/agentos-ext-grounding-guard/blob/master/src/types.ts)
+### `GroundingGuardOptions`
 
 | Option                   | Type                                     | Default                                | Description                                                                                                               |
 | ------------------------ | ---------------------------------------- | -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
-| `nliModelId`             | `string`                                 | `'cross-encoder/nli-deberta-v3-small'` | NLI cross-encoder model ID.                                                                                               |
+| `nliModelId`             | `string`                                 | `'Xenova/nli-deberta-v3-small'`        | NLI cross-encoder model ID (an ONNX export transformers.js can load).                                                     |
 | `entailmentThreshold`    | `number`                                 | `0.7`                                  | NLI score threshold for entailment (SUPPORTED).                                                                           |
 | `contradictionThreshold` | `number`                                 | `0.7`                                  | NLI score threshold for contradiction (CONTRADICTED).                                                                     |
 | `maxUnverifiableRatio`   | `number`                                 | `0.5`                                  | Maximum fraction of unverifiable claims before flagging.                                                                  |
 | `contradictionAction`    | `'flag' \| 'block'`                      | `'flag'`                               | Action when a contradiction is detected.                                                                                  |
 | `unverifiableAction`     | `'flag' \| 'block'`                      | `'flag'`                               | Action when unverifiable ratio is exceeded.                                                                               |
-| `llm`                    | `{ provider, model, apiKey?, baseUrl? }` | —                                      | LLM config for claim decomposition and ambiguous escalation. When omitted, heuristic-only claims + NLI-only verification. |
+| `llm`                    | `(prompt: string) => Promise<string>`    | —                                      | LLM function for claim decomposition and ambiguous escalation. When omitted, heuristic-only claims + NLI-only verification. |
 | `maxSourcesPerClaim`     | `number`                                 | `5`                                    | Max source chunks to compare each claim against.                                                                          |
 | `enableStreamingChecks`  | `boolean`                                | `true`                                 | Enable streaming sentence-level NLI checks. When false, only the final comprehensive check runs.                          |
-| `quantized`              | `boolean`                                | `true`                                 | Use INT8 quantized NLI model for lower memory.                                                                            |
-| `guardrailScope`         | `'input' \| 'output' \| 'both'`          | `'output'`                             | Grounding verification only applies to output.                                                                            |
+| `dtype`                  | `'q8' \| 'fp32' \| ...`                  | `'q8'`                                 | Which weight file to load: `'q8'` (172 MB for the default model) or `'fp32'` (568 MB).                                     |
+| `quantized`              | `boolean`                                | —                                      | Deprecated: `quantized: false` is `dtype: 'fp32'`.                                                                        |
+| `guardrailScope`         | `'input' \| 'output' \| 'both'`          | `'output'`                             | The guardrail never evaluates input: `'input'` turns it off, and `'both'` acts as `'output'`.                             |
 
 ---
 
@@ -271,25 +263,25 @@ Agent: Let me verify this synthesized answer is grounded in the sources.
     text: "The API rate limit is 1000 req/min",
     sources: ["Premium users get 1000 requests per minute."]
   })
-<- {
+<- output: {
     grounded: true,
     claims: [{
       claim: "The API rate limit is 1000 req/min",
       verdict: "supported",
       confidence: 0.92,
-      bestSource: { chunkId: "tool-source-0", content: "Premium users...", score: 0.92 },
+      bestSource: { chunkId: "synthetic-source-0", content: "Premium users...", score: 0.92 },
       escalated: false
     }],
     totalClaims: 1,
     supportedCount: 1,
     contradictedCount: 0,
     unverifiableCount: 0,
-    unverifiableRatio: 0.0,
-    summary: "1/1 claims supported"
+    unverifiableRatio: 0,
+    summary: "1/1 claims supported, 0 contradicted, 0 unverifiable (ratio 0.00)"
   }
 ```
 
-The tool accepts `sources: string[]` (plain text) for simplicity. These are wrapped as synthetic [`RagRetrievedChunk`](https://github.com/framerslab/agentos/blob/master/src/cognition/rag/IRetrievalAugmentor.ts) objects internally.
+`grounded` is true when no claim is contradicted and at most half are unverifiable (a fixed 0.5 for the tool). The tool accepts `sources: string[]` (plain text) for simplicity. These are wrapped as synthetic [`RagRetrievedChunk`](https://github.com/framerslab/agentos/blob/master/src/cognition/rag/IRetrievalAugmentor.ts) objects internally.
 
 ---
 
@@ -299,20 +291,19 @@ The tool accepts `sources: string[]` (plain text) for simplicity. These are wrap
 | ------------------------- | --------------------------------------------------- | ------------------------------------------- |
 | `GROUNDING_CONTRADICTION` | Claim contradicts a source                          | Per-claim verification results, best source |
 | `GROUNDING_UNVERIFIABLE`  | Too many claims not found in sources                | Unverifiable ratio, claim details           |
-| `GROUNDING_NO_SOURCES`    | Informational flag when response has no RAG sources | --                                          |
+
+A response with no RAG sources gets no result at all.
 
 ---
 
 ## Memory Impact
 
-| Component                             | Memory          | When Loaded           |
-| ------------------------------------- | --------------- | --------------------- |
-| NLI model (nli-deberta-v3-small INT8) | ~40MB           | First grounding check |
-| ClaimExtractor (heuristic rules)      | ~5KB            | Pack load             |
-| Per-stream sentence buffer            | ~1KB per stream | First TEXT_DELTA      |
-| **Total**                             | **~40MB**       | --                    |
+| Component                  | Size                                                | When Loaded                  |
+| -------------------------- | --------------------------------------------------- | ---------------------------- |
+| NLI model weights          | 172 MB file for the default `q8`, 568 MB for `fp32` | First claim-source pair      |
+| Per-stream sentence buffer | The text of the current unfinished sentence         | First TEXT_DELTA             |
 
-The NLI model is lazy-loaded and shared via [`ISharedServiceRegistry`](https://github.com/framerslab/agentos/blob/master/src/extensions/ISharedServiceRegistry.ts). If another extension uses the same model, zero additional memory.
+The NLI function is made once and shared through the [`ISharedServiceRegistry`](https://github.com/framerslab/agentos/blob/master/src/extensions/ISharedServiceRegistry.ts) under `agentos:grounding:nli-pipeline`; packs that ask for that id get the same loaded model.
 
 ---
 
@@ -321,9 +312,8 @@ The NLI model is lazy-loaded and shared via [`ISharedServiceRegistry`](https://g
 | Condition                            | Behavior                                                                     |
 | ------------------------------------ | ---------------------------------------------------------------------------- |
 | No `ragSources` on payload           | No-op -- returns null (cannot ground without sources)                        |
-| NLI model fails to load              | Falls back to LLM-only (if configured), else no-op                           |
+| NLI model fails to load              | Every claim is `unverifiable` and is not escalated, even with an LLM; the final check then reports `GROUNDING_UNVERIFIABLE` (FLAG, or BLOCK per `unverifiableAction`) when the ratio exceeds `maxUnverifiableRatio` |
 | LLM not configured                   | NLI-only mode -- heuristic claims, no decomposition, no ambiguous escalation |
-| Both NLI and LLM unavailable         | No-op with warning logged                                                    |
 | Empty response (no claims extracted) | Returns null                                                                 |
 | `ragSources` present but empty array | Returns null (no sources to compare against)                                 |
 

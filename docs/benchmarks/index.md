@@ -50,7 +50,7 @@ Same dataset (`data/longmemeval/longmemeval_s.json`), full N=500, same `gpt-4o-2
 
 **+1.4 points above Mastra OM gpt-4o (84.23%).** AgentOS at 85.6% is the highest published number from a permissively licensed memory framework that anyone can install, fork, and embed in commercial products without a SaaS contract. EmergenceMem Internal posts 86.0% (0.4 above us, statistically tied — their point estimate sits inside our [82.4%, 88.6%] CI), but **EmergenceMem Internal is closed-source SaaS at [emergence.ai/web-automation-api](https://www.emergence.ai/web-automation-api) — it is not a library you can install, fork, self-host, or audit**. Their public reference repo `emergence_simple_fast` ships with **no LICENSE file** (default copyright applies; publicly readable but not legally redistributable). AgentOS ships the full architecture under [Apache-2.0](https://github.com/framerslab/agentos/blob/master/LICENSE) — install, fork, redistribute, embed in commercial products without restriction or fee. AgentOS p50 latency 3,558 ms vs EmergenceMem's published median 5,650 ms (1.6× faster on the median).
 
-**Cost at scale**: $0.0090 per memory-grounded answer = $9 per 1,000 RAG calls. A chatbot averaging 5 RAG calls per conversation across 1,000 conversations costs ~$45.
+**Cost at scale**: $/correct is the run's total cost divided by its correct answers. $0.0090 per correct answer at 85.6% accuracy is about $0.0077 per memory-grounded answer, or about $7.70 per 1,000 calls; a chatbot averaging 5 such calls per conversation across 1,000 conversations spends about $39.
 
 ### Why other Mastra and managed-platform numbers are not in this table
 
@@ -62,7 +62,7 @@ Same dataset (`data/longmemeval/longmemeval_s.json`), full N=500, same `gpt-4o-2
 
 ## LongMemEval-M Phase B (1.5M tokens, 500 sessions per haystack)
 
-The harder variant. M's haystacks exceed every production context window: GPT-4o is 128K, Claude Opus is 200K, Gemini 3 Pro is 1M. Most memory vendors stop at S because raw long-context fits there.
+The harder variant. An M haystack runs to about 1.5M tokens, far past GPT-4o's 128K-token context window, so a `gpt-4o` reader cannot take the whole haystack. Most memory vendors stop at S because raw long-context fits there.
 
 | System | Accuracy | License | Source |
 |---|---:|---|---|
@@ -79,7 +79,7 @@ The harder variant. M's haystacks exceed every production context window: GPT-4o
 | Supermemory | not published | open | reports S only |
 | MemMachine, Memoria, agentmemory, Backboard, ByteRover, Letta, Cognee | not published | various | reports S only or no LongMemEval |
 
-**Competitive with the strongest published M results in the LongMemEval paper.** At reader-Top-5 retrieval, AgentOS is +4.5 above the round-level configuration (65.7%) and 1.2 below the session-level configuration (71.4%); the paper's strongest GPT-4o result overall is 72.0% at round-level Top-10. AgentOS is the first open-source library above 65% on M with publicly reproducible methodology (per-case run JSONs at fixed seed, single-CLI reproduction). The closest published external number is AgentBrain's 71.7% from their closed-source SaaS.
+**Competitive with the strongest published M results in the LongMemEval paper.** At reader-Top-5 retrieval, AgentOS is +4.5 above the round-level configuration (65.7%) and 1.2 below the session-level configuration (71.4%); the paper's strongest GPT-4o result overall is 72.0% at round-level Top-10. AgentOS is the first open-source library above 65% on M with publicly reproducible methodology (the open-source runner reproduces the run with one CLI command; see [Reproducing](#reproducing)). The closest published external number is AgentBrain's 71.7% from their closed-source SaaS.
 
 ## LOCOMO (out-of-distribution transfer)
 
@@ -114,11 +114,11 @@ The 62.81% FPR ceiling on LOCOMO's default `gpt-4o-mini` judge means any LOCOMO 
 | Latency avg / p50 / p95 | yes | no | no | no | partial | median only | no | no |
 | Per-category breakdown | yes | no | yes | yes | yes | yes | partial | no |
 | Open-source benchmark runner | yes | yes | partial | yes | partial | yes | no | partial |
-| Per-case run JSONs at fixed seed | yes | no | no | no | no | no | no | no |
+| Per-case run JSONs at fixed seed | no | no | no | no | no | no | no | no |
 | Judge-adversarial FPR probe | yes | no | no | no | no | no | no | no |
 | Cross-vendor cross-vendor table | yes | no | no | partial | partial | yes | no | no |
 
-The full audit framework is at [Memory Benchmark Transparency Audit](https://agentos.sh/en/blog/memory-benchmark-transparency-audit). Per-case run JSONs at `seed=42` are committed under [`packages/agentos-bench/results/runs/`](https://github.com/framerslab/agentos-bench/tree/master/results/runs) for every published number.
+The full audit framework is at [Memory Benchmark Transparency Audit](https://agentos.sh/en/blog/memory-benchmark-transparency-audit). [`results/runs/`](https://github.com/framerslab/agentos-bench/tree/master/results/runs) in agentos-bench holds a Git LFS pointer file for the run JSON behind each published number, and GitHub's LFS store holds none of those objects, so the per-case JSONs cannot be downloaded from the repository. The footnotes of [`results/LEADERBOARD.md`](https://github.com/framerslab/agentos-bench/blob/master/results/LEADERBOARD.md) give each run's file name, cost and per-category results.
 
 ## Reproducing
 
@@ -129,21 +129,27 @@ git clone https://github.com/framerslab/agentos-bench
 cd agentos-bench
 pnpm install && pnpm build
 
+# Download LongMemEval-S into data/longmemeval/longmemeval_s.json
+node dist/cli.js setup --benchmark longmemeval-s
+
 # Set OPENAI_API_KEY and COHERE_API_KEY in your environment
-NODE_OPTIONS="--max-old-space-size=8192" pnpm exec tsx src/cli.ts run longmemeval-s \
+NODE_OPTIONS="--max-old-space-size=8192" node dist/cli.js run longmemeval-s \
   --reader gpt-4o \
   --memory full-cognitive --replay ingest \
   --hybrid-retrieval --rerank cohere \
   --embedder-model text-embedding-3-small \
   --reader-router min-cost-best-cat-2026-04-28 \
   --concurrency 5 \
-  --bootstrap-resamples 10000
+  --bootstrap-resamples 10000 \
+  --seed 42
 ```
 
-The 70.2% LongMemEval-M headline (single-variable change is `--reader-top-k 5`):
+The 70.2% LongMemEval-M headline adds `--rerank-candidate-multiplier 5`, `--reader-top-k 5` and `--hyde` to the S command:
 
 ```bash
-NODE_OPTIONS="--max-old-space-size=8192" pnpm exec tsx src/cli.ts run longmemeval-m \
+node dist/cli.js setup --benchmark longmemeval-m
+
+NODE_OPTIONS="--max-old-space-size=8192" node dist/cli.js run longmemeval-m \
   --reader gpt-4o \
   --memory full-cognitive --replay ingest \
   --hybrid-retrieval --rerank cohere --rerank-candidate-multiplier 5 \
@@ -152,10 +158,11 @@ NODE_OPTIONS="--max-old-space-size=8192" pnpm exec tsx src/cli.ts run longmemeva
   --embedder-model text-embedding-3-small \
   --reader-router min-cost-best-cat-2026-04-28 \
   --concurrency 5 \
-  --bootstrap-resamples 10000
+  --bootstrap-resamples 10000 \
+  --seed 42
 ```
 
-Both runs ship with per-case run JSONs at `seed=42`. The full bench leaderboard is at [packages/agentos-bench/results/LEADERBOARD.md](https://github.com/framerslab/agentos-bench/blob/master/results/LEADERBOARD.md).
+Both runs write a per-case run JSON under `results/runs/`. `--seed 42` fixes the bootstrap resampling behind the confidence intervals; without `--seed` the resampling draws from `Math.random`, so the intervals differ from run to run. The full bench leaderboard is at [`results/LEADERBOARD.md`](https://github.com/framerslab/agentos-bench/blob/master/results/LEADERBOARD.md) in agentos-bench.
 
 ## Related blog posts
 

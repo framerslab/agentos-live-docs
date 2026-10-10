@@ -1,110 +1,71 @@
 # Platform Storage Strategy
 
-## Executive Summary
-
-**Recommendation:** Use **graceful degradation** with platform-specific optimizations and automatic adapter selection.
+`@framers/sql-storage-adapter` gives one `StorageAdapter` interface over several SQL backends; its resolver knows five adapter kinds. This page says which one fits each platform and how the package picks one (as of 0.6.9).
 
 ```typescript
-// Single API for all platforms
 import { createDatabase } from '@framers/sql-storage-adapter';
 
+// Try IndexedDB persistence first, then in-memory sql.js
 const db = await createDatabase({
-  priority: ['indexeddb', 'sqljs'], // Auto-detects best adapter
+  priority: ['indexeddb', 'sqljs'],
 });
 ```
 
 ---
 
-## Platform Matrix: Pros & Cons
+## Adapters
 
-### 🌐 Web (Browser)
+| Adapter kind | Engine | Where it runs | Persistence | Needs |
+| --- | --- | --- | --- | --- |
+| `indexeddb` | sql.js (SQLite compiled to WebAssembly) | Browsers, WebViews, Electron renderers | The database file is saved as one blob in IndexedDB (database `app-db`, store `sqliteDb` by default), every 5 seconds with `autoSave` on (the default) | `sql.js` (a dependency) |
+| `sqljs` | sql.js | Anywhere | In memory; in Node, with a `filePath`, the file is loaded at open and written back after changes | `sql.js` (a dependency) |
+| `better-sqlite3` | Native SQLite | Node and the Electron main process; it refuses to open in a browser | A file (default `<cwd>/db_data/app.sqlite3`; the parent directory is created) | `better-sqlite3` (peer) |
+| `capacitor` | Native SQLite through `@capacitor-community/sqlite` | Capacitor iOS and Android apps | On the device; the adapter turns on WAL journaling | `@capacitor-community/sqlite` (peer) |
+| `postgres` | PostgreSQL through `pg` | Node | A PostgreSQL server | `pg` (a dependency) and a connection string |
 
-| Adapter             | Pros                                                                                                                                                   | Cons                                                                                                                               | Best For                                                         |
-| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
-| **IndexedDB** (NEW) | ✅ Native browser storage API<br>✅ Async, non-blocking<br>✅ 50MB-1GB+ quota<br>✅ sql.js wrapper (full SQL support)<br>✅ Persistent across sessions | ❌ Uses sql.js WASM (500KB load)<br>❌ IndexedDB quotas vary by browser<br>❌ Not a separate SQL engine (sql.js + IDB persistence) | **Primary choice** for web<br>Offline PWAs<br>Privacy-first apps |
-| **sql.js**          | ✅ Full SQLite in WASM<br>✅ In-memory fast reads<br>✅ Optional IDB persistence<br>✅ Zero dependencies                                               | ❌ 500KB WASM load<br>❌ Slow writes to IDB<br>❌ Single-threaded                                                                  | Fallback for web<br>Edge functions                               |
-| **LocalStorage**    | ✅ 5-10MB simple API                                                                                                                                   | ❌ Synchronous (blocks UI)<br>❌ String-only<br>❌ No transactions                                                                 | ❌ **NOT RECOMMENDED**                                           |
-
-**Winner:** **IndexedDB adapter** (sql.js + IndexedDB persistence wrapper)
-
-- sql.js provides SQL execution (WASM SQLite)
-- IndexedDB provides browser-native persistence (stores SQLite file as blob)
-- Auto-save batching minimizes IDB overhead
-- Works offline, respects privacy
-- **Note:** This is sql.js with IndexedDB persistence, not a separate SQL engine
+For Electron, the `@framers/sql-storage-adapter/electron` entry point holds `createElectronMainAdapter()` and `createElectronRendererAdapter()` (renderer access goes over IPC through a preload script).
 
 ---
 
-### 🖥️ Electron (Desktop)
+## Recommendations by platform
 
-| Adapter            | Pros                                                                                                                                                        | Cons                                                                                         | Best For                                                   |
-| ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
-| **better-sqlite3** | ✅ **FASTEST** (native C++)<br>✅ Full SQLite features<br>✅ WAL mode for concurrency<br>✅ Synchronous API (no async overhead)<br>✅ Mature, battle-tested | ❌ Requires native compilation<br>❌ Must rebuild for Electron ABI<br>❌ Large binary (~5MB) | **Primary choice** for Electron<br>Production desktop apps |
-| **sql.js**         | ✅ No rebuild needed<br>✅ Cross-platform WASM                                                                                                              | ❌ 3-5x slower than native<br>❌ Async overhead                                              | Quick prototyping<br>CI/CD without build tools             |
-| **IndexedDB**      | ✅ Available in Electron renderer                                                                                                                           | ❌ Slower than better-sqlite3<br>❌ Unnecessary abstraction                                  | ❌ Use better-sqlite3 instead                              |
-
-**Winner:** **better-sqlite3**
-
-- Native performance is unbeatable for desktop
-- Electron already handles native modules
-- Fallback to sql.js if build fails
+| Platform | Primary | Fallback | Why |
+| --- | --- | --- | --- |
+| **Web** | `indexeddb` | `sqljs` | Survives reloads; plain `sqljs` in a browser is memory only |
+| **Electron** | `better-sqlite3` in the main process (or the Electron adapters) | `sqljs` | Native SQLite file; the renderer reaches it over IPC |
+| **Capacitor** | `capacitor` | `indexeddb` | Native SQLite on the device |
+| **Node** | `better-sqlite3` | `sqljs` | A local file with no server |
+| **Cloud / multi-user** | `postgres` | | One database for many processes and users |
 
 ---
 
-### 📱 Mobile (Capacitor: iOS/Android)
+## How the package picks an adapter
 
-| Adapter                         | Pros                                                                                                                                            | Cons                                                                            | Best For                                             |
-| ------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- | ---------------------------------------------------- |
-| **@capacitor-community/sqlite** | ✅ **BEST** native SQLite on mobile<br>✅ iOS: Core Data integration<br>✅ Android: Native SQLite<br>✅ Encryption support<br>✅ Multi-threaded | ❌ Capacitor-specific<br>❌ Requires native plugins                             | **Primary choice** for mobile<br>Capacitor apps only |
-| **IndexedDB**                   | ✅ Available in WebView<br>✅ Works without Capacitor                                                                                           | ❌ Slower than native<br>❌ Limited mobile quota<br>❌ Browser quirks on mobile | PWA-style mobile apps<br>Ionic without Capacitor     |
-| **sql.js**                      | ✅ Universal fallback                                                                                                                           | ❌ WASM overhead on mobile<br>❌ Battery drain                                  | Emergency fallback only                              |
+There are two entry points, and they pick differently.
 
-**Winner:** **@capacitor-community/sqlite** for Capacitor apps, **IndexedDB** for web-based mobile
+### `resolveStorageAdapter(options)`
 
----
+Without `options.priority`, it builds the order from the runtime, first match wins:
 
-### ☁️ Cloud (Node.js, Serverless)
+1. The `STORAGE_ADAPTER` environment variable (one adapter kind)
+2. Electron main process: `['better-sqlite3']`, with a console note pointing at the Electron adapter
+3. Electron renderer: `['indexeddb', 'sqljs']`, with a console note pointing at the Electron adapter
+4. Capacitor native platform: `['capacitor', 'indexeddb', 'sqljs']`
+5. A Postgres connection string (`options.postgres.connectionString` or `DATABASE_URL`): `['postgres', 'better-sqlite3', 'indexeddb', 'sqljs']`
+6. A `window` with `indexedDB`: `['indexeddb', 'sqljs']`
+7. Otherwise: `['better-sqlite3', 'indexeddb', 'sqljs']`
 
-| Adapter                | Pros                                                                                                                                                | Cons                                                                                 | Best For                                                            |
-| ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ | ------------------------------------------------------------------- |
-| **PostgreSQL**         | ✅ **BEST** for multi-user<br>✅ Connection pooling<br>✅ JSONB, full-text search<br>✅ Horizontal scaling<br>✅ Cloud-native (RDS, Supabase, Neon) | ❌ Requires hosted DB<br>❌ Network latency<br>❌ Cost at scale                      | **Primary choice** for cloud<br>Multi-tenant SaaS<br>Real-time sync |
-| **better-sqlite3**     | ✅ Fast for single-user<br>✅ No external DB needed<br>✅ Simple deployment                                                                         | ❌ File-based (hard to scale)<br>❌ No network access<br>❌ Single-writer limitation | Personal cloud instances<br>Dev/staging                             |
-| **sql.js (ephemeral)** | ✅ Serverless edge (Cloudflare Workers)<br>✅ No cold start for DB                                                                                  | ❌ In-memory only<br>❌ State lost on restart                                        | Stateless functions<br>Cache layer                                  |
+It then creates and opens each candidate in turn and returns the first that opens, logging which one it chose (`quiet: true` silences the logs). When none opens, it throws a `StorageResolutionError`.
 
-**Winner:** **PostgreSQL** for production, **better-sqlite3** for dev/staging
+### `createDatabase(options)`
 
----
+`createDatabase()` takes `url`, `file`, `postgres`, `mobile`, `indexedDb`, `type` and `priority`, sets the priority itself and then calls `resolveStorageAdapter()`. It returns an adapter that is already open.
 
-## Graceful Degradation Strategy
+- `priority` wins when given.
+- `type` picks one adapter: `postgres` → `postgres`, `sqlite` → `better-sqlite3`, `browser` → `sqljs`, `mobile` → `capacitor`, `memory` → `better-sqlite3` on `:memory:`.
+- Otherwise the priority is `['sqljs']` in a browser or Deno and `['better-sqlite3', 'sqljs']` in Node.
 
-### Priority Cascade by Platform
-
-```typescript
-const PLATFORM_PRIORITIES: Record<Platform, AdapterKind[]> = {
-  web: ['indexeddb', 'sqljs'], // NEW: IndexedDB first
-  electron: ['better-sqlite3', 'sqljs'], // Native first
-  capacitor: ['capacitor', 'indexeddb', 'sqljs'], // Native mobile > WebView IDB
-  node: ['better-sqlite3', 'postgres', 'sqljs'], // Native > Cloud > WASM
-  cloud: ['postgres', 'better-sqlite3', 'sqljs'], // Cloud-first
-};
-```
-
-### Automatic Detection
-
-```typescript
-function detectPlatform(): Platform {
-  if (typeof window !== 'undefined') {
-    if (window.Capacitor?.isNativePlatform?.()) return 'capacitor';
-    if (window.indexedDB) return 'web';
-  }
-  if (typeof process !== 'undefined') {
-    if (process.versions?.electron) return 'electron';
-    if (process.env.DATABASE_URL) return 'cloud';
-    return 'node';
-  }
-  return 'unknown';
-}
-```
+So without `priority` or `type`, `createDatabase()` never chooses `indexeddb`, `capacitor` or `postgres`: in a browser it opens an in-memory sql.js database, and in Node it opens SQLite even when `url`, `postgres` or `DATABASE_URL` names a PostgreSQL server. Pass `type` or `priority` to get those adapters, or call `resolveStorageAdapter()` for the runtime detection above.
 
 ---
 
@@ -122,20 +83,20 @@ const db = new IndexedDbAdapter({
 });
 
 await db.open();
-await db.run('CREATE TABLE sessions (id TEXT PRIMARY KEY, data TEXT)');
+await db.run('CREATE TABLE IF NOT EXISTS sessions (id TEXT PRIMARY KEY, data TEXT)');
 ```
 
-### Desktop Application (Electron)
+### Desktop Application (Electron main process)
 
 ```typescript
+import { app } from 'electron';
+import path from 'node:path';
 import { createDatabase } from '@framers/sql-storage-adapter';
-import path from 'path';
 
 const db = await createDatabase({
-  filePath: path.join(app.getPath('userData'), 'app.db'),
+  type: 'sqlite',
+  file: path.join(app.getPath('userData'), 'app.db'),
 });
-
-await db.open();
 ```
 
 ### Mobile Application (Capacitor)
@@ -154,6 +115,7 @@ const db = await createDatabase({
 import { createDatabase } from '@framers/sql-storage-adapter';
 
 const db = await createDatabase({
+  type: 'postgres',
   postgres: { connectionString: process.env.DATABASE_URL },
 });
 ```
@@ -162,12 +124,10 @@ const db = await createDatabase({
 
 ## Summary Table
 
-| Platform      | Primary        | Fallback       | Notes                          |
-| ------------- | -------------- | -------------- | ------------------------------ |
-| **Web**       | IndexedDB      | sql.js         | Browser-native persistence     |
-| **Electron**  | better-sqlite3 | sql.js         | Native performance             |
-| **Capacitor** | capacitor      | IndexedDB      | Native mobile > WebView        |
-| **Node**      | better-sqlite3 | Postgres       | Local-first, cloud optional    |
-| **Cloud**     | Postgres       | better-sqlite3 | Multi-tenant requires Postgres |
-
-**TL;DR:** Use IndexedDB for web, better-sqlite3 for desktop, capacitor for mobile, Postgres for cloud. The adapter automatically selects the best option based on your runtime environment.
+| Platform | Primary | Fallback | How to ask for it |
+| --- | --- | --- | --- |
+| **Web** | IndexedDB | sql.js | `priority: ['indexeddb', 'sqljs']`, `new IndexedDbAdapter()`, or `resolveStorageAdapter()` |
+| **Electron** | better-sqlite3 | sql.js | `type: 'sqlite'` in the main process, or the Electron adapters |
+| **Capacitor** | capacitor | IndexedDB | `priority: ['capacitor', 'indexeddb']`, or `resolveStorageAdapter()` |
+| **Node** | better-sqlite3 | sql.js | `createDatabase()` with no options |
+| **Cloud** | Postgres | | `type: 'postgres'` or `priority: ['postgres']` with a connection string |

@@ -5,23 +5,35 @@ sidebar_position: 35
 
 # Document Export
 
-The `@framers/agentos-ext-document-export` extension generates professional documents from structured content. It follows the standard AgentOS extension pack pattern (`createExtensionPack()` factory) and provides two ITool implementations.
+The `@framers/agentos-ext-document-export` extension pack writes PDF, DOCX, PPTX, CSV and XLSX files from structured content. Its `createExtensionPack()` factory returns two tools: `document_export`, which renders and saves a file, and `document_suggest`, which says whether a reply is worth offering as a file.
 
 ## Installation
 
-Load via the extension system or import directly:
+```bash
+npm install @framers/agentos-ext-document-export
+```
+
+Load the pack through the extension manifest:
 
 ```typescript
 import { AgentOS } from '@framers/agentos';
 
-const agent = new AgentOS();
-await agent.initialize({
-  provider: 'openai',
-  extensions: ['@framers/agentos-ext-document-export'],
+const agentos = await AgentOS.create({
+  extensionManifest: {
+    packs: [
+      {
+        package: '@framers/agentos-ext-document-export',
+        options: {
+          workspaceDir: '/home/agent/workspace',
+          publicBaseUrl: 'https://agent.example.com',
+        },
+      },
+    ],
+  },
 });
 ```
 
-Or use the factory directly:
+Or call the factory directly:
 
 ```typescript
 import { createExtensionPack } from '@framers/agentos-ext-document-export';
@@ -35,30 +47,32 @@ const pack = createExtensionPack({
   logger: console,
 });
 
-// pack.descriptors contains document_export and document_suggest tools
+// pack.descriptors holds the document_export and document_suggest tools
 ```
 
 ## Extension Pack Options
 
 ```typescript
 interface DocumentExportExtensionOptions {
-  /** Override the default priority used when registering the tools. */
+  /** Priority used when registering the tools (default 50). */
   priority?: number;
 
-  /** Override the agent workspace directory (defaults to process.cwd()). */
+  /** Workspace directory; files go to <workspaceDir>/exports (default process.cwd()). */
   workspaceDir?: string;
 
-  /** Override the server port used for download/preview URLs (defaults to 3777). */
+  /** Port written into download and preview URLs (default 3777). */
   serverPort?: number;
 
-  /** Override the externally reachable base URL used in export links. */
+  /** Base URL written into download and preview URLs in place of http://localhost:<serverPort>. */
   publicBaseUrl?: string;
 }
 ```
 
+The pack writes files and builds URLs; it starts no HTTP server. A download URL is `<base>/exports/<filename>` and a preview URL is `<base>/exports/<filename>/preview`, where `<base>` is `publicBaseUrl` or `http://localhost:<serverPort>`. The host serves those paths, for example with `ExportFileManager.resolve()` and `PreviewGenerator` (below).
+
 ## Tools
 
-### DocumentExportTool
+### document_export
 
 | Property | Value |
 |----------|-------|
@@ -79,15 +93,19 @@ interface DocumentExportInput {
 
 interface DocumentExportOutput {
   filePath: string;      // Absolute path on disk
-  downloadUrl: string;   // HTTP download URL
-  previewUrl: string;    // HTTP preview URL
+  downloadUrl: string;   // <base>/exports/<filename>
+  previewUrl: string;    // <base>/exports/<filename>/preview
   format: string;
   sizeBytes: number;
   filename: string;      // Final filename with extension
 }
 ```
 
-### DocumentSuggestTool
+The tool renders the file, saves it as `<workspaceDir>/exports/<timestamp>-<slug>.<format>` (the slug comes from `options.filename`, else the title) and returns the paths. A failed render returns `success: false` with `Document export failed: <reason>`.
+
+The input schema the model sees lists the content fields `title`, `subtitle`, `author`, `date`, `theme` and `sections` (each with `heading`, `level`, `paragraphs`, `table`, `chart`, `list` and `keyValues`) and the options `filename`, `pageSize`, `orientation`, `coverPage` and `pageNumbers`. The generators also read a section's `image`, `speakerNotes` and `layout` and the `sheetName` option when a caller passes them.
+
+### document_suggest
 
 | Property | Value |
 |----------|-------|
@@ -113,201 +131,130 @@ interface DocumentSuggestOutput {
 }
 ```
 
-## Generator APIs
+The tool reads the flags, not the text: more than 500 words suggests PDF and DOCX, table data CSV and XLSX, sections PPTX, and analytical content PDF and XLSX. `shouldOffer` is true when at least one format matches and `wordCount` is 200 or more; `offerText` is then `I can export this as <formats>. Want me to?`, with the matched formats upper-cased in the order of those rules: a 300-word analytical answer with table data gives `I can export this as CSV, XLSX, PDF. Want me to?`. When `shouldOffer` is false, `offerText` is an empty string and `suggestedFormats` still lists the matches.
 
-Each format has a dedicated stateless generator class. All generators accept [`DocumentContent`](https://github.com/framerslab/agentos-extensions/blob/master/registry/curated/productivity/document-export/src/types.ts) and return a `Buffer`.
+## Formats
 
-### PdfGenerator
+`document_export` sends each format to its own generator. The generator classes, the chart renderer and the theme table are internal: the package root does not export them.
 
-```typescript
-import { PdfGenerator } from '@framers/agentos-ext-document-export';
+### PDF
 
-const pdf = new PdfGenerator();
-const buffer = await pdf.generate(content, {
-  pageSize: 'a4',
-  orientation: 'portrait',
-  coverPage: true,
-  pageNumbers: true,
-});
+Built with `pdfkit`.
 
-fs.writeFileSync('report.pdf', buffer);
-```
-
-**Features:**
-- Cover page with centred title, subtitle, author, date
-- Running headers (document title) and footers (page numbers)
-- Section headings (H1/H2/H3) with proportional sizing
-- Inline markdown: `**bold**`, `*italic*`, `[link](url)` with clickable hyperlinks
-- Styled tables with accent-coloured headers, alternating row stripes, auto page-break with repeated headers
-- Charts rendered as titled data tables via [`ChartRenderer`](https://github.com/framerslab/agentos-extensions/blob/master/registry/curated/productivity/document-export/src/generators/ChartRenderer.ts)
-- Remote image fetching with timeout and base64 data URI support
+- Page size `letter` by default (`a4` and `legal` through `pageSize`), `portrait` or `landscape` through `orientation`
+- A cover page with the title, subtitle, author and date unless `coverPage` is `false`
+- The document title in the header of every content page, and page numbers in the footer unless `pageNumbers` is `false`
+- Section headings at three levels
+- Inline markdown in paragraphs: `**bold**`, `*italic*` and `[link](url)` as a clickable link
+- Tables with a blue header row and striped rows, continued on the next page with the header repeated
+- Charts as a titled table (see [Charts in PDF and DOCX](#charts-in-pdf-and-docx))
+- Images from a URL (fetched with a 10-second timeout) or base64 data, with captions; an image that fails to load is skipped
 - Bulleted and numbered lists
-- Key-value definition tables
+- Key-value pairs as a two-column Key and Value table
 
-### SlidesGenerator
+The PDF generator uses fixed colours and does not read `content.theme`.
 
-```typescript
-import { SlidesGenerator } from '@framers/agentos-ext-document-export';
+### PPTX
 
-const slides = new SlidesGenerator();
-const buffer = await slides.generate(content, { coverPage: true });
+Built with `pptxgenjs`, on the 16:9 wide layout.
 
-fs.writeFileSync('presentation.pptx', buffer);
-```
+- One slide per section that has content, after a cover slide unless `coverPage` is `false`
+- The theme from `content.theme`: `dark`, `light`, `corporate`, `creative` or `minimal` (a missing or unknown name gives `light`), which sets the background, text, title and accent colours, the fonts and the chart palette
+- Seven layouts, set by a section's `layout`: `title`, `content`, `two-column`, `image-left`, `image-right`, `chart-full` and `comparison`. Without one, a section with a chart gets `chart-full`, a section with an image and paragraphs gets `image-right`, and any other section gets `content`
+- Native pptxgenjs charts: bar, line, pie, doughnut, area and scatter
+- Speaker notes from a section's `speakerNotes`
+- A slide number in the bottom-right corner
+- Images from a URL (fetched with a 10-second timeout) or base64 data
 
-**Features:**
-- 5 built-in themes (dark, light, corporate, creative, minimal)
-- 7 slide layouts: title, content, two-column, image-left, image-right, chart-full, comparison
-- Native chart rendering via pptxgenjs (bar, line, pie, doughnut, area, scatter)
-- Auto-layout detection when no explicit layout hint is given
-- Speaker notes per slide
-- Slide numbers in bottom-right
-- Embedded images with automatic URL fetching
+`pageSize`, `orientation` and `pageNumbers` do not apply to slides.
 
-### DocxGenerator
+### DOCX
 
-```typescript
-import { DocxGenerator } from '@framers/agentos-ext-document-export';
+Built with `docx`.
 
-const docx = new DocxGenerator();
-const buffer = await docx.generate(content, { coverPage: true });
+- A cover page with the title, subtitle, author and date, followed by a page break, unless `coverPage` is `false`
+- The title in the header and `Page N` in the footer of every page
+- Inline bold, italic and hyperlinks
+- Table header rows in the theme's accent colour, with alternating row shading
+- Charts as tables
+- Images from a URL or base64 data, with captions
+- Bulleted and numbered lists
+- Key-value pairs as a borderless two-column table
 
-fs.writeFileSync('report.docx', buffer);
-```
+The DOCX generator reads only the accent colour from `content.theme`, and does not read `pageSize`, `orientation` or `pageNumbers`.
 
-**Features:**
-- Cover page with title, subtitle, author, date and page break
-- Running headers and "Page N" footers
-- Inline formatting: bold, italic, hyperlinks
-- Themed table headers with alternating row shading
-- Charts as formatted data tables
-- Images from URL or base64 with captions
-- Bullet and numbered lists
-- Borderless key-value definition tables
+### CSV
 
-### CsvGenerator
+Each section's `table` and `keyValues` (as `Key` and `Value` columns) are written in order, with a blank row between blocks. Content with neither fails the export with `No tabular data found for CSV export. Try PDF or DOCX instead.`
 
-```typescript
-import { CsvGenerator } from '@framers/agentos-ext-document-export';
+### XLSX
 
-const csv = new CsvGenerator();
-const buffer = await csv.generate(content);
+Built with `exceljs`.
 
-fs.writeFileSync('data.csv', buffer);
-```
+- One worksheet per `table` and one per `keyValues` block. The first worksheet takes `options.sheetName`; the others take the section heading, else `Sheet N`. Names have `\ / ? * [ ]` replaced with `_` and are cut to 31 characters
+- A bold header row, white on a fixed blue (the theme is not read)
+- A column whose cells all parse as numbers gets the number format `#,##0.##` and a bold `SUM` formula in a closing row, with `Total` in the first non-numeric column
+- Column widths from the longest value plus two characters, capped at 60
+- The first row frozen
+- Content with no table or key-value data gives a single `Sheet 1` holding the title
 
-Scans sections for `table` and `keyValues` data. Multiple tables are separated by blank rows. Throws if no tabular data is found.
+### Charts in PDF and DOCX
 
-### XlsxGenerator
+PDF and DOCX render a [`ChartSpec`](https://github.com/framerslab/agentos-extensions/blob/master/registry/curated/productivity/document-export/src/types.ts) as a table, after a line such as `Bar chart: Revenue — 2 datasets, 2 categories`:
 
-```typescript
-import { XlsxGenerator } from '@framers/agentos-ext-document-export';
-
-const xlsx = new XlsxGenerator();
-const buffer = await xlsx.generate(content, { sheetName: 'Q4 Results' });
-
-fs.writeFileSync('data.xlsx', buffer);
-```
-
-**Features:**
-- Each table section becomes its own worksheet
-- Bold, accent-coloured header rows
-- Auto-detected numeric columns with number formatting
-- SUM formula row appended to numeric columns
-- Frozen first row for scrolling
-- Auto-sized column widths (capped at 60 characters)
-- Sheet names sanitised for Excel compatibility (31 char max, no illegal chars)
-
-## ChartRenderer
-
-Converts [`ChartSpec`](https://github.com/framerslab/agentos-extensions/blob/master/registry/curated/productivity/document-export/src/types.ts) objects to tabular representations for PDF and DOCX embedding. Used internally by [`PdfGenerator`](https://github.com/framerslab/agentos-extensions/blob/master/registry/curated/productivity/document-export/src/generators/PdfGenerator.ts) and [`DocxGenerator`](https://github.com/framerslab/agentos-extensions/blob/master/registry/curated/productivity/document-export/src/generators/DocxGenerator.ts).
-
-```typescript
-import { ChartRenderer } from '@framers/agentos-ext-document-export';
-
-const renderer = new ChartRenderer();
-const { description, tableData } = renderer.renderChart({
-  type: 'bar',
-  title: 'Revenue',
-  data: [
-    { label: 'Q3', values: [4.2, 2.8], categories: ['NA', 'EU'] },
-    { label: 'Q4', values: [5.1, 3.5], categories: ['NA', 'EU'] },
-  ],
-});
-
-// description -> "Bar chart: Revenue -- 2 datasets, 2 categories"
-// tableData -> { headers: ['Category', 'Q3', 'Q4', 'Visual'], rows: [...] }
-```
-
-Rendering strategies by chart type:
-- **bar / line / area** -- Category column, dataset value columns, ASCII bar visualisation column
-- **pie / doughnut** -- Label, Value, Percentage columns
-- **scatter** -- Dataset, X, Y columns
+- **bar / line / area**: the category column (named by `xAxisLabel`, else `Category`), one value column per dataset, and a `Visual` column of block characters scaled to the category total
+- **pie / doughnut**: `Label`, `Value` and `Percentage` columns
+- **scatter**: `Dataset`, `X` and `Y` columns
 
 ## ExportFileManager
 
-Manages the local exports directory for generated documents.
+Manages the exports directory. The tool uses one internally; a host uses its own to list, serve and delete files.
 
 ```typescript
 import { ExportFileManager } from '@framers/agentos-ext-document-export';
 
 const manager = new ExportFileManager('/home/agent/workspace', 3777, 'https://agent.example.com');
 
-// Save a buffer
+// Save a buffer to /home/agent/workspace/exports
 const { filePath, filename } = await manager.save(buffer, 'Q4 Report', 'pdf');
 
-// URL generation
+// URLs
 const downloadUrl = manager.getDownloadUrl(filename);
 const previewUrl = manager.getPreviewUrl(filename);
+
+// Absolute path of a saved file, or null (names with path separators are refused)
+const path = manager.resolve(filename);
 
 // List all exports
 const files = await manager.list();
 // [{ filename, format, sizeBytes, createdAt }]
 
-// Delete an export
-await manager.remove(filename);
+// Delete an export; resolves to false when the file does not exist
+const removed = await manager.remove(filename);
 ```
 
-Files are stored as `{exportsDir}/{ISO-timestamp}-{slug}.{format}`.
+Files are stored as `{exportsDir}/{timestamp}-{slug}.{format}`, where the timestamp is the ISO time with `:` and `.` replaced by `-`.
 
 ## PreviewGenerator
 
-Generates format-specific previews for serving via HTTP without downloading the full file.
+Builds a preview of a saved file for a host to serve.
 
 ```typescript
 import { PreviewGenerator } from '@framers/agentos-ext-document-export';
 
 const preview = new PreviewGenerator();
-const { contentType, body } = await preview.generatePreview('/exports/data.csv', 'csv');
+const { contentType, body } = await preview.generatePreview('/home/agent/workspace/exports/data.csv', 'csv');
 // contentType -> 'text/html'
-// body -> '<html>...<table>...</table>...</html>' (first 10 rows)
+// body -> '<!DOCTYPE html>...<table>...</table>...'
 ```
 
-| Format | Preview Type | Content |
+| Format | Preview type | Content |
 |--------|-------------|---------|
-| CSV | HTML table | First 10 rows with styled headers |
-| XLSX | HTML table | First worksheet, first 10 rows |
-| PDF | Plain text | Title extracted from metadata + file size |
-| DOCX | Plain text | Filename + file size |
-| PPTX | Plain text | Filename + file size |
-
-## Themes
-
-Five built-in themes available via `getTheme()`:
-
-```typescript
-import { getTheme, SLIDE_THEMES } from '@framers/agentos-ext-document-export';
-
-const theme = getTheme('corporate');
-// { name, background, textColor, titleColor, mutedColor, accentColor,
-//   titleFont, bodyFont, chartPalette }
-
-// All theme names
-const names = Object.keys(SLIDE_THEMES);
-// ['dark', 'light', 'corporate', 'creative', 'minimal']
-```
-
-Unknown theme names fall back to `'light'`.
+| CSV | HTML table | The first 10 non-empty lines, the header line included |
+| XLSX | HTML table | The first 10 rows of the first worksheet |
+| PDF | Plain text | `PDF: <title>, <n> KB (<bytes> bytes)`; the title comes from a `/Title (...)` entry in the first 500 bytes, which files from this package do not have, so they show `Untitled` |
+| DOCX | Plain text | Filename and file size |
+| PPTX | Plain text | Filename and file size |
 
 ## Type Exports
 
@@ -331,23 +278,32 @@ import type {
 } from '@framers/agentos-ext-document-export';
 ```
 
-## Integration with agency()
+## Using the tool in an agency
 
-Use document export as the final step in a multi-agent research pipeline:
+A seat's `tools` map takes the tool instance from the pack:
 
 ```typescript
 import { agency } from '@framers/agentos';
+import { createExtensionPack } from '@framers/agentos-ext-document-export';
 
-const result = await agency({
+const pack = createExtensionPack({ options: { workspaceDir: './workspace' } });
+const documentExport = pack.descriptors.find((d) => d.id === 'document_export')!.payload;
+
+const team = agency({
+  provider: 'openai',
+  strategy: 'sequential',
   agents: {
-    researcher: { role: 'research', tools: ['web_search', 'deep_research'] },
-    analyst: { role: 'synthesize', tools: ['self_evaluate'] },
-    publisher: { role: 'export', tools: ['document_export'] },
+    analyst: {
+      instructions: 'Write a structured report with sections and a table of the figures.',
+    },
+    publisher: {
+      instructions:
+        'Export the report as a PDF with the document_export tool and reply with its download URL.',
+      tools: { document_export: documentExport },
+    },
   },
-  workflow: [
-    { agent: 'researcher', task: 'Research {{topic}}' },
-    { agent: 'analyst', task: 'Synthesize findings into structured report' },
-    { agent: 'publisher', task: 'Export as PDF with corporate theme and cover page' },
-  ],
 });
+
+const result = await team.generate('Q4 revenue by region');
+console.log(result.text);
 ```

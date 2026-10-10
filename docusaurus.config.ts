@@ -139,7 +139,7 @@ const config = (githubStars: number): Config => ({
       attributes: {
         name: 'description',
         content:
-          'AgentOS documentation — guides, tutorials, and TypeDoc API reference for building production AI agents with TypeScript. Graph orchestration, cognitive memory, RAG, guardrails, voice pipelines, and 11 LLM providers.',
+          'AgentOS documentation — guides, tutorials, and TypeDoc API reference for building production AI agents with TypeScript. Graph orchestration, cognitive memory, RAG, guardrails, voice pipelines, and 13 LLM providers.',
       },
     },
     {

@@ -290,14 +290,14 @@
     <circle cx="52" cy="70" r="24" class="disc-7" filter="url(#sa-disc-glow)" />
     <text x="52" y="77" text-anchor="middle" class="num">7</text>
     <text x="92" y="48" class="layer-title">I/O + providers</text>
-    <text x="92" y="74" class="layer-sub">Voice · channels · media · 11 LLM providers</text>
+    <text x="92" y="74" class="layer-sub">Voice · channels · media · 13 LLM providers</text>
     <text x="92" y="108" class="lbl">External surface</text>
 
     <g transform="translate(500, 26)">
       <g><rect width="200" height="34" rx="10" class="pill-emph" /><text x="100" y="22" text-anchor="middle" class="pill-emph-t">Voice (STT · TTS)</text></g>
       <g transform="translate(212, 0)"><rect width="150" height="34" rx="10" class="pill-emph" /><text x="75" y="22" text-anchor="middle" class="pill-emph-t">Channels</text></g>
       <g transform="translate(374, 0)"><rect width="270" height="34" rx="10" class="pill-emph" /><text x="135" y="22" text-anchor="middle" class="pill-emph-t">Media (img · video · music)</text></g>
-      <g transform="translate(656, 0)"><rect width="200" height="34" rx="10" class="pill-emph" /><text x="100" y="22" text-anchor="middle" class="pill-emph-t">11 LLM providers</text></g>
+      <g transform="translate(656, 0)"><rect width="200" height="34" rx="10" class="pill-emph" /><text x="100" y="22" text-anchor="middle" class="pill-emph-t">13 LLM providers</text></g>
       <g transform="translate(868, 0)"><rect width="200" height="34" rx="10" class="pill-emph" /><text x="100" y="22" text-anchor="middle" class="pill-emph-t">OpenRouter fanout</text></g>
     </g>
     <g transform="translate(500, 76)">
