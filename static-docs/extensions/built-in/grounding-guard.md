@@ -226,7 +226,7 @@ On stream completion, a comprehensive check runs:
 | -------------- | ---------------------------------------- | --------------------------------------------------------------------------- |
 | `supported`    | Claim is entailed by at least one source | Best NLI entailment ≥ `entailmentThreshold`, or the LLM judge says supported |
 | `contradicted` | Claim directly contradicts a source      | Best NLI contradiction ≥ `contradictionThreshold` while the best entailment stays below `entailmentThreshold`, or the LLM judge says contradicted |
-| `unverifiable` | Claim not found in any source            | Neither score reaches its threshold and no LLM, the LLM says unverifiable, or the NLI model could not score any pair |
+| `unverifiable` | Claim not found in any source            | Neither score reaches its threshold and no LLM, the LLM says unverifiable, the LLM call fails or its reply holds no valid object, or the NLI model could not score any pair |
 
 ---
 
