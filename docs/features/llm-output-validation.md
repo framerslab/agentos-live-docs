@@ -4,26 +4,27 @@ sidebar_position: 1.5
 displayed_sidebar: guideSidebar
 ---
 
-> Zod-based validation, retry with error feedback, centralized JSON extraction, and provider-native structured output — a shared utility layer that eliminates silent parse failures from every LLM call site.
+> Zod validation with retry and error feedback, JSON extraction from messy model output, and reusable schema pieces: helpers a host wraps around its own LLM calls.
 
 ---
 
 ## Overview
 
-Every AgentOS component that calls an LLM and expects structured output needs to parse JSON from messy LLM responses. The validation layer centralizes this with:
+Code that calls an LLM and expects JSON has to pull it out of fenced blocks, reasoning tags and prose, then check its shape. The validation layer in [`src/safety/validation`](https://github.com/framerslab/agentos/tree/master/src/safety/validation) gives a host:
 
-- **`extractJson()`** — handles markdown fences, `<thinking>` blocks, JSONL, embedded JSON
-- **`createValidatedInvoker()`** — wraps any LLM invoker with Zod validation + retry
-- **Schema primitives** — reusable Zod building blocks for common LLM output shapes
-- **`agent()` responseSchema** — automatic validation on the agent factory
-- **`LlmOutputValidationError`** — detailed error with raw output, Zod errors, and retry history
+- **`extractJson()`**: finds JSON in markdown fences, after `<thinking>` blocks, in JSONL, or embedded in prose
+- **`createValidatedInvoker()`**: wraps an LLM invoker with Zod validation and retry
+- **Schema primitives**: reusable Zod pieces for common LLM output fields
+- **`LlmOutputValidationError`**: the error thrown after the last retry, with the raw output, the Zod errors and the retry history
 
-## `extractJson` — Centralized JSON Extraction
+Import them from `@framers/agentos/safety/validation` (or as the `validation` namespace of `@framers/agentos/safety`); `extractJson` is also exported from `@framers/agentos`. No AgentOS component calls these helpers. For structured output from the runtime itself, see [Structured output from agents](#structured-output-from-agents).
 
-Handles all messy LLM output formats in a single call:
+## `extractJson`: JSON Extraction
+
+Handles the common LLM output formats in one call and returns the JSON text, or `null`:
 
 ```typescript
-import { extractJson } from '@framers/agentos/core/validation';
+import { extractJson } from '@framers/agentos/safety/validation';
 
 extractJson('{"a": 1}');                                // '{"a": 1}'
 extractJson('```json\n{"a": 1}\n```');                  // '{"a": 1}'
@@ -34,18 +35,18 @@ extractJson('just plain text');                          // null
 ```
 
 **Extraction strategies (priority order):**
-1. Raw JSON — entire string is valid JSON
-2. Markdown fenced blocks — ` ```json ... ``` `
-3. `<thinking>` block stripping — remove chain-of-thought, parse remainder
-4. JSONL — multiple JSON objects on separate lines → array
-5. Brace/bracket matching — first `{...}` or `[...]` in prose
+1. Raw JSON: the whole string parses
+2. Markdown fenced blocks: ` ```json ... ``` ` or a bare ` ``` ` fence
+3. `<thinking>` block stripping: remove the reasoning, then run the strategies again on the rest
+4. JSONL: when two or more lines each parse to an object or array, they become one array (other lines are skipped)
+5. Brace/bracket matching: the first `{...}` or `[...]` in the text; when that span does not parse, the result is `null`
 
-## `createValidatedInvoker` — Validated LLM Wrapper
+## `createValidatedInvoker`: Validated LLM Wrapper
 
 Wraps any `(systemPrompt, userPrompt) => Promise<string>` invoker with Zod validation:
 
 ```typescript
-import { createValidatedInvoker } from '@framers/agentos/core/validation';
+import { createValidatedInvoker } from '@framers/agentos/safety/validation';
 import { z } from 'zod';
 
 const PersonalitySchema = z.object({
@@ -55,8 +56,8 @@ const PersonalitySchema = z.object({
 });
 
 const validated = createValidatedInvoker(llmInvoker, PersonalitySchema, {
-  maxRetries: 2,              // retry with error feedback (default: 1)
-  injectSchemaOnRetry: true,  // include schema in retry prompt (default: true)
+  maxRetries: 2,              // retries after the first call (default: 1)
+  injectSchemaOnRetry: true,  // name the expected format in the retry prompt (default: true)
 });
 
 const personality = await validated(systemPrompt, userPrompt);
@@ -64,60 +65,69 @@ const personality = await validated(systemPrompt, userPrompt);
 ```
 
 **Pipeline:**
-1. Call LLM via the raw invoker
-2. Extract JSON via `extractJson()`
-3. Validate with Zod `.safeParse()` (applies defaults, type coercion)
-4. If valid: return typed result
-5. If invalid: retry with error feedback + schema description
-6. If all retries fail: throw `LlmOutputValidationError`
+1. Call the LLM through the raw invoker
+2. Extract JSON with `extractJson()`
+3. Parse with `JSON.parse`
+4. Validate with Zod `.safeParse()` (which fills `.default()` values)
+5. If valid: return the typed result
+6. If not: call again with the error appended to the system prompt
+7. If the last retry fails: throw `LlmOutputValidationError`
 
-**Retry prompt injection:** On failure, the system prompt is augmented with:
-- The specific error ("Zod validation: value.path: Required")
-- The expected JSON schema (auto-generated from the Zod schema)
-- An instruction to output ONLY valid JSON
+With `maxRetries: 2` the invoker is called at most three times.
 
-## `agent()` responseSchema
+**Retry prompt:** on a retry, the system prompt gets:
+- the previous attempt's error: `No JSON found in LLM output`, `JSON parse error: ...`, or `Zod validation: <path>: <message>; ...`
+- the instruction `Please output ONLY valid JSON matching the required format.`
+- with `injectSchemaOnRetry`, a `Required JSON format:` line naming the fields of an object schema (`A JSON object with these fields: honesty, emotionality, extraversion`), or `A valid JSON object matching the required schema` for any other schema
 
-The `agent()` factory accepts an optional `responseSchema` for automatic validation:
+The invoker type declares a `supportsStructuredOutput` flag and the options declare `preferStructuredOutput`; the wrapper reads neither, so every invoker gets the same extract, validate and retry loop.
+
+## Structured output from agents
+
+`agent()` accepts a `responseSchema` option in its types but does not read it: `generate()` returns no `parsed` value. For a validated object from an agent, pass the schema on a session send:
 
 ```typescript
 import { agent } from '@framers/agentos';
 import { z } from 'zod';
 
 const extractor = agent({
+  provider: 'openai',
+  model: 'gpt-4o',
   instructions: 'Extract entities from text as JSON.',
+});
+
+const result = await extractor.session().send('Find entities in: The cat sat on the mat.', {
   responseSchema: z.object({
     entities: z.array(z.string()),
     confidence: z.number().min(0).max(1),
   }),
 });
-
-const result = await extractor.generate('Find entities in: The cat sat on the mat.');
-// result.parsed?.entities is string[] — Zod-validated and typed
-// result.text is the raw LLM output for logging
+// result.object.entities is string[]: Zod-validated and typed
+// result.text is the JSON string the model returned
 ```
 
-When `responseSchema` is omitted, behavior is unchanged — no validation, `result.parsed` is undefined. Zero breaking changes.
+`send()` with `responseSchema` sends the schema through the provider's structured-output API where the payload can carry it, and in the system prompt otherwise. A reply that does not parse or fails the schema throws `ObjectGenerationError`; it is not retried. `agency({ output: schema })` validates the final text and puts the value on `result.parsed`, retrying `controls.maxValidationRetries` times (default 1) and returning `parsed: undefined` when every attempt fails. For one-off calls, `generateObject()` validates with retries (see [Structured Output API](/features/structured-output-api)).
 
 ## Schema Primitives
 
-Reusable Zod building blocks for common fields:
+Reusable Zod pieces for common fields:
 
 ```typescript
 import {
-  MemoryTypeEnum,       // 'episodic' | 'semantic' | 'procedural' | 'prospective' | 'relational'
-  MemoryScopeEnum,      // 'user' | 'thread' | 'persona' | 'organization'
-  ConfidenceScore,      // z.number().min(0).max(1)
-  EntityArray,          // z.array(z.string()).default([])
-  TagArray,             // z.array(z.string()).default([])
-  ImportanceScore,      // z.number().min(0).max(1).default(0.5)
-  ObservationNoteOutput, // Full schema for observer notes
-  ReflectionTraceOutput, // Full schema for reflector traces
-  ContentFeaturesOutput, // Full schema for content feature detection
-} from '@framers/agentos/core/validation';
+  MemoryTypeEnum,        // 'episodic' | 'semantic' | 'procedural' | 'prospective' | 'relational'
+  MemoryScopeEnum,       // 'user' | 'thread' | 'persona' | 'organization'
+  ConfidenceScore,       // z.number().min(0).max(1)
+  EntityArray,           // z.array(z.string()).default([])
+  TagArray,              // z.array(z.string()).default([])
+  ImportanceScore,       // z.number().min(0).max(1).default(0.5)
+  ObservationNoteOutput, // an observer note
+  ReflectionTraceOutput, // a reflector trace
+  CompressedObservationOutput, // a compressed observation
+  ContentFeaturesOutput, // content feature flags
+} from '@framers/agentos/safety/validation';
 ```
 
-Compose domain-specific schemas from primitives:
+Compose domain-specific schemas from the primitives:
 
 ```typescript
 const MyOutputSchema = z.object({
@@ -130,26 +140,20 @@ const MyOutputSchema = z.object({
 
 ## Error Handling
 
-When validation fails after all retries, `LlmOutputValidationError` is thrown:
+When the last retry fails, the validated invoker throws `LlmOutputValidationError`:
 
 ```typescript
-import { LlmOutputValidationError } from '@framers/agentos/core/validation';
+import { LlmOutputValidationError } from '@framers/agentos/safety/validation';
 
 try {
   const result = await validatedInvoker(system, user);
 } catch (err) {
   if (err instanceof LlmOutputValidationError) {
-    console.error('Raw output:', err.rawOutput);
-    console.error('Zod errors:', err.zodErrors);
-    console.error('Retry count:', err.retryCount);
+    console.error('Raw output:', err.rawOutput);     // the last attempt's raw text
+    console.error('Zod errors:', err.zodErrors);     // the last attempt's ZodError (empty when it held no JSON)
+    console.error('Retry count:', err.retryCount);   // the configured maxRetries
     console.error('History:', err.retryHistory);
     // retryHistory: [{ attempt: 0, rawOutput: '...', error: '...' }, ...]
   }
 }
 ```
-
-## Provider-Native Structured Output
-
-When the LLM invoker has `supportsStructuredOutput: true` (Anthropic tool_use, OpenAI json_schema), the wrapper converts the Zod schema to JSON Schema and uses the provider's native enforcement. No retries needed — the provider guarantees valid JSON.
-
-All other providers (Ollama, OpenRouter, Groq) get the retry-with-schema fallback automatically.
