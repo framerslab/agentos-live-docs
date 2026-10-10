@@ -215,7 +215,7 @@ On stream completion, a comprehensive check runs:
 3. Ambiguous claims: escalate to LLM-as-judge
 4. Aggregate results:
    - Any contradicted claim: FLAG or BLOCK (per `contradictionAction`)
-   - Unverifiable ratio > `maxUnverifiableRatio`: FLAG (per `unverifiableAction`)
+   - Unverifiable ratio > `maxUnverifiableRatio`: FLAG, or BLOCK with `unverifiableAction: 'block'`
    - All supported: pass
 
 ---
@@ -224,8 +224,8 @@ On stream completion, a comprehensive check runs:
 
 | Verdict        | Meaning                                  | Trigger                                                                     |
 | -------------- | ---------------------------------------- | --------------------------------------------------------------------------- |
-| `supported`    | Claim is entailed by at least one source | NLI entailment ≥ threshold, or the LLM judge says supported                 |
-| `contradicted` | Claim directly contradicts a source      | NLI contradiction ≥ threshold (and entailment below it), or LLM confirms    |
+| `supported`    | Claim is entailed by at least one source | Best NLI entailment ≥ `entailmentThreshold`, or the LLM judge says supported |
+| `contradicted` | Claim directly contradicts a source      | Best NLI contradiction ≥ `contradictionThreshold` while the best entailment stays below `entailmentThreshold`, or the LLM judge says contradicted |
 | `unverifiable` | Claim not found in any source            | Neither score reaches its threshold and no LLM, the LLM says unverifiable, or the NLI model could not score any pair |
 
 ---
