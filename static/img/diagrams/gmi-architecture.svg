@@ -131,7 +131,7 @@
     <!-- Core -->
     <circle cx="10" cy="458" r="6" class="swatch-core"/>
     <text x="28" y="462" class="legend-title">LLM core</text>
-    <text x="28" y="478" class="legend-text">11 providers + OpenRouter fan-out · automatic</text>
+    <text x="28" y="478" class="legend-text">13 providers + OpenRouter fan-out · automatic</text>
     <text x="28" y="492" class="legend-text">fallback chains · streaming dispatch.</text>
 
     <text x="0" y="544" class="legend-tag">All seven layers compose; the GMI itself is a thin coordinator</text>

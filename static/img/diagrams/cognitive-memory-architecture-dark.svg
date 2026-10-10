@@ -134,7 +134,7 @@
   <rect x="500" y="430" width="200" height="80" rx="8" class="substrate"/>
   <text x="600" y="454" class="heading" text-anchor="middle">LLM invokers</text>
   <text x="600" y="474" class="small" text-anchor="middle">observation + reflection calls</text>
-  <text x="600" y="492" class="micro" text-anchor="middle">11 providers via dispatcher</text>
+  <text x="600" y="492" class="micro" text-anchor="middle">13 providers via dispatcher</text>
 
   <rect x="720" y="430" width="200" height="80" rx="8" class="substrate"/>
   <text x="820" y="454" class="heading" text-anchor="middle">Prospective Memory</text>

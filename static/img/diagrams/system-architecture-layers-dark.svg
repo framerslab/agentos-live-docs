@@ -91,7 +91,7 @@
     <rect x="30" y="470" width="940" height="70" rx="10" class="layer-card acc-7"/>
     <text x="50" y="498" class="layer-num num-7">6</text>
     <text x="70" y="498" class="layer-title">LLM providers</text>
-    <text x="70" y="518" class="layer-text">11 direct providers + OpenRouter fan-out · automatic fallback chains</text>
+    <text x="70" y="518" class="layer-text">13 providers + OpenRouter fan-out · automatic fallback chains</text>
     <text x="70" y="534" class="layer-text">OpenAI · Anthropic · Gemini · Ollama · Groq · Mistral · xAI · Together · Claude Code CLI · Gemini CLI</text>
   </g>
 
