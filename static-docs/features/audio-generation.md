@@ -62,7 +62,6 @@ const result = await generateMusic({
   provider: 'stable-audio',
   model: 'stable-audio-open-1.0',
   durationSec: 30,
-  outputFormat: 'wav',
   onProgress: (event) => {
     console.log(`[${event.status}] ${event.progress ?? '?'}% - ${event.message}`);
   },
@@ -77,15 +76,17 @@ const result = await generateMusic({
 | `provider` | `string` | Provider ID (`"suno"`, `"udio"`, `"stable-audio"`, etc.) |
 | `model` | `string` | Model override within the provider |
 | `durationSec` | `number` | Desired output duration in seconds |
-| `negativePrompt` | `string` | Musical elements to avoid |
-| `outputFormat` | [`AudioOutputFormat`](https://github.com/framerslab/agentos/blob/master/src/io/media/audio/types.ts) | `"mp3"` / `"wav"` / `"flac"` / `"ogg"` / `"aac"` |
-| `seed` | `number` | Seed for reproducible generation |
+| `negativePrompt` | `string` | Musical elements to avoid; passed to the provider, which ignores it |
+| `outputFormat` | [`AudioOutputFormat`](https://github.com/framerslab/agentos/blob/master/src/io/media/audio/types.ts) | `"mp3"` / `"wav"` / `"flac"` / `"ogg"` / `"aac"`; passed to the provider, which ignores it, so the clip comes in the provider's own format |
+| `seed` | `number` | Seed for reproducible generation; passed to the provider, which ignores it |
 | `timeoutMs` | `number` | Maximum wait time in milliseconds |
-| `n` | `number` | Number of clips to request |
+| `n` | `number` | Number of clips to request; passed to the provider, which ignores it |
 | `onProgress` | `(event) => void` | Progress callback with [`AudioProgressEvent`](https://github.com/framerslab/agentos/blob/master/src/io/media/audio/types.ts) |
 | `providerPreferences` | [`MediaProviderPreference`](https://github.com/framerslab/agentos/blob/master/src/io/media/ProviderPreferences.ts) | Reorder or filter the fallback chain |
 | `apiKey` | `string` | Override the API key of the first provider |
-| `providerOptions` | `Record<string, unknown>` | Provider-specific options passed through |
+| `providerOptions` | `Record<string, unknown>` | Provider-specific options; passed to the provider, which ignores them |
+
+Every built-in provider reads three fields of a request: the prompt, the model and `durationSec` (the providers under [`src/io/media/audio/providers/`](https://github.com/framerslab/agentos/tree/master/src/io/media/audio/providers)). `negativePrompt`, `outputFormat`, `seed`, `n` and `providerOptions` reach the provider and change nothing, so a call returns the clips and the format the provider's API produces.
 
 ## `generateSFX()`
 
@@ -109,14 +110,14 @@ console.log(result.audio[0].url);
 | `provider` | `string` | Provider ID (`"elevenlabs-sfx"`, `"stable-audio"`, etc.) |
 | `model` | `string` | Model override within the provider |
 | `durationSec` | `number` | Desired output duration (SFX: typically 1-15s) |
-| `outputFormat` | [`AudioOutputFormat`](https://github.com/framerslab/agentos/blob/master/src/io/media/audio/types.ts) | `"mp3"` / `"wav"` / `"flac"` / `"ogg"` / `"aac"` |
-| `seed` | `number` | Seed for reproducible generation |
+| `outputFormat` | [`AudioOutputFormat`](https://github.com/framerslab/agentos/blob/master/src/io/media/audio/types.ts) | `"mp3"` / `"wav"` / `"flac"` / `"ogg"` / `"aac"`; passed to the provider, which ignores it, so the clip comes in the provider's own format |
+| `seed` | `number` | Seed for reproducible generation; passed to the provider, which ignores it |
 | `timeoutMs` | `number` | Maximum wait time in milliseconds |
-| `n` | `number` | Number of clips to request |
+| `n` | `number` | Number of clips to request; passed to the provider, which ignores it |
 | `onProgress` | `(event) => void` | Progress callback with [`AudioProgressEvent`](https://github.com/framerslab/agentos/blob/master/src/io/media/audio/types.ts) |
 | `providerPreferences` | [`MediaProviderPreference`](https://github.com/framerslab/agentos/blob/master/src/io/media/ProviderPreferences.ts) | Reorder or filter the fallback chain |
 | `apiKey` | `string` | Override the API key of the first provider |
-| `providerOptions` | `Record<string, unknown>` | Provider-specific options passed through |
+| `providerOptions` | `Record<string, unknown>` | Provider-specific options; passed to the provider, which ignores them |
 
 ## Result types
 
@@ -155,7 +156,7 @@ interface AudioProgressEvent {
 }
 ```
 
-`generateMusic()` and `generateSFX()` report `queued` (0), `processing` (25), then `complete` (100) or `failed`; the providers report no progress of their own.
+`generateMusic()` and `generateSFX()` report `queued` (0) once they have chosen a provider, `processing` (25) once it is created, and `complete` (100) with the result. An error at any point reports `failed`, so a call that fails while choosing its provider (a named provider without its API key, or no provider configured) reports `failed` alone. The providers report no progress of their own.
 
 ## Local generation
 
