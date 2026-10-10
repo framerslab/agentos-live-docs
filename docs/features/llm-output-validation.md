@@ -78,7 +78,7 @@ With `maxRetries: 2` the invoker is called at most three times.
 **Retry prompt:** on a retry, the system prompt gets:
 - the previous attempt's error: `No JSON found in LLM output`, `JSON parse error: ...`, or `Zod validation: <path>: <message>; ...`
 - the instruction `Please output ONLY valid JSON matching the required format.`
-- with `injectSchemaOnRetry`, a `Required JSON format:` line naming the fields of an object schema (`A JSON object with these fields: honesty, emotionality, extraversion`), or `A valid JSON object matching the required schema` for any other schema
+- with `injectSchemaOnRetry`, a `Required JSON format:` line naming the fields of an object schema (`A JSON object with these fields: honesty, emotionality, extraversion`), or `A valid JSON object matching the required schema` for any other schema. For a schema without an object shape, `describeSchema()` first tries to load `zod-to-json-schema` with `require()`. The package ships ES modules, where Node defines no `require`, so under Node the call throws, the error is caught, and the fixed sentence is used whether or not `zod-to-json-schema` is installed
 
 The invoker type declares a `supportsStructuredOutput` flag and the options declare `preferStructuredOutput`; the wrapper reads neither, so every invoker gets the same extract, validate and retry loop.
 

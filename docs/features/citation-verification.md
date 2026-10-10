@@ -49,7 +49,7 @@ for (const claim of result.grounding?.claims ?? []) {
 
 After the model answers, the agent calls `retrieve` with the user's input and runs [`CitationVerifier`](https://github.com/framerslab/agentos/blob/master/src/cognition/rag/citation/CitationVerifier.ts) over the answer and those sources ([`citationVerification.ts`](https://github.com/framerslab/agentos/blob/master/src/api/runtime/citationVerification.ts)). The sources serve the check and do not reach the model. With `retrievalAugmentor` in place of `embedFn` and `retrieve`, the agent retrieves through the augmentor's `retrieveContext()` (with `retrievalOptions`) and embeds through its `embedTexts()`. `supportThreshold`, `unverifiableThreshold`, `nliFn` and `extractClaims` pass through to the verifier.
 
-`result.grounding` is `undefined` when retrieval returns no sources, when neither wiring is complete, or when retrieval or verification throws; outside production a warning is logged. The check never fails the call. Only `generate()` runs it: `stream()` and `session().send()` do not.
+`result.grounding` is `undefined` when retrieval returns no sources, when neither wiring is complete, or when retrieval or verification throws. Outside production (`NODE_ENV` other than `production`), incomplete wiring and a thrown error log a warning; an empty source list logs nothing. The check never fails the call. Only `generate()` runs it: `stream()` and `session().send()` do not.
 
 [`QueryRouter`](https://github.com/framerslab/agentos/blob/master/src/orchestration/pipeline/query/QueryRouter.ts) takes `verifyCitations: true` and verifies with its own retrieved chunks and embeddings (see [QueryRouter](#queryrouter)).
 

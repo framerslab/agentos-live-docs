@@ -127,7 +127,7 @@ const compiled = app.workflow('research-pipeline')
 const result = await app.runGraph(compiled, { topic: 'graph-based agent runtimes' });
 ```
 
-`app.workflow()` builds DAGs, `app.agentGraph()` router-driven graphs, and `app.mission()` planner-driven orchestration. All three compile to AgentOS's graph IR and run on its graph runtime with Wunderland's node executor, which uses the app's LLM, tools and approvals. A node runs at most once per run, so a cycle in a graph does not run.
+`app.workflow()` builds DAGs, `app.agentGraph()` router-driven graphs, and `app.mission()` planner-driven orchestration. All three compile to AgentOS's graph IR and run on its graph runtime with Wunderland's node executor, which uses the app's LLM, tools and approvals. `AgentGraph` accepts a cycle when it compiles, but the runtime starts a node only once every node with an edge into it has finished, and never starts a finished node again. The nodes of a cycle each wait on the other, so none of them starts and the run ends without them; a back edge gives neither a loop nor a retry.
 
 ---
 
