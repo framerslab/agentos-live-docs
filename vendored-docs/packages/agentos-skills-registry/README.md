@@ -1,6 +1,6 @@
 # @framers/agentos-skills-registry
 
-Curated skills registry for [AgentOS](https://github.com/framerslab/agentos) — 88 SKILL.md prompt modules, typed catalog, and lazy-loading factories.
+**Catalog SDK** for querying and loading AgentOS skills (this page describes 0.19.5).
 
 [![npm](https://img.shields.io/npm/v/@framers/agentos-skills-registry?logo=npm&color=cb3837)](https://www.npmjs.com/package/@framers/agentos-skills-registry)
 
@@ -8,21 +8,22 @@ Curated skills registry for [AgentOS](https://github.com/framerslab/agentos) —
 npm install @framers/agentos-skills-registry
 ```
 
-## What's Inside
+The skill content (88 SKILL.md files and `registry.json`) lives in [`@framers/agentos-skills`](https://github.com/framerslab/agentos-skills), which this package depends on and reads.
 
-This is the **catalog SDK** for AgentOS skills. It contains:
+## Ecosystem
 
-- **88 curated SKILL.md files** — prompt modules spanning developer tooling, productivity, research, social automation, voice, memory, and more
-- **registry.json** — machine-readable index of all skills with metadata
-- **Static catalog** (`SKILLS_CATALOG`) — typed array with query helpers
-- **Registry factories** — `createCuratedSkillRegistry()`, `createCuratedSkillSnapshot()` (requires `@framers/agentos`)
-- **Validation script** — `npm run validate` to lint SKILL.md files
+| Package | Role | What | Dependencies |
+| --- | --- | --- | --- |
+| [**@framers/agentos**](https://github.com/framerslab/agentos/tree/master/src/cognition/skills) (`@framers/agentos/cognition/skills`) | **Engine** | [SkillLoader](https://github.com/framerslab/agentos/blob/master/src/cognition/skills/SkillLoader.ts), [SkillRegistry](https://github.com/framerslab/agentos/blob/master/src/cognition/skills/SkillRegistry.ts), [path utils](https://github.com/framerslab/agentos/blob/master/src/cognition/skills/paths.ts) | |
+| [**@framers/agentos-skills**](https://github.com/framerslab/agentos-skills) | **Content** | 88 [SKILL.md files](https://github.com/framerslab/agentos-skills/tree/master/registry/curated) + [registry.json](https://github.com/framerslab/agentos-skills/blob/master/registry.json) index | None |
+| [**@framers/agentos-skills-registry**](https://github.com/framerslab/agentos-skills-registry) | **Catalog SDK** | `SKILLS_CATALOG`, query helpers, lazy loaders, factories | `@framers/agentos-skills`, `yaml`; peer `@framers/agentos` |
+
+> This layout mirrors the extensions ecosystem:
+> [`@framers/agentos-extensions`](https://github.com/framerslab/agentos-extensions) (content) + [`@framers/agentos-extensions-registry`](https://github.com/framerslab/agentos-extensions-registry) (SDK).
 
 ## Quick Start
 
-### 1. Browse the catalog (zero peer deps)
-
-The `./catalog` sub-export has no peer dependencies:
+### 1. Browse the catalog
 
 ```typescript
 import {
@@ -30,198 +31,132 @@ import {
   searchSkills,
   getSkillsByCategory,
   getSkillByName,
-  getAvailableSkills,
-  getCategories,
-  getSkillsByTag,
 } from '@framers/agentos-skills-registry/catalog';
 
-// Search across names, descriptions, and tags
+// Search names, display names, descriptions and tags
 const matches = searchSkills('github');
+console.log(matches.map((s) => `${s.name}: ${s.description}`));
 
-// Filter by category
-const social = getSkillsByCategory('social-automation');
+// By category
+const devSkills = getSkillsByCategory('developer-tools');
+console.log(`${devSkills.length} developer-tools skills`);
 
-// Filter by installed tools
-const available = getAvailableSkills(['web-search', 'filesystem']);
-
-// Get a specific skill
-const github = getSkillByName('github');
-console.log(github?.requiredSecrets); // ['github.token']
-
-// All unique categories
-const categories = getCategories();
-// ['communication', 'creative', 'developer-tools', 'devops', 'information', ...]
+// By name
+const gh = getSkillByName('github');
+console.log(gh?.requiredSecrets); // ['github.token']
 ```
 
-### 2. Load raw registry data
+`SKILLS_CATALOG` is built from `@framers/agentos-skills/registry.json` when the module loads: its curated and community entries (88 curated, no community entries in 0.10.1), sorted by name. Each entry carries `name`, `displayName`, `description`, `category`, `tags`, `requiredSecrets`, `requiredTools`, `skillPath`, `source`, `namespace` and a lazy `loadSkill()`.
 
-Access the JSON index directly:
+### 2. Load a skill on demand
 
 ```typescript
-import { getSkillsCatalog } from '@framers/agentos-skills-registry';
+import { loadSkillByName } from '@framers/agentos-skills-registry';
 
-const catalog = await getSkillsCatalog();
-console.log(catalog.skills.curated.length); // 69
-console.log(catalog.version); // '1.0.0'
+const skill = await loadSkillByName('github');
+if (skill) {
+  console.log(skill.content);         // SKILL.md body for prompt injection
+  console.log(skill.metadata?.emoji); // the emoji from the skill's metadata.agentos block
+}
 ```
 
-Or import the raw JSON:
+A loaded skill has `name`, `displayName`, `description`, `content`, `frontmatter`, `metadata` and `sourcePath`. The frontmatter is parsed with `@framers/agentos`'s skill parser when that package is installed, else with the package's own YAML parser. `loadSkillByName()` resolves to `null` for a name the catalog does not hold.
+
+### 3. Build a SkillSnapshot (requires @framers/agentos)
 
 ```typescript
-import registry from '@framers/agentos-skills-registry/registry.json';
-console.log(registry.skills.curated[0].name); // 'weather'
-```
+import { createCuratedSkillSnapshot } from '@framers/agentos-skills-registry';
 
-### 3. Dynamically load skills into an agent (requires @framers/agentos)
-
-The factory functions lazy-load `@framers/agentos` via dynamic `import()`:
-
-```bash
-npm install @framers/agentos-skills-registry @framers/agentos
-```
-
-```typescript
-import {
-  createCuratedSkillRegistry,
-  createCuratedSkillSnapshot,
-  getBundledCuratedSkillsDir,
-  loadSkillByName,
-} from '@framers/agentos-skills-registry';
-
-// Option A: Create a live SkillRegistry loaded with all curated skills
-const registry = await createCuratedSkillRegistry();
-
-// Or load only a specific curated subset
-const selectedRegistry = await createCuratedSkillRegistry({
-  skills: ['github', 'weather'],
-});
-
-// Option B: Build a prompt snapshot for specific skills
 const snapshot = await createCuratedSkillSnapshot({
-  skills: ['github', 'weather', 'notion'], // or 'all'
+  skills: ['github', 'web-search', 'notion'],
   platform: 'darwin',
 });
 
-// Only the selected skills are loaded when you pass an explicit list.
-console.log(snapshot.skills.map((skill) => skill.name));
-// ['github', 'weather', 'notion']
-
-// Inject the snapshot prompt into your agent's system message
-const systemPrompt = `You are an AI assistant.\n\n${snapshot.prompt}`;
-
-// Option C: Load a single SKILL.md lazily with parsed metadata
-const githubSkill = await loadSkillByName('github');
-console.log(githubSkill?.metadata?.primaryEnv); // 'GITHUB_TOKEN'
-console.log(githubSkill?.frontmatter.requires_tools); // ['filesystem']
-
-// Option D: Get the directory path and load manually
-const skillsDir = getBundledCuratedSkillsDir();
-// → '/path/to/node_modules/@framers/agentos-skills-registry/registry/curated'
+// Inject into the agent's prompt
+console.log(snapshot.prompt);
 ```
 
-### 4. Dynamic skill resolution in Wunderland presets
+`createCuratedSkillRegistry({ skills, config })` imports `SkillRegistry` from `@framers/agentos/cognition/skills` and registers the selected skills (`'all'` by default, `'none'`, or a list of names); only the listed `SKILL.md` files are read. `createCuratedSkillSnapshot({ skills, platform, eligibility, config })` builds that registry and returns `registry.buildSnapshot({ platform, eligibility })`; with `skills: 'none'` it returns an empty snapshot without loading anything.
+
+### 4. Workspace skill discovery
 
 ```typescript
-// In agent.config.json:
-// { "suggestedSkills": ["github", "web-search", "notion"] }
-
-import { getSkillByName } from '@framers/agentos-skills-registry/catalog';
-import { createCuratedSkillSnapshot } from '@framers/agentos-skills-registry';
-
-// Validate skill names exist before loading
-const skillNames = ['github', 'web-search', 'notion'];
-const valid = skillNames.filter((name) => {
-  const entry = getSkillByName(name);
-  if (!entry) {
-    console.warn(`Unknown skill "${name}", skipping`);
-    return false;
-  }
-  return true;
-});
-
-// Build snapshot with only validated skills
-const snapshot = await createCuratedSkillSnapshot({ skills: valid });
-```
-
-When `skills` is a string array, the registry only loads those specific `SKILL.md`
-files before building the snapshot. It does not walk the full curated bundle first.
-Loaded skills also include parsed `metadata` so consumers do not need to decode
-the `metadata.agentos` block manually.
-
-## Two Import Paths
-
-| Import                                     | Peer deps                     | Use case                              |
-| ------------------------------------------ | ----------------------------- | ------------------------------------- |
-| `@framers/agentos-skills-registry/catalog` | None                          | UI browsing, search, filtering        |
-| `@framers/agentos-skills-registry`         | `@framers/agentos` (optional) | Runtime loading, snapshots, factories |
-
-The `@framers/agentos` dependency is loaded **lazily** at runtime and cached after first resolution. If it's not installed and you call a factory function, you get a clear error with install instructions.
-
-## Included Skills (69)
-
-The catalog now includes both foundational utility skills and social automation modules, including:
-
-- Information and research: `web-search`, `weather`, `summarize`, `deep-research`
-- Developer tools: `github`, `coding-agent`, `git`
-- Productivity: `notion`, `obsidian`, `trello`, `apple-notes`, `apple-reminders`
-- Social automation: `social-broadcast`, `twitter-bot`, `instagram-bot`, `linkedin-bot`, `facebook-bot`, `threads-bot`, `bluesky-bot`, `mastodon-bot`, `youtube-bot`, `tiktok-bot`, `pinterest-bot`, `reddit-bot`, `blog-publisher`
-- Additional categories: `automation`, `communication`, `devops`, `media`, `marketing`, `creative`, `security`
-
-## Community Skills
-
-The catalog supports both **curated** (staff-maintained) and **community** (PR-submitted) skills:
-
-```typescript
-import { getCuratedSkills, getCommunitySkills } from '@framers/agentos-skills-registry/catalog';
-
-const curated = getCuratedSkills(); // Staff-verified skills
-const community = getCommunitySkills(); // Community-contributed
-```
-
-Each entry includes a `source` field (`'curated'` or `'community'`) for provenance filtering.
-
-## Schema Types
-
-Import registry.json schema types for type-safe access:
-
-```typescript
-import type {
-  SkillRegistryEntry,
-  SkillsRegistry,
-  SkillInstallSpec,
-  SkillMetadata,
+import {
+  discoverWorkspaceSkills,
+  mergeWithWorkspaceSkills,
+  SKILLS_CATALOG,
 } from '@framers/agentos-skills-registry';
 
-// SkillRegistryEntry — shape of entries in registry.json
-// SkillsRegistry — shape of the full registry.json file
-// SkillInstallSpec — install instructions for skill dependencies
+// Scan .agents/skills/ under the working directory for <name>/SKILL.md
+const workspace = await discoverWorkspaceSkills();
+
+// Workspace skills first; a catalog skill with the same name is dropped
+const merged = mergeWithWorkspaceSkills(SKILLS_CATALOG, workspace);
 ```
 
-## Exports
+`discoverWorkspaceSkills()` takes `cwd` and `skillsDir` options and returns an empty array when the directory does not exist.
 
-| Export path       | Contents                                                      |
-| ----------------- | ------------------------------------------------------------- |
-| `.`               | Full SDK: catalog helpers + factory functions + schema types  |
-| `./catalog`       | Lightweight: `SKILLS_CATALOG`, query helpers (zero peer deps) |
-| `./registry.json` | Raw JSON index of all skills                                  |
-| `./types`         | TypeScript declarations for registry.json schema              |
+## Sub-exports
 
-## Relationship to Other Packages
+| Entry Point | What | Peer Deps |
+| --- | --- | --- |
+| `@framers/agentos-skills-registry` | Full API: catalog + factories + workspace discovery + schema types | `@framers/agentos` (needed by the factories) |
+| `@framers/agentos-skills-registry/catalog` | `SKILLS_CATALOG`, query helpers, lazy loaders | None |
+| `@framers/agentos-skills-registry/workspace-discovery` | Workspace skill scanning + merging | None |
 
-```mermaid
-graph TD
-    A["@framers/agentos-skills-registry<br/><i>This package — data + SDK</i>"]
-    A --> B["registry/curated/*/SKILL.md<br/><i>bundled prompt modules</i>"]
-    A --> C["registry.json<br/><i>machine-readable index</i>"]
-    A --> D["catalog.ts<br/><i>typed queries: search, filter, browse</i>"]
-    A --> E["index.ts<br/><i>factories: lazy-load @framers/agentos</i>"]
-    E --> F["@framers/agentos<br/><i>optional peer: live SkillRegistry + snapshots</i>"]
-```
+## API Reference
 
-## Contributing
+### Catalog Queries
 
-See [CONTRIBUTING.md](./CONTRIBUTING.md) for how to submit new skills.
+- `SKILLS_CATALOG`: sorted array of the curated and community skill entries
+- `searchSkills(query)`: case-insensitive substring search across names, display names, descriptions and tags
+- `getSkillsByCategory(category)`: filter by category
+- `getSkillByName(name)`: single skill lookup
+- `getAvailableSkills(installedTools)`: the skills whose `requiredTools` are all in `installedTools`
+- `getCategories()`: sorted list of unique categories
+- `getSkillsByTag(tag)`: filter by tag (case-insensitive exact match)
+- `getCuratedSkills()` / `getCommunitySkills()` / `getAllSkills()`: source filters
+- `getSkillEntries(names)`: filter by name list (`'all'` | `'none'` | `string[]`)
+
+### Lazy Loading
+
+- `loadSkillByName(name)`: load and parse a single SKILL.md by name
+- `loadSkillsByNames(names)`: load several in parallel, skipping unknown names
+- `loadSkillFromAbsolutePath(path, displayName)`, `createLocalSkillProxy(relativePath, displayName)`: load a SKILL.md by path
+
+### Factory Functions (require @framers/agentos)
+
+- `createCuratedSkillRegistry(options?)`: a live `SkillRegistry` with the selected curated skills
+- `createCuratedSkillSnapshot(options?)`: a `SkillSnapshot` ready for prompt injection
+
+### Registry Data and Path Helpers
+
+- `getSkillsCatalog()`: the parsed `registry.json`; `getAvailableCuratedSkills()`: its curated entries
+- `getBundledCuratedSkillsDir()`: absolute path to `@framers/agentos-skills/registry/curated/`
+- `getBundledCommunitySkillsDir()`: absolute path to `@framers/agentos-skills/registry/community/`
+
+### Workspace Discovery
+
+- `discoverWorkspaceSkills(options?)`: scan `.agents/skills/` for workspace-local skills
+- `mergeWithWorkspaceSkills(registry, workspace)`: merge, workspace skills first
+- `parseSkillFrontmatter(content)`: parse YAML frontmatter from skill content
+
+### Schema Types
+
+`SkillRegistryEntry`, `SkillsRegistry`, `SkillsRegistryStats`, `SkillMetadata`, `SkillRequirements`, `SkillInstallSpec` and `SkillInstallKind` describe `registry.json` and are exported from the package root.
+
+## Contributing and support
+
+| Guide | What |
+|---|---|
+| [Contributing](https://github.com/framerslab/agentos-skills-registry/blob/master/CONTRIBUTING.md) | Development setup, commit and pull request rules, review threads, contribution licensing |
+| [Release guide](https://github.com/framerslab/agentos-skills-registry/blob/master/RELEASING.md) | How a push to master becomes an npm release |
+| [Code of Conduct](https://github.com/framerslab/agentos-skills-registry/blob/master/.github/CODE_OF_CONDUCT.md) | Community standards |
+| [Security Policy](https://github.com/framerslab/agentos-skills-registry/blob/master/.github/SECURITY.md) | Reporting vulnerabilities privately |
+| [Support](https://github.com/framerslab/agentos-skills-registry/blob/master/SUPPORT.md) | Where to get help |
+
+New skills are added to [`@framers/agentos-skills`](https://github.com/framerslab/agentos-skills/blob/master/CONTRIBUTING.md).
 
 ## License
 
-MIT
+Apache 2.0. See [LICENSE](https://github.com/framerslab/agentos-skills-registry/blob/master/LICENSE).
