@@ -23,15 +23,16 @@ This site hosts guides, API reference, architecture docs, and tutorials for buil
 
 - [System Architecture](https://docs.agentos.sh/architecture/system-architecture)
 - [Agent Communication](https://docs.agentos.sh/features/agent-communication)
-- [Platform Support (37 Channels)](https://docs.agentos.sh/features/platform-strategy)
+- [Channels (37 Channel Packs)](https://docs.agentos.sh/features/channels)
+- [Storage Platform Strategy](https://docs.agentos.sh/features/platform-strategy)
 - [Streaming Semantics](https://docs.agentos.sh/architecture/streaming-semantics)
 
 ## Features
 
 - [Cognitive Memory (8 Mechanisms)](https://docs.agentos.sh/features/cognitive-memory)
-- [HEXACO Personality Model](https://docs.agentos.sh/features/cognitive-memory-guide)
+- [HEXACO Personality Model](https://docs.agentos.sh/features/hexaco-personality)
 - [Multi-Agent Teams (6 Strategies)](https://docs.agentos.sh/features/agency-collaboration)
-- [RAG & Memory Configuration](https://docs.agentos.sh/features/rag-memory-configuration)
+- [RAG & Memory Configuration](https://docs.agentos.sh/features/rag-memory)
 - [Orchestration Guide](https://docs.agentos.sh/features/orchestration-guide)
 - [Workflow DSL](https://docs.agentos.sh/features/workflow-dsl)
 - [Planning Engine](https://docs.agentos.sh/features/planning-engine)
@@ -39,14 +40,14 @@ This site hosts guides, API reference, architecture docs, and tutorials for buil
 - [Human-in-the-Loop](https://docs.agentos.sh/features/human-in-the-loop)
 - [Image Generation](https://docs.agentos.sh/features/image-generation)
 - [Voice Pipeline](https://docs.agentos.sh/features/voice-pipeline)
-- [Emergent Capabilities](https://docs.agentos.sh/features/recursive-self-building)
+- [Emergent Capabilities](https://docs.agentos.sh/features/emergent-capabilities)
 
 ## Blog
 
-- [AgentOS vs LangGraph vs CrewAI vs Mastra](https://docs.agentos.sh/blog/2026/02/20/agentos-vs-langgraph-vs-crewai)
-- [Build a TypeScript AI Agent in 5 Minutes](https://docs.agentos.sh/blog/build-typescript-ai-agent-5-minutes)
-- [Adaptive vs. Emergent Intelligence](https://docs.agentos.sh/blog/adaptive-vs-emergent)
-- [Announcing AgentOS](https://docs.agentos.sh/blog/announcing-agentos)
+- [AgentOS vs LangGraph vs CrewAI vs Mastra](https://agentos.sh/en/blog/agentos-vs-langgraph-vs-crewai)
+- [Build a TypeScript AI Agent in 5 Minutes](https://agentos.sh/en/blog/build-typescript-ai-agent-5-minutes)
+- [Adaptive vs. Emergent Intelligence](https://agentos.sh/en/blog/adaptive-vs-emergent)
+- [Announcing AgentOS](https://agentos.sh/en/blog/announcing-agentos)
 
 ## Related
 
