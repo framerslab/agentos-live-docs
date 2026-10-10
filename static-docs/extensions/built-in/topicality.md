@@ -5,9 +5,9 @@ sidebar_position: 20
 
 # Topicality
 
-Embedding-based topic enforcement with allowed/forbidden topic boundaries and session-aware drift detection via exponential moving average tracking.
+Topic enforcement for user input: a message that matches a blocked topic is blocked, and one that matches no allowed topic is flagged. Matching runs on local sentence embeddings, an LLM judge, or substring keywords, in that order.
 
-**Package:** `@framers/agentos-ext-topicality`
+**Package:** `@framers/agentos-ext-topicality` (this page describes 0.2.2)
 
 ---
 
@@ -15,16 +15,30 @@ Embedding-based topic enforcement with allowed/forbidden topic boundaries and se
 
 The Topicality extension provides two modes of operation:
 
-- **Passive protection** via a built-in guardrail that automatically enforces topic boundaries on user input using semantic embedding similarity
-- **Active capability** via an agent-callable tool (`check_topic`) for on-demand topic matching
+- **Passive protection** via a guardrail that checks the user's text input (`evaluateInput`). It does not evaluate the agent's output or streamed chunks.
+- **Active capability** via an agent-callable tool (`check_topic`) for on-demand topic checks.
 
-It enforces:
+Topics are short natural-language strings, such as `'billing and payments'` or `'violence'`.
 
-- **Allowed topics** -- messages must be semantically related to at least one configured allowed topic (off-topic messages are flagged or blocked)
-- **Forbidden topics** -- messages matching a forbidden topic above the threshold are immediately blocked
-- **Drift detection** -- gradual off-topic steering across multiple conversation turns is detected using per-session exponential moving average (EMA) tracking
+### Tiers
 
-Topics are defined as structured descriptors with name, description, and example phrases. Each topic is embedded as a centroid vector (average of all example embeddings) for broad semantic coverage across different phrasings.
+Each message goes to the first tier that answers:
+
+1. **Embeddings**: `@huggingface/transformers` feature extraction with `Xenova/all-MiniLM-L6-v2` (mean pooling, normalized vectors), loaded on the first message; each topic string's vector is cached. Blocked topics are checked first: a cosine similarity at or above `maxBlockedSimilarity` (0.5) is a blocked-topic hit. With no allowed topics the message passes; otherwise it passes when its best allowed-topic similarity is at or above `minSimilarity` (0.3), and is off-topic below it.
+2. **LLM judge**: when the model cannot load and `llmInvoker` is set. The prompt lists the allowed and blocked topics and asks for `{ onTopic, confidence, detectedTopic }` as JSON. A failed call or a reply without JSON falls through to the keyword tier.
+3. **Keywords**: case-insensitive substring matching in both directions between the message and each topic string, blocked topics first.
+
+A model that fails to load is not tried again in the process.
+
+### Results
+
+| Outcome                                                         | Action  | Reason code     |
+| --------------------------------------------------------------- | ------- | --------------- |
+| The detected topic is one of `blockedTopics`                     | `BLOCK` | `BLOCKED_TOPIC` |
+| Off-topic (no allowed topic matched, or the LLM judge said so)   | `FLAG`  | `OFF_TOPIC`     |
+| On-topic, or neither list has an entry, or empty input           | none    | --              |
+
+The metadata carries `detectedTopic`, `confidence` and `onTopic`. An LLM judge reply blocks only when its `detectedTopic` names a blocked topic exactly; otherwise an off-topic reply flags.
 
 ---
 
@@ -34,7 +48,11 @@ Topics are defined as structured descriptors with name, description, and example
 npm install @framers/agentos-ext-topicality
 ```
 
-Requires an embedding provider to be configured in AgentOS (e.g., OpenAI embeddings via [`AIModelProviderManager`](https://github.com/framerslab/agentos/blob/master/src/core/llm/providers/AIModelProviderManager.ts)), or a custom `embeddingFn` can be injected for testing.
+The embedding tier needs `@huggingface/transformers` (an optional dependency of AgentOS):
+
+```bash
+npm install @huggingface/transformers
+```
 
 ---
 
@@ -43,44 +61,35 @@ Requires an embedding provider to be configured in AgentOS (e.g., OpenAI embeddi
 ### Direct factory usage
 
 ```typescript
-import { AgentOS } from '@framers/agentos';
-import { createTopicalityGuardrail, TOPIC_PRESETS } from '@framers/agentos-ext-topicality';
+import { AgentOS, generateText } from '@framers/agentos';
+import { createTopicalityGuardrail } from '@framers/agentos-ext-topicality';
 
 const topicalityPack = createTopicalityGuardrail({
-  allowedTopics: TOPIC_PRESETS.customerSupport,
-  forbiddenTopics: TOPIC_PRESETS.commonUnsafe,
-  allowedThreshold: 0.35,
-  forbiddenThreshold: 0.65,
-  offTopicAction: 'flag',
-  forbiddenAction: 'block',
-  enableDriftDetection: true,
+  allowedTopics: ['billing and payments', 'technical support', 'account management'],
+  blockedTopics: ['violence', 'illegal activity'],
+  minSimilarity: 0.3,
+  maxBlockedSimilarity: 0.5,
+  // Used only when the embedding model cannot load.
+  llmInvoker: async (prompt) =>
+    (await generateText({ provider: 'openai', model: 'gpt-4o-mini', prompt })).text,
 });
 
-const agent = new AgentOS();
-await agent.initialize({
-  ...config,
-  manifest: { packs: [{ factory: () => topicalityPack }] },
+const agentos = await AgentOS.create({
+  extensionManifest: { packs: [{ factory: () => topicalityPack }] },
 });
 ```
 
 ### Manifest-based loading
 
 ```typescript
-await agent.initialize({
-  manifest: {
+const agentos = await AgentOS.create({
+  extensionManifest: {
     packs: [
       {
         package: '@framers/agentos-ext-topicality',
         options: {
-          allowedTopics: [
-            {
-              id: 'billing',
-              name: 'Billing & Payments',
-              description: 'Questions about charges, invoices, payments, refunds',
-              examples: ['why was I charged twice?', 'can I get a refund?'],
-            },
-          ],
-          forbiddenTopics: [],
+          allowedTopics: ['billing and payments'],
+          blockedTopics: [],
         },
       },
     ],
@@ -88,146 +97,21 @@ await agent.initialize({
 });
 ```
 
----
-
-## TopicDescriptor
-
-Topics are defined as structured descriptors. The embedding strategy computes a centroid (average vector) of embeddings for `[description, ...examples]`, giving broad semantic coverage across different phrasings of the same topic.
-
-```typescript
-interface TopicDescriptor {
-  /** Machine-readable identifier (e.g., 'billing', 'tech-support') */
-  id: string;
-  /** Human-readable name (e.g., 'Billing & Payments') */
-  name: string;
-  /** What this topic covers (1-2 sentences) */
-  description: string;
-  /** 3-5 example messages that fall under this topic */
-  examples: string[];
-}
-```
-
-Example:
-
-```typescript
-const billingTopic: TopicDescriptor = {
-  id: 'billing',
-  name: 'Billing & Payments',
-  description: 'Questions about charges, invoices, payments, refunds, and subscription management',
-  examples: [
-    'why was I charged twice?',
-    'can I get a refund?',
-    'how do I update my payment method?',
-    'what does my invoice include?',
-  ],
-};
-```
-
----
-
-## TopicEmbeddingIndex
-
-The [`TopicEmbeddingIndex`](https://github.com/framerslab/agentos-extensions/blob/master/registry/curated/safety/topicality/src/TopicEmbeddingIndex.ts) pre-computes embeddings for all topic descriptors. Built lazily on first evaluation:
-
-1. Embed `[description, ...examples]` as a batch for each topic
-2. Compute centroid (component-wise average) of all embeddings per topic
-3. Store as `{ descriptor, centroid }` for fast cosine comparison
-
-On query, the input text is embedded and compared against all topic centroids via cosine similarity. Results are sorted by similarity descending.
-
-The centroid approach gives better coverage than embedding a single description string -- the examples anchor different phrasings and intents within the same topic.
-
----
-
-## TopicDriftTracker
-
-The [`TopicDriftTracker`](https://github.com/framerslab/agentos-extensions/blob/master/registry/curated/safety/topicality/src/TopicDriftTracker.ts) detects gradual off-topic steering across multiple conversation turns using an exponential moving average (EMA) of message embeddings.
-
-### EMA Formula
-
-```
-First message:  running_embedding = message_embedding
-Subsequent:     running_embedding = alpha * message_embedding + (1 - alpha) * running_embedding
-```
-
-Where `alpha` (default 0.3) controls how much weight is given to recent messages. Higher alpha = more weight on the latest message.
-
-### Drift Detection
-
-After each EMA update, the running embedding is compared against all allowed topic centroids:
-
-1. If the nearest allowed topic similarity is below `driftThreshold` (default 0.3), the `driftStreak` counter increments
-2. If the streak exceeds `driftStreakLimit` (default 3), a drift action is triggered
-
-This catches gradual off-topic steering where each individual message might pass single-message topic checks, but the conversation trajectory is drifting away from allowed topics.
-
-### Per-Session State
-
-| Field              | Description                                       |
-| ------------------ | ------------------------------------------------- |
-| `runningEmbedding` | EMA of message embeddings                         |
-| `messageCount`     | Messages contributed to the average               |
-| `lastTopicScore`   | Last computed similarity to nearest allowed topic |
-| `driftStreak`      | Consecutive messages below drift threshold        |
-| `lastSeenAt`       | Timestamp for stale cleanup                       |
-
-Sessions are cleaned up lazily when the session map exceeds `maxSessions` (default 100) entries or after `sessionTimeoutMs` (default 1 hour) of inactivity.
-
----
-
-## Preset Libraries
-
-The extension ships with pre-built topic descriptor sets for common use cases:
-
-### `TOPIC_PRESETS.customerSupport`
-
-5 topics: Billing & Payments, Technical Support, Account Management, Product Information, Shipping & Delivery.
-
-### `TOPIC_PRESETS.codingAssistant`
-
-4 topics: Programming, Debugging, Software Architecture, DevOps & Deployment.
-
-### `TOPIC_PRESETS.commonUnsafe`
-
-3 forbidden topics: Violence & Harm, Illegal Activity, Self-Harm.
-
-```typescript
-import { createTopicalityGuardrail, TOPIC_PRESETS } from '@framers/agentos-ext-topicality';
-
-const pack = createTopicalityGuardrail({
-  allowedTopics: TOPIC_PRESETS.customerSupport,
-  forbiddenTopics: TOPIC_PRESETS.commonUnsafe,
-});
-```
+Both lists are required: pass `[]` for the one you do not use.
 
 ---
 
 ## Configuration
 
-### `TopicalityPackOptions`
+### `TopicalityOptions`
 
-| Option                 | Type                                       | Default   | Description                                                                                                                  |
-| ---------------------- | ------------------------------------------ | --------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| `allowedTopics`        | `TopicDescriptor[]`                        | —         | Topics the agent IS allowed to discuss. If omitted, no allowed-topic filtering is performed.                                 |
-| `forbiddenTopics`      | `TopicDescriptor[]`                        | —         | Topics the agent must NOT discuss.                                                                                           |
-| `allowedThreshold`     | `number`                                   | `0.35`    | Cosine similarity threshold for matching allowed topics. Messages below this to ALL allowed topics are considered off-topic. |
-| `forbiddenThreshold`   | `number`                                   | `0.65`    | Cosine similarity threshold for matching forbidden topics. Messages above this to ANY forbidden topic are blocked.           |
-| `offTopicAction`       | `'flag' \| 'block'`                        | `'flag'`  | Action when a message is off-topic.                                                                                          |
-| `forbiddenAction`      | `'flag' \| 'block'`                        | `'block'` | Action when a message matches a forbidden topic.                                                                             |
-| `enableDriftDetection` | `boolean`                                  | `true`    | Enable session-aware topic drift detection.                                                                                  |
-| `drift`                | `Partial<DriftConfig>`                     | —         | Drift detection configuration overrides.                                                                                     |
-| `embeddingFn`          | `(texts: string[]) => Promise<number[][]>` | —         | Custom embedding function. If omitted, resolves [`EmbeddingManager`](https://github.com/framerslab/agentos/blob/master/src/cognition/rag/EmbeddingManager.ts) from [`ISharedServiceRegistry`](https://github.com/framerslab/agentos/blob/master/src/extensions/ISharedServiceRegistry.ts).                            |
-| `guardrailScope`       | `'input' \| 'output' \| 'both'`            | `'input'` | Defaults to input-only because topicality checks user messages, not agent responses.                                         |
-
-### `DriftConfig`
-
-| Option             | Type     | Default            | Description                                                                         |
-| ------------------ | -------- | ------------------ | ----------------------------------------------------------------------------------- |
-| `alpha`            | `number` | `0.3`              | EMA smoothing factor. Higher = more weight on recent messages. Range: 0.0--1.0.     |
-| `driftThreshold`   | `number` | `0.3`              | Similarity below which a message's running average is considered drifting.          |
-| `driftStreakLimit` | `number` | `3`                | Consecutive drifting messages before triggering the drift action.                   |
-| `sessionTimeoutMs` | `number` | `3600000` (1 hour) | Session state timeout. Stale sessions are cleaned up.                               |
-| `maxSessions`      | `number` | `100`              | Maximum concurrent session states. When exceeded, stale sessions are pruned lazily. |
+| Option                 | Type                                  | Default  | Description                                                              |
+| ---------------------- | ------------------------------------- | -------- | ------------------------------------------------------------------------ |
+| `allowedTopics`        | `string[]`                            | required | Topics the agent may discuss. `[]` places no restriction.                |
+| `blockedTopics`        | `string[]`                            | required | Topics to block. Checked before the allowed topics.                      |
+| `minSimilarity`        | `number`                              | `0.3`    | Lowest best allowed-topic similarity (inclusive) for an on-topic message. |
+| `maxBlockedSimilarity` | `number`                              | `0.5`    | Similarity (inclusive) to a blocked topic that blocks the message.       |
+| `llmInvoker`           | `(prompt: string) => Promise<string>` | —        | LLM judge used when the embedding model cannot load.                     |
 
 ---
 
@@ -235,54 +119,26 @@ const pack = createTopicalityGuardrail({
 
 ### `check_topic`
 
-On-demand topic matching tool. Lets agents proactively check text against configured topics.
+On-demand topic check through the same guardrail.
 
 ```
 Agent: Let me verify this is on-topic before processing.
 -> check_topic({ text: "how do I update my credit card?" })
-<- {
-    onTopic: true,
-    nearestTopic: { topicId: 'billing', topicName: 'Billing & Payments', similarity: 0.82 },
-    forbiddenMatch: null,
-    allScores: [...],
-    driftStatus: null
-  }
+<- output: { onTopic: true, confidence: 1, detectedTopic: 'allowed' }
 ```
 
----
-
-## Reason Codes
-
-The guardrail returns machine-readable reason codes for analytics:
-
-| Reason Code            | Trigger                                        | Metadata                                                      |
-| ---------------------- | ---------------------------------------------- | ------------------------------------------------------------- |
-| `TOPICALITY_FORBIDDEN` | Message matches a forbidden topic              | `matchedTopic: { topicId, topicName, similarity }`            |
-| `TOPICALITY_OFF_TOPIC` | Message below allowed threshold for all topics | `nearestTopic: { topicId, topicName, similarity }, threshold` |
-| `TOPICALITY_DRIFT`     | Drift streak exceeded limit                    | `driftStreak, currentSimilarity, nearestTopic`                |
-
----
-
-## Memory Impact
-
-| Component                   | Memory                             | When Loaded                   |
-| --------------------------- | ---------------------------------- | ----------------------------- |
-| Topic centroid embeddings   | ~50KB per topic (1536-dim)         | First evaluation (lazy build) |
-| TopicDriftTracker state     | ~12KB per active session           | First message per session     |
-| EmbeddingManager            | Shared (already loaded by AgentOS) | --                            |
-| **10 topics, 100 sessions** | **~1.7MB**                         | --                            |
+An on-topic message returns `confidence: 1` and `detectedTopic: 'allowed'`; an off-topic one returns the guardrail's confidence and detected topic.
 
 ---
 
 ## Graceful Degradation
 
-| Condition                                 | Behavior                                         |
-| ----------------------------------------- | ------------------------------------------------ |
-| No embedding provider configured          | Pack logs warning, all messages pass (fail-open) |
-| Embedding API call fails                  | That evaluation skipped, message passes          |
-| No allowed or forbidden topics configured | Guardrail is a no-op (returns null)              |
-| Session map exceeds 100 entries           | `pruneStale()` cleans up lazily                  |
-| `embeddingFn` throws                      | Logged, fail-open for that message               |
+| Condition                                                        | Behavior                                                         |
+| ---------------------------------------------------------------- | ---------------------------------------------------------------- |
+| `@huggingface/transformers` not installed, or the model fails to load | The embedding tier is skipped from then on; the LLM judge or keywords decide |
+| LLM call fails or returns no JSON                                | The keyword tier decides                                         |
+| Both topic lists empty                                           | No result                                                        |
+| Empty input                                                      | No result                                                        |
 
 ---
 
