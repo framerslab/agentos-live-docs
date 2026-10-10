@@ -131,7 +131,7 @@ interface DocumentSuggestOutput {
 }
 ```
 
-The tool reads the flags, not the text: more than 500 words suggests PDF and DOCX, table data CSV and XLSX, sections PPTX, and analytical content PDF and XLSX. `shouldOffer` is true when at least one format matches and `wordCount` is 200 or more; `offerText` is then `I can export this as PDF, DOCX. Want me to?` with the matched formats.
+The tool reads the flags, not the text: more than 500 words suggests PDF and DOCX, table data CSV and XLSX, sections PPTX, and analytical content PDF and XLSX. `shouldOffer` is true when at least one format matches and `wordCount` is 200 or more; `offerText` is then `I can export this as <formats>. Want me to?`, with the matched formats upper-cased in the order of those rules: a 300-word analytical answer with table data gives `I can export this as CSV, XLSX, PDF. Want me to?`. When `shouldOffer` is false, `offerText` is an empty string and `suggestedFormats` still lists the matches.
 
 ## Formats
 

@@ -63,7 +63,7 @@ resolveProviderOrder(['a', 'b', 'c'], { blocked: ['b'] });
 
 ### `selectWeightedProvider(providers, weights)`
 
-Pick a single provider from a list using optional per-provider weights. Providers not listed in the `weights` map default to weight `1`, and a weight of `0` excludes a provider. Without weights, or with one provider, it returns the first. It throws on an empty list, on a negative or non-finite weight, and when every weight is `0`.
+Pick a single provider from a list using optional per-provider weights. Providers not listed in the `weights` map default to weight `1`, and a weight of `0` excludes a provider. Without weights, or with one provider, it returns the first provider and checks no weight. With two or more providers and a weight map, it throws on a negative or non-finite weight of a listed provider and when every listed provider's weight is `0`. An empty list always throws.
 
 ```typescript
 import { selectWeightedProvider } from '@framers/agentos';

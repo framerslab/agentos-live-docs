@@ -132,7 +132,9 @@ const prs = await new GitHubPrListTool(service).execute({
   repo: 'agentos',
   state: 'open',
 });
+if (!prs.success) throw new Error(prs.error);
 const first = (prs.data as Array<{ number: number }>)[0];
+if (!first) throw new Error('No open pull requests');
 
 // 2. Changed files with patches
 const diff = await new GitHubPrDiffTool(service).execute({
