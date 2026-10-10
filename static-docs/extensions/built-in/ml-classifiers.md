@@ -5,49 +5,44 @@ sidebar_position: 19
 
 # ML Content Classifiers
 
-Streaming ML content safety classification using BERT-family models with sliding-window chunk-based evaluation. Detects toxicity, prompt injection, and jailbreak attempts in real-time during LLM streaming.
+Content safety classification of user input and final responses across four categories: `toxic`, `injection`, `nsfw` and `threat`. Each text goes to the first tier that answers: an ONNX toxicity model, an LLM judge, or keyword patterns.
 
-**Package:** `@framers/agentos-ext-ml-classifiers`
+**Package:** `@framers/agentos-ext-ml-classifiers` (this page describes 0.3.1)
 
 ---
 
 ## Overview
 
 ```mermaid
-flowchart LR
-    subgraph Buffer["Sliding Window Buffer"]
-        direction TB
-        CTX[Context Ring<br/>50 tokens] --> BUF[Current Buffer<br/>accumulating...]
-    end
+flowchart TD
+    A[User input or FINAL_RESPONSE text] --> B{ONNX toxic-bert loaded?}
+    B -->|yes| C[Xenova/toxic-bert scores]
+    B -->|no| D{llmInvoker set?}
+    D -->|yes| E[LLM judge]
+    D -->|no| F[Keyword patterns]
+    E -->|failed, no JSON, or nothing true| F
 
-    A[Token Stream] -->|TEXT_DELTA| Buffer
-    Buffer -->|chunk_size reached| C[Classifier Orchestrator]
+    C --> G{Thresholds}
+    E --> G
+    F --> G
 
-    C --> C1[Toxicity<br/>toxic-bert<br/>~20ms]
-    C --> C2[Injection<br/>DeBERTa<br/>~50ms]
-    C --> C3[Jailbreak<br/>PromptGuard<br/>~60ms]
-
-    C1 --> D{Worst Wins}
-    C2 --> D
-    C3 --> D
-
-    D -->|BLOCK| E[Terminate Stream]
-    D -->|ALLOW| F[Slide Window Forward]
-    F -->|context carry-forward| Buffer
+    G -->|a score above block| H[BLOCK]
+    G -->|a score above flag| I[FLAG]
+    G -->|otherwise| J[PASS]
 ```
 
 The ML Content Classifiers extension provides two modes of operation:
 
-- **Passive protection** via a built-in guardrail that automatically classifies input and output content using three BERT-family models running in parallel
-- **Active capability** via an agent-callable tool (`classify_content`) for on-demand content safety classification
+- **Passive protection** via a guardrail that classifies the user's text input and the text of the final response (`FINAL_RESPONSE`). It does not evaluate streamed chunks (`evaluateStreamingChunks: false`).
+- **Active capability** via an agent-callable tool (`classify_content`) for on-demand classification.
 
-It detects:
+### Tiers
 
-- **Toxicity** -- toxic, severe toxic, obscene, threat, insult, identity hate (via `unitary/toxic-bert`)
-- **Prompt injection** -- paraphrased, obfuscated, and indirect injection attacks (via `protectai/deberta-v3-small-prompt-injection-v2`)
-- **Jailbreak** -- role-play attacks, system prompt extraction, constraint bypasses (via `meta-llama/PromptGuard-86M`)
+1. **ONNX**: the `@huggingface/transformers` text-classification pipeline with `Xenova/toxic-bert` on the CPU, loaded on the first classification. Its labels map to categories: `toxic`, `severe_toxic`, `insult` and `identity_hate` to `toxic`, `obscene` to `nsfw`, and `threat` to `threat`. The model has no injection label, so `injection` scores 0 whenever this tier answers, and while the model is loaded the other tiers do not run.
+2. **LLM judge**: when the model cannot load and `llmInvoker` is set. A system prompt asks for a JSON object with a boolean per category and one `confidence`; each category marked true gets that confidence (0.7 when the reply gives none). A failed call, a reply without parseable JSON, or a reply with no category true falls through to the keyword tier.
+3. **Keywords**: regex patterns per category (for example "ignore previous instructions" or "you are now DAN" for `injection`). One matching pattern scores 0.4, and each further matching pattern of the same category adds 0.15, up to 1.0.
 
-All models run via `@huggingface/transformers` with ONNX Runtime. Models are INT8 quantized by default for ~50% smaller footprint with minimal accuracy loss. Lazy-loaded on first use via [`ISharedServiceRegistry`](https://github.com/framerslab/agentos/blob/master/src/extensions/ISharedServiceRegistry.ts).
+A model that fails to load is not tried again for the life of the guardrail.
 
 ---
 
@@ -57,7 +52,7 @@ All models run via `@huggingface/transformers` with ONNX Runtime. Models are INT
 npm install @framers/agentos-ext-ml-classifiers
 ```
 
-The extension requires `@huggingface/transformers` (already an AgentOS dependency):
+The ONNX tier needs `@huggingface/transformers` (an optional dependency of AgentOS). Without it, the LLM judge or the keyword patterns classify:
 
 ```bash
 npm install @huggingface/transformers
@@ -70,38 +65,35 @@ npm install @huggingface/transformers
 ### Direct factory usage
 
 ```typescript
-import { AgentOS } from '@framers/agentos';
+import { AgentOS, generateText } from '@framers/agentos';
 import { createMLClassifierGuardrail } from '@framers/agentos-ext-ml-classifiers';
 
 const mlPack = createMLClassifierGuardrail({
-  classifiers: {
-    toxicity: true,
-    injection: true,
-    jailbreak: true,
-  },
-  streamingMode: 'hybrid',
-  chunkSize: 200,
-  contextSize: 50,
+  categories: ['toxic', 'injection', 'threat'],
+  flagThreshold: 0.5,
+  blockThreshold: 0.8,
+  thresholds: { injection: { block: 0.6 } },
+  // Used only when the ONNX model cannot load.
+  llmInvoker: async (system, user) =>
+    (await generateText({ provider: 'openai', model: 'gpt-4o-mini', system, prompt: user })).text,
 });
 
-const agent = new AgentOS();
-await agent.initialize({
-  ...config,
-  manifest: { packs: [{ factory: () => mlPack }] },
+const agentos = await AgentOS.create({
+  extensionManifest: { packs: [{ factory: () => mlPack }] },
 });
 ```
 
 ### Manifest-based loading
 
 ```typescript
-await agent.initialize({
-  manifest: {
+const agentos = await AgentOS.create({
+  extensionManifest: {
     packs: [
       {
         package: '@framers/agentos-ext-ml-classifiers',
         options: {
-          classifiers: { toxicity: true, injection: true, jailbreak: false },
-          streamingMode: 'non-blocking',
+          categories: ['toxic', 'injection'],
+          blockThreshold: 0.9,
         },
       },
     ],
@@ -112,212 +104,39 @@ await agent.initialize({
 ### Via curated registry
 
 ```typescript
+import { AgentOS } from '@framers/agentos';
 import { createCuratedManifest } from '@framers/agentos-extensions-registry';
 
 const manifest = await createCuratedManifest({
   tools: ['ml-classifiers'],
   channels: 'none',
 });
+const agentos = await AgentOS.create({ extensionManifest: manifest });
 ```
+
+`tools: ['ml-classifiers']` loads this pack with the tool entries; the voice, productivity, cloud and domain categories keep their default of every installed pack.
 
 ---
 
-## Default Classifiers
+## Thresholds and Results
 
-### Toxicity Classifier
+A category whose score is above its block threshold blocks the message; otherwise one above its flag threshold flags it. The comparison is strict (`>`). The reason code is `ML_CLASSIFIER_<CATEGORY>` for the highest-scoring category that crossed the threshold, and the metadata carries the deciding tier (`source`: `onnx`, `llm` or `keyword`) and every category score.
 
-| Property    | Value                                                                   |
-| ----------- | ----------------------------------------------------------------------- |
-| **Model**   | `unitary/toxic-bert` (66M params, INT8 ~33MB)                           |
-| **Labels**  | `toxic`, `severe_toxic`, `obscene`, `threat`, `insult`, `identity_hate` |
-| **Latency** | ~20ms CPU ONNX, ~5ms GPU                                                |
-| **AUC**     | 98.28 mean across 6 categories                                          |
-| **Output**  | Multi-label (each label scored independently 0.0--1.0)                  |
-
-Default thresholds: block > 0.9, flag > 0.7, warn > 0.4
-
-### Injection Classifier
-
-| Property    | Value                                                                            |
-| ----------- | -------------------------------------------------------------------------------- |
-| **Model**   | `protectai/deberta-v3-small-prompt-injection-v2` (44M params, INT8 ~22MB)        |
-| **Labels**  | `INJECTION`, `SAFE` (binary classification)                                      |
-| **Latency** | ~50ms CPU ONNX, ~15ms GPU                                                        |
-| **Focus**   | Paraphrased, obfuscated, and indirect injections via tool outputs or RAG context |
-
-Default thresholds: block INJECTION > 0.85, flag INJECTION > 0.5
-
-### Jailbreak Classifier
-
-| Property    | Value                                                      |
-| ----------- | ---------------------------------------------------------- |
-| **Model**   | `meta-llama/PromptGuard-86M` (86M params, INT8 ~43MB)      |
-| **Labels**  | `jailbreak`, `injection`, `benign` (multi-class, one wins) |
-| **Latency** | ~60ms CPU ONNX, ~15ms GPU                                  |
-| **Origin**  | Meta's LlamaFirewall                                       |
-
-Default thresholds: block jailbreak > 0.8, flag jailbreak > 0.5 OR injection > 0.5
-
----
-
-## IContentClassifier Interface
-
-Add custom classifiers by implementing the [`IContentClassifier`](https://github.com/framerslab/agentos-extensions/blob/master/registry/curated/safety/ml-classifiers/src/IContentClassifier.ts) interface:
-
-```typescript
-interface IContentClassifier {
-  /** Unique identifier (e.g., 'my-custom-classifier') */
-  readonly id: string;
-  /** Human-readable display name */
-  readonly displayName: string;
-  /** What this classifier detects */
-  readonly description: string;
-  /** HuggingFace model ID or local path */
-  readonly modelId: string;
-  /** Whether the model is loaded and ready */
-  readonly isLoaded: boolean;
-
-  /** Classify text and return a ClassificationResult */
-  classify(text: string): Promise<ClassificationResult>;
-
-  /** Release model resources */
-  dispose?(): Promise<void>;
-}
-```
-
-Register custom classifiers in the pack options:
-
-```typescript
-const pack = createMLClassifierGuardrail({
-  customClassifiers: [new MyCustomClassifier()],
-  classifiers: { toxicity: true }, // defaults still run alongside
-});
-```
-
----
-
-## SlidingWindowBuffer
-
-The sliding window buffer manages token accumulation and context carry-forward for streaming classification. It decides _when_ a chunk is ready for classification, decoupled from the classification logic itself.
-
-### How It Works
-
-1. TEXT_DELTA chunks feed into the buffer via `push(streamId, text)`
-2. Tokens accumulate until `chunkSize` (default 200) tokens are reached
-3. When ready, the buffer returns the chunk text with `contextSize` (default 50) tokens carried forward from the previous chunk's tail
-4. On stream end, `flush()` returns any remaining buffered text
-
-### Configuration
-
-| Parameter         | Default | Description                                                                                                                          |
-| ----------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------ |
-| `chunkSize`       | `200`   | Tokens to accumulate before triggering classification. Larger = better accuracy, slower detection.                                   |
-| `contextSize`     | `50`    | Tokens carried forward from previous chunk tail as overlap context. Prevents violations spanning chunk boundaries from being missed. |
-| `maxEvaluations`  | `100`   | Cap on total classifier invocations per stream.                                                                                      |
-| `streamTimeoutMs` | `30000` | Stale stream cleanup timeout.                                                                                                        |
-
-### Token Estimation
-
-Token count is estimated at ~4 characters per token (standard for English text). This is intentionally approximate -- the buffer decides _when_ to classify, not how to tokenize for the model (the model's own tokenizer handles that).
-
----
-
-## Streaming Modes
-
-The guardrail supports three streaming modes, all implemented within the [`IGuardrailService`](https://github.com/framerslab/agentos/blob/master/src/safety/guardrails/IGuardrailService.ts) contract:
-
-### Non-blocking (default)
-
-`evaluateOutput()` returns `null` immediately for accumulating chunks. Classification fires asynchronously in the background. On the _next_ `evaluateOutput()` call, the guardrail checks the previous async result -- if it was a violation, returns BLOCK then. Tokens stream with ~0ms added latency; violations are caught with a one-chunk delay (~2s at chunkSize=200).
-
-### Blocking
-
-`evaluateOutput()` awaits classification before returning. When the buffer has not reached chunkSize, returns `null` immediately. When the buffer _is_ ready, the call blocks for ~20--60ms while classifiers run. Users see smooth streaming with imperceptible ~60ms micro-pauses every ~2 seconds.
-
-### Hybrid (recommended)
-
-First chunk uses blocking mode (catches injection in the first response -- the most dangerous attack vector). Subsequent chunks use non-blocking for smooth streaming with one-chunk-delayed violation detection.
-
-```typescript
-const pack = createMLClassifierGuardrail({
-  streamingMode: 'hybrid', // first chunk blocking, rest non-blocking
-});
-```
+With the keyword tier and the default thresholds, one matching pattern (0.4) passes, two (0.55) flag, and four (0.85) block.
 
 ---
 
 ## Configuration
 
-### `MLClassifierPackOptions`
+### `MLClassifierOptions`
 
-| Option              | Type                                       | Default                 | Description                                                                                           |
-| ------------------- | ------------------------------------------ | ----------------------- | ----------------------------------------------------------------------------------------------------- |
-| `classifiers`       | `{ toxicity?, injection?, jailbreak? }`    | all `true`              | Toggle each classifier independently. Pass `true` for defaults or a `ClassifierConfig` for overrides. |
-| `customClassifiers` | `IContentClassifier[]`                     | `[]`                    | Additional classifiers to run alongside defaults.                                                     |
-| `modelCacheDir`     | `string`                                   | `~/.wunderland/models/` | Model cache directory (Node.js only).                                                                 |
-| `quantized`         | `boolean`                                  | `true`                  | Use INT8 quantized models for lower memory.                                                           |
-| `runtime`           | `'node' \| 'browser' \| 'edge' \| 'auto'`  | `'auto'`                | Runtime environment hint. Auto-detected if omitted.                                                   |
-| `browser`           | [`BrowserConfig`](https://github.com/framerslab/agentos-extensions/blob/master/registry/curated/system/browser-automation/src/BrowserService.ts)                            | —                       | Browser-specific configuration (Web Worker, cache strategy).                                          |
-| `chunkSize`         | `number`                                   | `200`                   | Tokens per sliding window chunk.                                                                      |
-| `contextSize`       | `number`                                   | `50`                    | Context overlap tokens carried forward.                                                               |
-| `maxEvaluations`    | `number`                                   | `100`                   | Max evaluations per stream.                                                                           |
-| `streamingMode`     | `'non-blocking' \| 'blocking' \| 'hybrid'` | `'non-blocking'`        | Streaming evaluation strategy.                                                                        |
-| `thresholds`        | `Partial<ClassifierThresholds>`            | —                       | Default action thresholds for all classifiers.                                                        |
-| `guardrailScope`    | `'input' \| 'output' \| 'both'`            | `'both'`                | Which direction(s) the guardrail applies to.                                                          |
-
-### `ClassifierThresholds`
-
-| Threshold        | Default | Description                                             |
-| ---------------- | ------- | ------------------------------------------------------- |
-| `blockThreshold` | `0.9`   | Score above which the stream is BLOCKED immediately.    |
-| `flagThreshold`  | `0.7`   | Score above which the result is FLAGGED for escalation. |
-| `warnThreshold`  | `0.4`   | Score above which a warning is logged (no action).      |
-
-### Per-Classifier Overrides
-
-```typescript
-const pack = createMLClassifierGuardrail({
-  classifiers: {
-    toxicity: {
-      modelId: 'custom/my-toxicity-model', // override model
-      thresholds: { blockThreshold: 0.95 }, // override thresholds
-      labelActions: { identity_hate: 'block' }, // always block this label
-    },
-    injection: true, // use defaults
-    jailbreak: false, // disable entirely
-  },
-});
-```
-
----
-
-## Browser Support
-
-The extension runs in browser environments using ONNX Runtime WASM:
-
-### Web Worker
-
-By default, classification is offloaded to a Web Worker to avoid blocking the UI thread for 50--100ms per chunk. The worker is created lazily on first classification call and falls back to main-thread execution if Worker creation fails (e.g., CSP restrictions).
-
-### Cache API
-
-Models are cached in the browser using the Cache API (default) or IndexedDB for persistence across page loads. LRU eviction when `maxCacheSize` (default 200MB) is exceeded.
-
-### Configuration
-
-```typescript
-const pack = createMLClassifierGuardrail({
-  runtime: 'browser',
-  browser: {
-    useWebWorker: true,
-    cacheStrategy: 'cache-api',
-    maxCacheSize: 200 * 1024 * 1024,
-    onProgress: ({ modelId, percent }) => {
-      console.log(`Downloading ${modelId}: ${percent}%`);
-    },
-  },
-});
-```
+| Option           | Type                                                       | Default        | Description                                                         |
+| ---------------- | ---------------------------------------------------------- | -------------- | ------------------------------------------------------------------- |
+| `categories`     | `('toxic' \| 'injection' \| 'nsfw' \| 'threat')[]`          | all four       | Categories to score.                                                |
+| `flagThreshold`  | `number`                                                   | `0.5`          | Score above which a category flags.                                 |
+| `blockThreshold` | `number`                                                   | `0.8`          | Score above which a category blocks.                                |
+| `thresholds`     | `Partial<Record<category, { flag?: number; block?: number }>>` | —          | Per-category overrides of the two thresholds.                       |
+| `llmInvoker`     | `(systemPrompt: string, userMessage: string) => Promise<string>` | —        | LLM judge used when the ONNX model cannot load.                     |
 
 ---
 
@@ -325,45 +144,34 @@ const pack = createMLClassifierGuardrail({
 
 ### `classify_content`
 
-On-demand content safety classification. Lets agents proactively classify arbitrary text before forwarding to external APIs, including in responses, or presenting to users.
+On-demand classification with the same tiers. Lets agents check text before forwarding it to external APIs, including it in responses, or presenting it to users.
 
 ```
 Agent: I'll check this user comment for safety before posting.
--> classify_content({ text: "user-submitted comment", classifiers: ["toxicity"] })
-<- {
-    results: [{ classifierId: "toxicity", topLabel: "toxic", topScore: 0.02 }],
-    recommendedAction: "allow",
-    triggeredBy: null,
-    totalLatencyMs: 22
+-> classify_content({ text: "user-submitted comment" })
+<- output: {
+    categories: [
+      { name: 'toxic', confidence: 0.02 },
+      { name: 'injection', confidence: 0 },
+      { name: 'nsfw', confidence: 0.01 },
+      { name: 'threat', confidence: 0 }
+    ],
+    flagged: false
   }
 ```
 
----
-
-## Memory Impact
-
-| Component                            | Memory          | When Loaded               |
-| ------------------------------------ | --------------- | ------------------------- |
-| Toxicity model (toxic-bert INT8)     | ~33MB           | First classification call |
-| Injection model (DeBERTa INT8)       | ~22MB           | First classification call |
-| Jailbreak model (PromptGuard INT8)   | ~43MB           | First classification call |
-| SlidingWindowBuffer state            | ~1KB per stream | First TEXT_DELTA          |
-| **Total (all 3 models, 10 streams)** | **~98MB**       | --                        |
-
-All models are lazy-loaded. If only toxicity is enabled, memory cost is ~33MB. Models are shared across extensions via [`ISharedServiceRegistry`](https://github.com/framerslab/agentos/blob/master/src/extensions/ISharedServiceRegistry.ts) -- if another extension uses the same model, zero additional memory.
+`flagged` is true when any category passes its flag threshold.
 
 ---
 
 ## Graceful Degradation
 
-| Condition                                 | Behavior                                                                 |
-| ----------------------------------------- | ------------------------------------------------------------------------ |
-| `@huggingface/transformers` not installed | Pack logs error, all messages pass (fail-open)                           |
-| Model download fails                      | That classifier marked `unavailable`, contributes ALLOW to aggregation   |
-| ONNX Runtime not available                | Falls back to WASM backend (browser/edge)                                |
-| Single classifier throws                  | Warning logged, other classifiers continue, failed one contributes ALLOW |
-| Max evaluations exceeded                  | Remaining chunks pass without classification                             |
-| Stream timeout                            | Buffer state cleaned up, no memory leak                                  |
+| Condition                                                        | Behavior                                                                  |
+| ---------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| `@huggingface/transformers` not installed, or the model fails to load | The ONNX tier is skipped from then on; the LLM judge or keywords classify |
+| ONNX inference throws on one text                                | That text goes to the LLM judge or the keyword patterns                    |
+| LLM call fails or returns no JSON                                | The keyword patterns classify                                             |
+| Empty input or empty final response text                         | No result                                                                 |
 
 ---
 
