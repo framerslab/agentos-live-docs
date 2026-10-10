@@ -33,6 +33,18 @@ jobs:
         with:
           path: apps/agentos-live-docs
 
+      # .gitignore lists the folders the build fills. A file tracked there goes stale: every build
+      # rewrites it and nobody commits the result.
+      - name: No tracked file is under an ignored path
+        working-directory: apps/agentos-live-docs
+        run: |
+          tracked=$(git ls-files -ci --exclude-standard)
+          if [ -n "$tracked" ]; then
+            echo "::error::Tracked files under paths .gitignore excludes. Untrack them (git rm --cached) or add an exception to .gitignore."
+            echo "$tracked"
+            exit 1
+          fi
+
       - name: Checkout agentos (source for docs + TypeDoc)
         uses: actions/checkout@v5
         with:
