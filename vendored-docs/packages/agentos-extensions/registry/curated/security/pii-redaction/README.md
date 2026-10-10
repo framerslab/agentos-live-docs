@@ -5,25 +5,23 @@ sidebar_position: 18
 
 # PII Redaction
 
-Automatic and on-demand detection and redaction of personally identifiable information via a four-tier detection pipeline: regex with checksum validation → NLP pre-filter → ML NER model → LLM-as-judge.
+Detection and redaction of personally identifiable information through four tiers: regex patterns, an NLP pre-filter, an NER model and an optional LLM judge. A guardrail scrubs agent inputs and outputs, two tools let an agent scan or redact text on purpose, and `redactPii()` redacts any string in your own code.
 
-**Package:** `@framers/agentos-ext-pii-redaction`
+**Package:** `@framers/agentos-ext-pii-redaction` (this page describes 0.3.1)
 
 ---
 
 ## Overview
 
-The PII Redaction extension provides two modes of operation:
+The pack holds three descriptors:
 
-- **Passive protection** via a built-in guardrail that automatically intercepts and sanitizes input and output content
-- **Active capability** via two agent-callable tools (`pii_scan`, `pii_redact`) for deliberate, on-demand PII handling
+- **The guardrail** `pii-redaction-guardrail`, which answers with a `SANITIZE` result carrying the redacted text
+- **The tools** `pii_scan` and `pii_redact`, for deliberate, on-demand handling
 
 It detects:
 
-- **Structured PII** — SSN, credit card numbers, email addresses, phone numbers, IP addresses, IBAN, passports, driver's licences, government IDs across 50+ countries, dates of birth, API keys, AWS keys, crypto addresses
-- **Unstructured PII** — person names, organizations, locations, medical terms (via NER/NLP models)
-
-Heavy dependencies (NLP model, BERT NER model, LLM client) are lazy-loaded and shared across extensions via `ISharedServiceRegistry`, so the extension costs only ~300KB if no names are detected in a session.
+- **Structured PII** through [openredaction](https://www.npmjs.com/package/openredaction)'s patterns: emails, phone numbers, SSNs, card numbers, IBANs, API keys and tokens, AWS keys, US and UK passports and driving licences, government IDs (US tax IDs and ITINs, UK National Insurance and NHS numbers, Canadian SINs), IP addresses, dates of birth, crypto addresses and names
+- **Unstructured PII**: person names, organisations and locations through the NLP and NER tiers
 
 ---
 
@@ -33,52 +31,51 @@ Heavy dependencies (NLP model, BERT NER model, LLM client) are lazy-loaded and s
 npm install @framers/agentos-ext-pii-redaction
 ```
 
-The optional NLP and NER tiers require additional packages:
-
-```bash
-# Optional — enables Tier 2 (NLP pre-filter)
-npm install compromise
-
-# Optional — enables Tier 3 (ML NER, ~110MB BERT model)
-npm install @huggingface/transformers
-
-# Optional — enables Tier 4 (LLM-as-judge)
-npm install openai
-```
+`openredaction`, `compromise` and `@huggingface/transformers` are optional dependencies of the package, installed with it unless optional dependencies are skipped. Without `openredaction`, detection throws; without `compromise` or `@huggingface/transformers`, their tiers are skipped. The LLM judge needs no extra package. Peer dependency: `@framers/agentos` 0.12.0 or later.
 
 ---
 
 ## Usage
 
-### Direct factory usage
+### Redact a string
+
+```typescript
+import { redactPii } from '@framers/agentos-ext-pii-redaction';
+
+const result = await redactPii('Write to sam@mail.invalid or call +1 415 555 0100 about the 1919 treaty.');
+// result.found: true
+// result.types: ['EMAIL', 'PHONE']
+// result.text:  the sentence with [EMAIL] and [PHONE] in place of the address and the number
+```
+
+With no options, `redactPii()` looks for the regex tier's types (`REGEX_TIER_TYPES`: `EMAIL`, `PHONE`, `SSN`, `CREDIT_CARD`, `IBAN`, `API_KEY`, `AWS_KEY`, `GOV_ID`, `PASSPORT`, `DRIVERS_LICENSE`, `IP_ADDRESS`) with the NER model off, so no model loads and names stay as they are. Its options are `entityTypes`, `redactionStyle`, `enableNerModel` (default `false`) and `pipeline` (any other pack option below). It builds one pipeline per set of options and reuses it, and it throws when detection fails, for example when `openredaction` is missing. openredaction leaves addresses at documentation domains such as `example.com` in the text.
+
+### The guardrail and tools in AgentOS
 
 ```typescript
 import { AgentOS } from '@framers/agentos';
 import { createPiiRedactionGuardrail } from '@framers/agentos-ext-pii-redaction';
 
-const piiPack = createPiiRedactionGuardrail({
-  confidenceThreshold: 0.5,
-  redactionStyle: 'placeholder',
-  enableNerModel: true,
-  llmJudge: {
-    provider: 'anthropic',
-    model: 'claude-haiku-4-5-20251001',
-    apiKey: process.env.ANTHROPIC_API_KEY,
+const agentos = await AgentOS.create({
+  extensionManifest: {
+    packs: [
+      {
+        factory: () =>
+          createPiiRedactionGuardrail({
+            entityTypes: ['EMAIL', 'PHONE', 'SSN', 'PERSON', 'CREDIT_CARD'],
+            redactionStyle: 'placeholder',
+          }),
+      },
+    ],
   },
-});
-
-const agent = new AgentOS();
-await agent.initialize({
-  ...config,
-  manifest: { packs: [{ factory: () => piiPack }] },
 });
 ```
 
 ### Manifest-based loading
 
 ```typescript
-await agent.initialize({
-  manifest: {
+const agentos = await AgentOS.create({
+  extensionManifest: {
     packs: [
       {
         package: '@framers/agentos-ext-pii-redaction',
@@ -92,196 +89,156 @@ await agent.initialize({
 });
 ```
 
-### Via curated registry
+### Via the curated registry
 
 ```typescript
+import { AgentOS } from '@framers/agentos';
 import { createCuratedManifest } from '@framers/agentos-extensions-registry';
 
 const manifest = await createCuratedManifest({
   tools: ['pii-redaction'],
   channels: 'none',
 });
+const agentos = await AgentOS.create({ extensionManifest: manifest });
 ```
 
 ---
 
 ## Configuration
 
-All fields are optional. The factory is safe to call with no arguments for sensible defaults.
+`createPiiRedactionGuardrail(options)` takes `PiiRedactionPackOptions`. Every field is optional.
 
-### `PiiRedactionPackOptions`
+| Option | Default | What it sets |
+|---|---|---|
+| `entityTypes` | every type (`ALL_PII_ENTITY_TYPES`) | The kinds to detect |
+| `confidenceThreshold` | `0.5` | Entities scoring below it are dropped, after the LLM judge |
+| `redactionStyle` | `'placeholder'` | How a found span is written (see [Redaction styles](#redaction-styles)) |
+| `allowlist` | none | Found text equal to one of these strings, in any case, is left in place |
+| `denylist` | none | Found text equal to one of these strings scores 1.0 |
+| `enableNerModel` | `true` | Whether tier 3 may load; only `false` turns it off |
+| `nerDtype` | `'q8'` | The NER model's weights: `q8` (`onnx/model_quantized.onnx`, 109 MB) or `fp32` (`onnx/model.onnx`, 431 MB) |
+| `llmJudge` | none | Turns tier 4 on (see [`LlmJudgeConfig`](#llmjudgeconfig)) |
+| `guardrailScope` | `'both'` | `'input'`, `'output'` or `'both'` |
+| `evaluateStreamingChunks` | `false` | Whether the guardrail receives streamed text deltas; with `false`, AgentOS hands it the final response only |
+| `maxStreamingEvaluations` | `50` | Sentence-boundary scans per stream |
+| `failClosed` | `true` | Whether a guardrail evaluation that throws blocks the text |
 
-| Option                    | Type                                                  | Default         | Description                                                                                                                               |
-| ------------------------- | ----------------------------------------------------- | --------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| `entityTypes`             | `PiiEntityType[]`                                     | all types       | Restrict detection to specific entity types. When omitted, all supported types are enabled.                                               |
-| `confidenceThreshold`     | `number`                                              | `0.5`           | Minimum confidence score to trigger redaction. Entities below this threshold are discarded. Applied after LLM judge resolution.           |
-| `redactionStyle`          | `'placeholder' \| 'mask' \| 'hash' \| 'category-tag'` | `'placeholder'` | How to replace detected PII in output text.                                                                                               |
-| `allowlist`               | `string[]`                                            | `[]`            | Terms to never flag as PII (e.g., product names). Case-insensitive string matching against detected entity text. Reduces false positives. |
-| `denylist`                | `string[]`                                            | `[]`            | Terms to always flag as PII regardless of confidence. Case-insensitive. Ensures critical terms are never missed.                          |
-| `enableNerModel`          | `boolean`                                             | `true`          | Whether to load and use the BERT NER model (Tier 3). Set to `false` in low-resource environments to skip the ~110MB model.                |
-| `llmJudge`                | `LlmJudgeConfig`                                      | `undefined`     | Configuration for the LLM-as-judge tier. When omitted, Tier 4 is disabled entirely.                                                       |
-| `guardrailScope`          | `'input' \| 'output' \| 'both'`                       | `'both'`        | Which direction(s) the guardrail applies to.                                                                                              |
-| `evaluateStreamingChunks` | `boolean`                                             | `true`          | Whether to evaluate TEXT_DELTA chunks in real-time during streaming. When `false`, only FINAL_RESPONSE is evaluated.                      |
-| `maxStreamingEvaluations` | `number`                                              | `50`            | Rate limit for streaming evaluations per request. With sentence-boundary buffering, each evaluation covers a full sentence.               |
+`allowlist` and `denylist` accept `RegExp` entries in their type; detection applies the string entries alone.
 
 ### `LlmJudgeConfig`
 
-| Option           | Type     | Default | Description                                                                                    |
-| ---------------- | -------- | ------- | ---------------------------------------------------------------------------------------------- |
-| `provider`       | `string` | —       | LLM provider identifier (e.g., `'openai'`, `'anthropic'`, `'openrouter'`, `'ollama'`).         |
-| `model`          | `string` | —       | Model ID to use for PII classification (e.g., `'claude-haiku-4-5-20251001'`, `'gpt-4o-mini'`). |
-| `apiKey`         | `string` | —       | API key. Falls back to `getSecret('pii.llm.apiKey')` if omitted.                               |
-| `baseUrl`        | `string` | —       | Base URL override for self-hosted or proxy endpoints.                                          |
-| `maxConcurrency` | `number` | `3`     | Maximum concurrent LLM calls for PII classification.                                           |
-| `cacheSize`      | `number` | `500`   | LRU cache size for repeat pattern results, keyed by `(span_text, context_hash)`.               |
+| Option | Default | Description |
+|---|---|---|
+| `provider` | - | Names the secret the key falls back to (`<provider>.apiKey`) |
+| `model` | - | Model ID sent in the request |
+| `apiKey` | - | API key; without it the guardrail asks the extension manager for the secret `<provider>.apiKey`, then `pii.llm.apiKey` |
+| `baseUrl` | `https://api.openai.com/v1` | Base URL of an OpenAI-compatible chat completions endpoint |
+| `maxConcurrency` | `4` | Concurrent judge calls |
+| `cacheSize` | `256` | LRU cache entries, keyed by the span text and a hash of its context |
+
+The judge sends an OpenAI chat completions request (`POST <baseUrl>/chat/completions`, temperature 0.1) whatever `provider` says. A provider other than OpenAI therefore needs `baseUrl` set to an OpenAI-compatible endpoint; without it, the request and its key go to `api.openai.com`. The `pii_scan` and `pii_redact` tools use `llmJudge.apiKey` only.
 
 ---
 
 ## Detection Tiers
 
-The pipeline runs four tiers in sequence. Each tier feeds its results to the next, and a final EntityMerger deduplicates overlapping spans before the confidence threshold is applied.
+The pipeline (`PiiDetectionPipeline.detect()`) runs the tiers in order, merges overlapping spans (`EntityMerger`, which also applies the allowlist and denylist), runs the judge, then drops entities under `confidenceThreshold`. The result lists the entities with their positions, scores and sources, `tiersExecuted` (`'regex'`, `'ner'`, `'llm'`) and a summary such as `3 entities found: 1×EMAIL, 1×PERSON, 1×SSN`.
 
-### Tier 1 — Regex (always runs, ~0ms)
+### Tier 1: Regex (always runs)
 
-**Dependency:** `openredaction` (required)
+openredaction's patterns, with its false-positive filter off: that filter drops a phone number when a word beginning "on", "after" or "address" sits within 50 characters of it, and an email address near a link's "//". Each pattern's own validator still runs. Matches score at least 0.85. Keywords within 50 characters raise a score by 0.2 or 0.15 (for example `social security` for an SSN, `date of birth` for a date of birth, `name:` for a person).
 
-Detects structured PII using regex patterns with checksum validation (Luhn for credit cards, country-specific SSN formats, etc.). Context enhancement then scans ±50 characters around each match for keywords (`"social security" → +0.2`, `"name:" → +0.2`, `"date of birth" → +0.2`) to boost confidence scores.
+### Tier 2: NLP pre-filter
 
-Detected types: `SSN`, `CREDIT_CARD`, `EMAIL`, `PHONE`, `IP_ADDRESS`, `IBAN`, `PASSPORT`, `DRIVERS_LICENSE`, `GOV_ID`, `DATE_OF_BIRTH`, `API_KEY`, `AWS_KEY`, `CRYPTO_ADDRESS`
+[compromise](https://www.npmjs.com/package/compromise) proposes people, places and organisations at low confidence (0.3 to 0.6). Without `compromise`, the tier returns nothing.
 
-### Tier 2 — NLP Pre-filter (lazy, ~250KB)
+### Tier 3: NER model
 
-**Dependency:** `compromise` (optional)
+`Xenova/bert-base-NER` through transformers.js labels `PERSON`, `LOCATION`, `ORGANIZATION` and, from its MISC label, `UNKNOWN_PII`. It runs only when tier 2 proposed a person, place or organisation and `enableNerModel` is not `false`; without tier 2 candidates, as when `compromise` is missing, it does not run. A model that cannot load (no `@huggingface/transformers`, a failed download) disables the tier.
 
-Fast rule-based NLP scan that identifies candidate tokens that might be names, places, or organizations. This tier acts as a gate: Tier 3 (the heavy BERT model) only runs if Tier 2 found at least one `PERSON`, `ORGANIZATION`, or `LOCATION` candidate. In most agent messages that contain no person names, the 110MB NER model never loads.
+### Tier 4: LLM judge (only with `llmJudge`)
 
-### Tier 3 — NER Model (lazy, ~110MB)
-
-**Dependency:** `@huggingface/transformers` (optional)
-
-A quantized BERT NER model (`q8`, ~110MB) from HuggingFace Transformers for ML-grade entity recognition. Only runs when Tier 2 identified candidates, making the worst-case memory cost opt-in rather than constant.
-
-Detected types: `PERSON`, `ORGANIZATION`, `LOCATION`, `MEDICAL_TERM`
-
-### Tier 4 — LLM Judge (lazy, per-call cost)
-
-**Dependency:** `openai` (optional)
-
-A lightweight LLM resolves ambiguous cases — entities where the merged confidence score from Tiers 1–3 falls in the 0.3–0.7 range. Uses chain-of-thought prompting to analyze context: "Is 'Jordan' a person's name, a country, or a basketball reference in this sentence?"
-
-When the LLM returns `NOT_PII`, the entity is discarded (treated as a false positive). When it confirms PII, the entity's `score` and `entityType` are updated with the LLM's values. Results are cached (LRU, default 500 entries) to avoid repeat calls for identical patterns.
-
-Note: `confidenceThreshold` is applied **after** LLM judge resolution, giving the judge a chance to resolve ambiguity before threshold filtering.
+The judge re-examines each merged entity scoring above 0.3 and below 0.7. When it answers `NOT_PII`, the entity is dropped; otherwise the entity takes the judge's type and confidence (the judge may relabel it, for example as `MEDICAL_TERM`). When the call fails, the entity keeps its original score.
 
 ---
 
 ## Redaction Styles
 
-| Style          | Input        | Output                              | Notes                                                                                                                                                                 |
-| -------------- | ------------ | ----------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `placeholder`  | `John Smith` | `[PERSON]`                          | Simple type tag. Default.                                                                                                                                             |
-| `mask`         | `John Smith` | `J*** S****`                        | First letter kept, rest masked.                                                                                                                                       |
-| `hash`         | `John Smith` | `[PERSON:a1b2c3d4e5]`               | Deterministic SHA-256 (10 hex chars). Same entity always produces the same hash — enables cross-document correlation without revealing original text. Not reversible. |
-| `category-tag` | `John Smith` | `<PII type="PERSON">REDACTED</PII>` | XML-style tag. Useful for structured downstream parsing.                                                                                                              |
+| Style | Input | Output | Notes |
+|---|---|---|---|
+| `placeholder` | `John Smith` | `[PERSON]` | The entity type. Default. |
+| `mask` | `John Smith` | `J*** S****` | Each word keeps its first character; the rest is starred. |
+| `hash` | `John Smith` | `[PERSON:a1b2c3d4e5]` | The type and the first 10 hex characters of the text's SHA-256. The same text always gives the same hash; not reversible. |
+| `category-tag` | `John Smith` | `<PII type="PERSON">REDACTED</PII>` | An XML-style tag. |
+
+---
+
+## The guardrail
+
+The guardrail's config sets `canSanitize: true`, so AgentOS runs it among the sanitising guardrails, `failClosed` from the option (default `true`: when detection throws, the dispatcher blocks the text instead of passing it through unredacted) and `evaluateStreamingChunks` from the option of that name.
+
+- **Input**: the user's text is scanned and returned redacted.
+- **Output**: each stream's text is buffered by stream ID. With `evaluateStreamingChunks: true`, the buffer is scanned whenever it holds a sentence boundary (`. `, `? `, `! ` or a newline), up to `maxStreamingEvaluations` times; the final response is always scanned, and its buffer is then dropped.
 
 ---
 
 ## Agent Tools
 
-The pack registers two agent-callable tools alongside the guardrail.
-
 ### `pii_scan`
 
-Scan text for PII and return detected entities without modifying the input. Use this to audit data before storage or before passing to external APIs.
+Scans text and returns the detection result without changing it. Arguments: `text` and an optional `entityTypes` filter.
 
 ```
-Agent: I'll scan this customer record for PII before storing it.
-→ pii_scan({ text: "Contact John Smith at john@example.com, SSN 123-45-6789" })
+→ pii_scan({ text: "Contact John Smith at john@mail.invalid, SSN 123-45-6789" })
 ← {
-    entities: [
-      { entityType: "PERSON", text: "John Smith", score: 0.95, source: "ner-model" },
-      { entityType: "EMAIL", text: "john@example.com", score: 1.0, source: "regex" },
-      { entityType: "SSN", text: "123-45-6789", score: 1.0, source: "regex" }
-    ],
-    summary: "Found 3 PII entities: 1 PERSON, 1 EMAIL, 1 SSN",
+    entities: [ { entityType, text, start, end, score, source, metadata }, ... ],
+    inputLength: 56,
     processingTimeMs: 42,
-    tiersExecuted: ["regex", "nlp-prefilter", "ner-model"]
+    tiersExecuted: ["regex", "ner"],
+    summary: "3 entities found: 1×EMAIL, 1×PERSON, 1×SSN"
   }
 ```
 
 ### `pii_redact`
 
-Scan text for PII and return a sanitized version with detected entities replaced according to the configured redaction style. Supports an optional per-call style override.
+Scans text and returns it redacted. Arguments: `text` and an optional `redactionStyle` overriding the pack's.
 
 ```
-Agent: Let me redact the PII from this before saving.
 → pii_redact({
-    text: "Email john@acme.com about the 4111-1111-1111-1111 charge",
-    style: "placeholder"
+    text: "Email john@acme.invalid about the 4111-1111-1111-1111 charge",
+    redactionStyle: "placeholder"
   })
 ← {
     redactedText: "Email [EMAIL] about the [CREDIT_CARD] charge",
-    entitiesFound: 2,
-    entities: [...]
+    originalText: "Email john@acme.invalid about the 4111-1111-1111-1111 charge",
+    wasRedacted: true,
+    detectionResult: { entities: [...], ... }
   }
 ```
 
-Agents should use `pii_redact` before:
-
-- Storing user data in memory or databases
-- Passing text to untrusted third-party extensions
-- Sharing content across agents in multi-agent systems
-- Responding with user-provided data that may contain PII
+The result carries `originalText` as well, so the model that called the tool sees the unredacted text in it.
 
 ---
 
-## Shared Service Registry Integration
+## Shared services and lazy loading
 
-Heavy dependencies are loaded once and shared across extensions via `ISharedServiceRegistry` on `ExtensionLifecycleContext`. This means if another extension (e.g., a sentiment analyzer) also uses the `compromise` NLP library, it calls `context.services.getOrCreate('agentos:nlp:compromise', factory)` and receives the same cached instance — zero additional memory.
+The NLP library and the NER pipeline load on first use, through the extension manager's shared service registry (`ISharedServiceRegistry`) when AgentOS activates the pack:
 
-The PII extension registers three service IDs:
+| Service ID | Dependency |
+|---|---|
+| `agentos:nlp:compromise` | `compromise` |
+| `agentos:nlp:ner-pipeline` | `@huggingface/transformers` (`Xenova/bert-base-NER`) |
 
-| Service ID                 | Dependency                  | Size   |
-| -------------------------- | --------------------------- | ------ |
-| `agentos:nlp:compromise`   | `compromise`                | ~250KB |
-| `agentos:nlp:ner-pipeline` | `@huggingface/transformers` | ~110MB |
-| `agentos:pii:llm-client`   | `openai`                    | ~5MB   |
+Concurrent `getOrCreate()` calls for one ID share one factory call. The guardrail and both tools share these instances, so the first pack to load the NER pipeline decides its weights for every pack on the registry. The LLM judge uses `fetch` and registers no service.
 
-Concurrent calls to `getOrCreate` with the same service ID are coalesced — only one factory invocation occurs, and all callers await the same promise.
-
----
-
-## Performance
-
-| Component                           | Memory     | When Loaded                                  |
-| ----------------------------------- | ---------- | -------------------------------------------- |
-| RegexRecognizer (openredaction)     | ~50KB      | Always (pack activation)                     |
-| NlpPrefilterRecognizer (compromise) | ~250KB     | First message with text to scan              |
-| NerModelRecognizer (BERT q8)        | ~110MB     | First time compromise finds name-like tokens |
-| LlmJudgeRecognizer (openai client)  | ~5MB       | First ambiguous span (score 0.3–0.7)         |
-| **Total if no names detected**      | **~300KB** | —                                            |
-| **Total worst case (all tiers)**    | **~115MB** | —                                            |
-
-For memory-constrained environments, set `enableNerModel: false` and omit `llmJudge`. The pipeline degrades gracefully to regex + optional LLM judge, which remains effective for all structured PII types.
-
-The streaming guardrail uses sentence-boundary buffering (splits on `. `, `? `, `! `, `\n`) to avoid partial-word false positives. Buffers are scoped per-request (keyed by `sessionId + conversationId`) and cleaned up on stream end or after a 30-second timeout.
-
----
-
-## Optional Dependency Fallback
-
-| Dependency                  | Missing Behavior                                                                                              | Impact                                                         |
-| --------------------------- | ------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
-| `openredaction`             | **Required** — pack fails to load with a clear error message                                                  | Extension cannot function without the regex tier               |
-| `compromise`                | Tier 2 skipped, warning logged. Tier 3 runs unconditionally on all text instead of being gated by pre-filter. | Higher NER costs but no loss of detection accuracy             |
-| `@huggingface/transformers` | Tier 3 skipped, warning logged. Only regex + LLM judge available for name detection.                          | Reduced recall for unstructured PII (names, orgs)              |
-| `openai`                    | Tier 4 skipped, warning logged. Ambiguous entities use their raw confidence score without LLM resolution.     | Some false positives/negatives in the 0.3–0.7 confidence range |
+For memory-constrained environments, set `enableNerModel: false` and leave `llmJudge` unset: detection then runs the regex tier and the NLP pre-filter.
 
 ---
 
 ## Related Documentation
 
-- [Guardrails](/docs/features/guardrails)
-- [Extension Architecture](/docs/extensions/extension-architecture)
+- [PII Redaction (and PHI scrubbing)](/features/pii-redaction)
+- [Guardrails](/features/guardrails)
+- [Extension Architecture](/extensions/extension-architecture)
 - [Extensions Overview](/extensions)
-- [Safety Primitives](/docs/features/safety-primitives)
+- [Safety Primitives](/features/safety-primitives)
