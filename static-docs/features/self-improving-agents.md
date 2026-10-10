@@ -21,7 +21,7 @@ const agentos = await AgentOS.create({
       enabled: true,
       personality: {
         maxDeltaPerSession: 0.15,  // Max absolute change per trait per session
-        persistWithDecay: true,    // Decay stored mutations when new ones are recorded
+        persistWithDecay: true,    // Record mutations (with a storage adapter) and decay them
         decayRate: 0.05,           // Strength removed per decay step
       },
       skills: {
@@ -65,7 +65,7 @@ Changes one HEXACO trait of the calling GMI by a signed delta. `reasoning` is re
 
 **Budget**: the absolute changes applied to a trait in one session add up to at most `maxDeltaPerSession`; a delta beyond the remaining budget is cut to it, and the result is clamped to [0, 1]. A trait the persona does not set starts from 0.5.
 
-The change applies to the calling GMI's own copy of the persona; the shared persona definition stays as it was. With a storage adapter, each change is also recorded in the [`PersonalityMutationStore`](https://github.com/framerslab/agentos/blob/master/src/cognition/emergent/PersonalityMutationStore.ts) (below). Stored mutations are not loaded back into a GMI, so a trait change lasts for the instance that made it.
+The change applies to the calling GMI's own copy of the persona; the shared persona definition stays as it was. With a storage adapter and `persistWithDecay` on (the default), each change is also recorded in the [`PersonalityMutationStore`](https://github.com/framerslab/agentos/blob/master/src/cognition/emergent/PersonalityMutationStore.ts) (below). Stored mutations are not loaded back into a GMI, so a trait change lasts for the instance that made it.
 
 **Result**:
 
