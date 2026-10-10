@@ -227,7 +227,7 @@ function ContactCTAs() {
 /* ------------------------------------------------------------------ */
 
 /**
- * Animated demo of runtime tool forging. Mirrors the ForgeDemoSection on
+ * Animated demo of runtime agent spawning. Mirrors the ForgeDemoSection on
  * agentos.sh. Server-rendered, zero client JS: the only dynamic element
  * is the animated WebP/PNG, both lazy-loaded so neither blocks first paint.
  *
@@ -249,15 +249,16 @@ function ForgeDemoSection() {
             marginBottom: '0.5rem',
           }}
         >
-          Runtime tool forging
+          Runtime agent spawning
         </p>
         <h2 style={{ fontSize: '1.65rem', margin: '0 0 0.5rem' }}>
-          Watch a tool get forged at runtime
+          Watch an agent spawn a specialist at runtime
         </h2>
         <p style={{ fontSize: '0.95rem', opacity: 0.75, maxWidth: '720px', margin: '0 auto' }}>
-          Three HEXACO-distinct agents collaborate on a code review. When their static toolkit
-          can&apos;t cover the task, the manager calls <code>spawn_specialist</code>, an LLM judge
-          approves the spec, and all three invoke the forged tool on the next turn.
+          A manager with a researcher and a writer gets a task neither of them covers. It calls
+          <code>spawn_specialist</code>, the LLM judge approves the new agent&apos;s spec, and the
+          specialist joins the roster as a <code>delegate_to_&lt;role&gt;</code> tool for the
+          manager&apos;s next turn.
         </p>
       </header>
       <figure
@@ -285,13 +286,13 @@ function ForgeDemoSection() {
           poster="/img/demos/agentos-emergent-demo.png"
           width={1600}
           height={920}
-          aria-label="Three AgentOS agents with distinct HEXACO personalities collaborate on a code review, forge a new tool at runtime, the LLM judge approves the spec, and all three invoke it on the next turn."
+          aria-label="An AgentOS manager with a researcher and a writer spawns a security_audit_specialist agent at runtime; the LLM judge approves its spec and the specialist joins the roster."
           style={{ width: '100%', height: 'auto', display: 'block' }}
         >
           <source src="/img/demos/agentos-forge-demo.mp4" type="video/mp4" />
           <img
             src="/img/demos/agentos-emergent-demo.png"
-            alt="Three AgentOS agents with distinct HEXACO personalities collaborate on a code review, forge a new tool at runtime, the LLM judge approves the spec, and all three invoke it on the next turn."
+            alt="An AgentOS manager with a researcher and a writer spawns a security_audit_specialist agent at runtime; the LLM judge approves its spec and the specialist joins the roster."
             width={1600}
             height={920}
             loading="lazy"
@@ -312,7 +313,7 @@ function ForgeDemoSection() {
           }}
         >
           <span>
-            Captured from <code>node examples/emergent-hierarchical-spawning.mjs</code>
+            Captured from a run of <code>node examples/emergent-hierarchical-spawning.mjs</code> with a security-audit prompt
           </span>
           <a
             href="https://github.com/framerslab/agentos/blob/master/examples/emergent-hierarchical-spawning.mjs"
@@ -381,44 +382,34 @@ function InstallTabs() {
 const quickStartCode = {
   'HEXACO Agent': `import { agent } from '@framers/agentos';
 
-// Personality is six 0-1 trait values. The runtime appends a trait-derived
-// directive to the system prompt and modulates three cognitive-memory
-// mechanisms (involuntary recall, consolidation, schema encoding) based on
-// honesty / emotionality / openness. Default is neutral (0.5) on every axis.
+// Personality is six 0-1 trait values. Each trait above 0.65 or below 0.35
+// adds one line of direction to the system prompt; a trait in between, or
+// one left out (0.5), adds none.
 const tutor = agent({
   provider: 'openai',
   model: 'gpt-4o',
   instructions: 'You are a patient programming tutor.',
   personality: {
     honesty:           0.85,  // direct, transparent, no flattery
-    emotionality:      0.65,  // tone-aware without being clinical
-    extraversion:      0.50,
+    emotionality:      0.70,  // tone-aware without being clinical
+    extraversion:      0.50,  // in between: adds no line
     agreeableness:     0.75,  // warm, encouraging
     conscientiousness: 0.90,  // structured, thorough, follow-through
     openness:          0.85,  // creative, exploratory framing
   },
-  memory: {
-    enabled:    true,         // session history persists automatically
-    cognitive:  true,         // Ebbinghaus decay + reconsolidation + 6 more
-  },
 });
 
-// Sessions scope conversation history by ID. Same agent, multiple users,
-// no cross-talk — each session has its own memory bag.
+// Each session keeps its own conversation history in process memory
+// (bounded to about 120,000 tokens), so two session ids share nothing.
 const session = tutor.session('user-42');
 
-// The agent remembers across turns. Context from the first message is
-// recalled automatically in the second.
+// Every send() passes the session's earlier turns to the model.
 await session.send('My exam is on distributed systems next Thursday.');
 await session.send('I struggle with consensus algorithms.');
 const reply = await session.send('What should I focus on this week?');
-
 console.log(reply.text);
-// => "Given Thursday's exam and your block on consensus, lock in Paxos
-//     and Raft this week. Start with the leader-election proof…"
 
-// Inspect what the session actually carries — full message history +
-// token usage. Useful for debugging memory recall or cost.
+// The transcript the session holds, and the tokens it has used.
 console.log(session.messages());
 const usage = await session.usage();
 console.log(\`Total tokens: \${usage.totalTokens}\`);`,
@@ -426,16 +417,14 @@ console.log(\`Total tokens: \${usage.totalTokens}\`);`,
   'Agency': `import { agency } from '@framers/agentos';
 
 // Agency composes a team of GMI brains. Each agent in the roster has its
-// own cognition, memory, persona, tools. The agency layer adds three
-// things on top: an orchestration strategy that routes outputs between
-// brains, shared coordination primitives (memory, RAG, communication
-// bus), and a team-wide coordination shell (HITL, guardrails, controls).
+// own cognition, memory, persona, tools. The agency layer adds an
+// orchestration strategy that routes outputs between brains, HITL approval
+// gates on every member's tool calls, run limits (controls) and structured
+// output. It accepts memory, rag and guardrails options without applying them.
 const team = agency({
   provider: 'openai',
   model: 'gpt-4o',
   strategy: 'graph',                        // sequential | parallel | debate | review-loop | hierarchical | graph
-  memory: { shared: true },                 // cognitive memory shared across brains
-  rag: { vectorStore: 'in-memory', topK: 5 }, // shared retrieval corpus
   agents: {
     researcher: {
       instructions: 'Find authoritative sources on the topic.',
@@ -451,23 +440,20 @@ const team = agency({
   },
 });
 
-// Same .generate() interface as a single agent — drop-in swap anywhere
-// you called agent().generate(). The roster becomes one composable unit.
+// Same .generate() interface as a single agent.
 const { text, agentCalls } = await team.generate(
   'Write a briefing on QUIC vs TCP for game networking.'
 );
 console.log(text);
 console.log(agentCalls);                    // trace of which agent did what
 
-// Six strategies in total. memory: { shared: true } scopes to this
-// generate() call. See /features/agency-api for the full reference.`,
+// Six strategies in total. See /features/agency-api for the full reference.`,
 
   'Streaming': `import { streamText, agent } from '@framers/agentos';
 
-// streamText() — raw streaming completion. Yields token deltas as they arrive.
-// Backpressure-safe; you can break out of the loop and the upstream HTTP
-// request aborts cleanly.
-const { textStream, text, usage } = streamText({
+// streamText() yields token deltas as they arrive. Breaking out of the loop
+// ends the stream, and the OpenAI provider cancels its HTTP response.
+const { textStream, usage } = streamText({
   provider: 'openai',
   model: 'gpt-4o',
   prompt: 'Explain how QUIC differs from TCP at the wire level.',
@@ -477,72 +463,75 @@ for await (const delta of textStream) {
 }
 console.log(\`\\n\\nTotal tokens: \${(await usage).totalTokens}\`);
 
-// Streaming on an agent session — same async-iterable shape, but reasoning,
-// tool-call, and memory-update events ride alongside the text deltas so a UI
-// can render each one as it happens.
+// A session's stream() returns the same kind of result. fullStream yields
+// text, tool-call, tool-result and error parts in order; the reply joins the
+// session's history once its text promise resolves.
 const support = agent({
   provider: 'openai',
   instructions: 'You are a senior platform engineer.',
-  memory: { enabled: true, cognitive: true },
 });
 const session = support.session('user-42');
 
-for await (const chunk of session.stream('Why is gRPC slow over satellite?')) {
-  switch (chunk.type) {
-    case 'TEXT_DELTA':           process.stdout.write(chunk.delta);          break;
-    case 'TOOL_CALL_REQUEST':    console.log('\\n[tool]', chunk.toolName);    break;
-    case 'REASONING_STATE':      console.log('\\n[reasoning]', chunk.state);  break;
-    case 'MEMORY_FORMED':        console.log('\\n[memory]', chunk.traceId);   break;
-    case 'FINAL_RESPONSE_MARKER':                                            break;
+const reply = session.stream('Why is gRPC slow over satellite?');
+for await (const part of reply.fullStream) {
+  switch (part.type) {
+    case 'text':        process.stdout.write(part.text);                 break;
+    case 'tool-call':   console.log('\\n[tool]', part.toolName);          break;
+    case 'tool-result': console.log('\\n[result]', part.toolName);        break;
+    case 'error':       console.error('\\n[error]', part.error.message);  break;
   }
 }`,
 
-  'Multimodal RAG': `import { Memory } from '@framers/agentos';
-import { MultimodalIndexer } from '@framers/agentos/cognition/rag';
-import fs from 'fs';
+  'Multimodal RAG': `import {
+  MultimodalIndexer,
+  LLMVisionAdapter,
+  SpeechProviderAdapter,
+  InMemoryVectorStore,
+  type IEmbeddingManager,
+} from '@framers/agentos/cognition/rag';
+import { OpenAIWhisperSpeechToTextProvider } from '@framers/agentos/speech';
+import fs from 'node:fs';
 
-// One brain backs everything — text, PDFs, images, audio.
-const brain = await Memory.createSqlite({ path: './brain.sqlite' });
+// The embedding manager your text RAG already uses.
+declare const embeddingManager: IEmbeddingManager;
 
-// Text + documents flow through the standard ingest path.
-// Loaders auto-detect PDF / DOCX / MD / HTML / CSV / JSON / XML.
-await brain.ingest('./reports/q4-earnings.pdf');
-await brain.ingest('./notes/');                       // recurse a folder
+const vectorStore = new InMemoryVectorStore();
+await vectorStore.initialize({ id: 'media', type: 'in_memory' });
+await vectorStore.createCollection('multimodal', 1536);   // the embedding model's dimension
 
-// Images and audio go through MultimodalIndexer. It captions images
-// via a vision provider, transcribes audio via STT, and indexes the
-// derived text into the same vector store as everything else.
+// An image becomes a vision model's description and audio an STT transcript;
+// each text is embedded and stored with its modality.
 const indexer = new MultimodalIndexer({
-  embeddingManager: brain.embeddingManager,
-  vectorStore: brain.vectorStore,
-  visionProvider: { provider: 'openai', model: 'gpt-4o-mini' },
-  sttProvider:    { provider: 'openai', model: 'whisper-1' },
+  embeddingManager,
+  vectorStore,
+  visionProvider: new LLMVisionAdapter({ provider: 'openai', model: 'gpt-4o-mini' }),
+  sttProvider: new SpeechProviderAdapter(
+    new OpenAIWhisperSpeechToTextProvider({ apiKey: process.env.OPENAI_API_KEY! }),
+  ),
 });
 
 await indexer.indexImage({ image: fs.readFileSync('./figures/revenue-chart.png') });
 await indexer.indexAudio({ audio: fs.readFileSync('./calls/sales-q4.wav'), language: 'en' });
+await indexer.indexText({ text: 'Revenue grew 23% to $4.2B, driven by cloud services.' });
 
-// One text query, every modality searched. Hits arrive ranked with
-// modality + derived text so you can cite the underlying asset.
-const hits = await indexer.search('Q4 revenue growth drivers');
+// One text query over every modality in the collection.
+const hits = await indexer.search('Q4 revenue growth drivers', { topK: 5 });
 for (const hit of hits) {
-  console.log(\`[\${hit.modality}] \${hit.text.slice(0, 80)}…  (\${hit.score.toFixed(2)})\`);
-  // => [image]    "Bar chart showing 23% YoY growth in cloud…  (0.91)"
-  // => [audio]    "…we hit $4.2B in cloud services…           (0.87)"
-  // => [document] "Revenue grew 23% to $4.2B driven by…       (0.84)"
+  console.log(\`[\${hit.modality}] \${hit.content.slice(0, 80)} (\${hit.score.toFixed(2)})\`);
 }`,
 
   'Media Generation': `import { generateText, streamText, generateImage, agent } from '@framers/agentos';
 
-// Text — just set the provider, AgentOS picks the model
+// Text: name the provider and its default model answers
 const { text } = await generateText({ provider: 'openai', prompt: 'Explain QUIC.' });
 
-// Images — cloud or local (Ollama, SD WebUI)
+// Images: cloud providers, or a local Stable Diffusion server
+// (Automatic1111, Forge or ComfyUI)
 const poster = await generateImage({
   provider: 'stability',
   model: 'stable-image-core',
   prompt: 'Art deco travel poster for a moon colony',
-  providerOptions: { stability: { stylePreset: 'illustration' } },
+  providerOptions: { stability: { negativePrompt: 'text, watermark' } },
 });
 
 // Streaming
@@ -560,97 +549,104 @@ const session = tutor.session('demo');
 await session.send('What is QUIC?');
 await session.send('How does it compare to HTTP/2?');`,
 
-  'Deep Research': `import { mission, toolNode, humanNode } from '@framers/agentos/orchestration';
+  'Deep Research': `import { mission, toolNode } from '@framers/agentos/orchestration';
+import type { WorkflowRuntimeDeps } from '@framers/agentos/orchestration/builders/WorkflowBuilder';
 import { z } from 'zod';
 
-// Goal-first orchestration — the planner decides the steps
+// Your runtime's executors: tool calls, the reasoning loop and the model call.
+declare const deps: WorkflowRuntimeDeps;
+
+// The compiler turns the goal into a linear plan from a template (the
+// research style: gather, process, deliver and refine steps) and splices
+// anchor nodes into it.
 const researcher = mission('deep-research')
   .input(z.object({ topic: z.string() }))
-  .goal('Research {topic} thoroughly and produce a cited summary')
+  .goal('Research the topic in the input and produce a cited summary')
   .returns(z.object({ summary: z.string(), confidence: z.number() }))
-  .planner({ strategy: 'plan_and_execute', maxSteps: 8 })
-  .policy({
-    memory: { read: { types: ['semantic', 'episodic'] }, write: 'auto' },
-    discovery: { kind: 'tool', fallback: 'all' },
-    guardrails: ['grounding-guard', 'pii-redaction'],
-  })
+  .planner({ strategy: 'linear', maxSteps: 8, style: 'research' })
   .anchor('fact-check', toolNode('grounding_verifier'), { phase: 'validate', required: true })
-  .anchor('human-review', humanNode({ prompt: 'Verify sources' }), { phase: 'validate' })
-  .compile();
+  .compile({ deps });
 
-const plan = await researcher.explain({ topic: 'AI safety' });  // Preview the plan
-const result = await researcher.invoke({ topic: 'AI safety' });  // Execute it`,
+const plan = await researcher.explain({ topic: 'AI safety' });  // the steps and the graph
+const result = await researcher.invoke({ topic: 'AI safety' });  // run it`,
 
-  'Voice IVR': `import { AgentOS } from '@framers/agentos';
+  'Voice Calls': `import { CallManager, TwilioVoiceProvider, twilioConversationTwiml } from '@framers/agentos';
 
-const agent = new AgentOS();
-await agent.initialize({
-  provider: 'openai',
-  voice: {
-    stt: { provider: 'deepgram', model: 'nova-2' },
-    tts: { provider: 'elevenlabs', model: 'eleven_turbo_v2', voice: 'Rachel' },
-    vad: { provider: 'silero' },
-    endpointDetection: 'acoustic',   // or 'heuristic' | 'semantic'
-    bargeinStrategy: 'soft-fade',    // or 'hard-cut'
+const manager = new CallManager({
+  provider: {
+    provider: 'twilio',
+    config: {
+      accountSid: process.env.TWILIO_ACCOUNT_SID!,
+      authToken: process.env.TWILIO_AUTH_TOKEN!,
+      fromNumber: '+15551234567',
+    },
   },
-  telephony: {
-    provider: 'twilio',              // or 'telnyx' | 'plivo'
-    webhookPath: '/voice/webhook',
-  },
-  guardrails: ['pii-redaction'],     // Redact PII from voice transcripts
+  webhookBaseUrl: 'https://your-domain.com',
+  inboundPolicy: 'allowlist',
+  allowedNumbers: ['+15550001111'],
+});
+manager.registerProvider(new TwilioVoiceProvider({
+  accountSid: process.env.TWILIO_ACCOUNT_SID!,
+  authToken: process.env.TWILIO_AUTH_TOKEN!,
+}));
+
+// Place a call. Twilio requests <webhookBaseUrl>/voice/webhook/twilio when it
+// connects, and your route answers with TwiML that opens a media stream.
+const call = await manager.initiateCall({ toNumber: '+15550001234' });
+const twiml = twilioConversationTwiml('wss://your-domain.com/voice/media-stream', call.callId);
+
+// Key presses and state changes arrive as events.
+manager.on((event) => {
+  if (event.type === 'call:dtmf') console.log('pressed', (event.data as { digit: string }).digit);
 });
 
-// Handle inbound calls
-agent.onCall(async (call) => {
-  for await (const chunk of agent.processVoice(call)) {
-    call.stream(chunk);              // Stream TTS audio back
-  }
-});`,
+// On the media stream WebSocket, TelephonyStreamTransport turns caller audio
+// into Float32 frames for VAD and STT and sends TTS audio back as mu-law.`,
 
   'Emergent Tools': `import { AgentOS } from '@framers/agentos';
 
-// Enable emergent capabilities — agents can forge new tools at runtime
-const agent = new AgentOS();
-await agent.initialize({
-  provider: 'openai',
+// Emergent capabilities: the agent gets forge_tool and can build a tool
+// mid-conversation.
+const agentos = await AgentOS.create({
   emergent: true,
   emergentConfig: {
     maxSessionTools: 10,
+    allowSandboxTools: true,         // generated code; off by default
     sandboxTimeoutMs: 5000,
-    judgeModel: 'gpt-4o-mini',       // LLM-as-judge for safety review
+    judgeModel: 'gpt-4o-mini',       // LLM-as-judge for each forged tool
   },
 });
 
-// The agent now has forge_tool. When it encounters a task with no matching
-// tool, it creates one — compose mode (chain existing tools) or sandbox
-// mode (isolated V8). Every tool is judge-reviewed before activation.
+// A forged tool composes existing tools, or runs generated JavaScript in a
+// node:vm context or a QuickJS WebAssembly instance. Its test cases run, and
+// no tool activates without the judge's approval.
 
-// Tools start at session tier, auto-promote to agent tier after 5+ uses
-// with >0.8 confidence, then require human approval for shared tier.
+// Tools start at the session tier. Five or more uses at confidence 0.8 or
+// higher, with a two-reviewer panel's approval, promote a tool to the agent
+// tier; the shared tier takes an explicit promote() call.
 
 // Export a forged tool as a portable YAML package:
-// wunderland emergent export <id> --output ./my-tool.emergent-tool.yaml`,
+// wunderland emergent export <name|id> --output ./my-tool.emergent-tool.yaml`,
 
   'Video & Audio': `import { generateVideo, analyzeVideo, generateMusic, generateSFX } from '@framers/agentos';
 
-// Text-to-video — provider auto-detected from env vars
+// Text-to-video on a named provider, or the first one whose key is set
 const video = await generateVideo({
   prompt: 'A drone flying over a misty forest at sunrise',
   provider: 'runway',
   durationSec: 5,
-  aspectRatio: '16:9',
 });
 console.log(video.videos[0].url);
 
-// Video analysis with RAG indexing
+// Video analysis: scenes, a description of each, a transcript and a summary
+// (needs ffmpeg and ffprobe on the PATH)
 const analysis = await analyzeVideo({
   videoUrl: 'https://example.com/demo.mp4',
   transcribeAudio: true,
-  indexForRAG: true,      // Index scenes into the vector store
 });
 console.log(analysis.scenes);
 
-// Music generation — 8 providers with auto-fallback
+// Music: the first configured provider, with the others as fallbacks
 const music = await generateMusic({
   prompt: 'Upbeat lo-fi hip hop beat with vinyl crackle and mellow piano',
   durationSec: 60,
@@ -662,29 +658,29 @@ const sfx = await generateSFX({
   durationSec: 5,
 });`,
 
-  AgentGraph: `import { AgentGraph, toolNode, gmiNode, judgeNode, START, END } from '@framers/agentos/orchestration';
+  AgentGraph: `import { AgentGraph, toolNode, gmiNode, START, END } from '@framers/agentos/orchestration';
+import type { WorkflowRuntimeDeps } from '@framers/agentos/orchestration/builders/WorkflowBuilder';
 import { z } from 'zod';
 
-const graph = new AgentGraph({
-  input: z.object({ topic: z.string() }),
-  scratch: z.object({ confidence: z.number().default(0) }),
-  artifacts: z.object({ summary: z.string(), image: z.string().optional() }),
-})
-  .addNode('search', toolNode('web_search'))
-  .addNode('evaluate', gmiNode({ instructions: 'Score source quality 0-1' }))
-  .addNode('judge', judgeNode({
-    rubric: 'Score accuracy (1-10) and credibility (1-10)',
-    threshold: 7,
-  }))
-  .addNode('summarize', gmiNode({ instructions: 'Write a cited summary' }))
-  .addNode('illustrate', toolNode('generate_image'))
+// Your runtime's executors: toolOrchestrator runs tool nodes,
+// loopController and providerCall run gmi nodes.
+declare const deps: WorkflowRuntimeDeps;
+
+const graph = new AgentGraph(
+  {
+    input: z.object({ topic: z.string() }),
+    scratch: z.object({}),
+    artifacts: z.object({ search: z.unknown(), summarize: z.string() }),
+  },
+  { checkpointPolicy: 'every_node' },        // a checkpoint after each node
+)
+  // A tool node sends its tool the static args and nothing from the state.
+  .addNode('search', toolNode('web_search', { args: { query: 'quantum computing' } }))
+  .addNode('summarize', gmiNode({ instructions: 'Write a cited summary of the search results.' }))
   .addEdge(START, 'search')
-  .addEdge('search', 'evaluate')
-  .addConditionalEdge('evaluate', (s) => s.scratch.confidence > 0.8 ? 'judge' : 'search')
-  .addEdge('judge', 'summarize')
-  .addEdge('summarize', 'illustrate')
-  .addEdge('illustrate', END)
-  .compile({ checkpoint: 'every_node' });  // Enable time-travel
+  .addEdge('search', 'summarize')
+  .addEdge('summarize', END)
+  .compile({ deps });
 
 const result = await graph.invoke({ topic: 'quantum computing' });`,
 };
@@ -759,61 +755,61 @@ const features = [
   {
     title: 'Multimodal Provider API',
     description:
-      'Text, images, video, music, SFX, embeddings, and speech from one API. Cloud and local backends share the same surface, with fallback chains and provider preferences for load balancing.',
+      'Text, images, video, music, SFX, embeddings, and speech from one API. Cloud and local backends share the same surface, with fallback chains and provider preferences that order, filter or weight them.',
     link: '/features/multimodal-rag',
   },
   {
     title: 'Deep Research Agents',
     description:
-      'mission() API with Tree of Thought planning, multi-source search, grounding verification, and human-in-the-loop review. 3 autonomy modes, 5 provider strategies, and dynamic graph expansion.',
+      'mission() compiles a goal into a linear step graph from a plan template (research, Q&A or creative), with anchor nodes for verification and human review spliced into its phases.',
     link: '/features/rag-memory#query-classification',
   },
   {
     title: 'Emergent Capabilities',
     description:
-      'Agents forge new tools at runtime \u2014 compose (chain existing tools) or sandbox (isolated V8 with allowlists). LLM-as-judge safety review, tiered promotion, portable YAML export.',
+      'Agents forge new tools at runtime \u2014 compose (chain existing tools) or sandbox (generated JavaScript in node:vm or QuickJS, with allowlists; off by default). LLM-as-judge review, tiered promotion, portable YAML export.',
     link: '/features/emergent-capabilities',
   },
   {
     title: 'Voice & IVR Pipeline',
     description:
-      'Full-duplex voice with endpoint detection modes, barge-in handling, diarization, and Twilio/Telnyx/Plivo telephony bridging for production IVR.',
+      'Voice pipeline with VAD, STT, endpoint detection and TTS, and Twilio, Telnyx and Plivo call providers with a media-stream transport for phone calls.',
     link: '/features/voice-pipeline',
   },
   {
     title: 'Graph Orchestration',
     description:
-      'Three authoring APIs \u2014 AgentGraph, workflow() DSL, mission() \u2014 compile to one IR. judgeNode for evaluation, checkpointing for time-travel, streaming events.',
+      'Three authoring APIs \u2014 AgentGraph, workflow() DSL, mission() \u2014 compile to one IR. judgeNode for evaluation, checkpoints to resume from, streaming events.',
     link: '/features/unified-orchestration',
   },
   {
     title: 'Cognitive Memory',
     description:
-      '8 neuroscience-grounded mechanisms with HEXACO personality modulation. Ebbinghaus decay, spreading activation, Baddeley working memory, GraphRAG retrieval with episodic-to-semantic consolidation.',
+      'Ebbinghaus decay, spreading activation, Baddeley-style working memory, GraphRAG retrieval and consolidation, plus 8 neuroscience-grounded mechanisms that run with a cognitiveMechanisms config and that HEXACO traits modulate.',
     link: '/features/cognitive-memory',
   },
   {
     title: 'Streaming Guardrails',
     description:
-      '5-tier pipeline: PII redaction (regex + NLP + NER + LLM), ML classifiers (ONNX BERT), topicality drift, code safety (OWASP), grounding guard (NLI). Sentence-boundary buffered.',
+      'Five guardrail packs: PII redaction (regex, NLP, NER and an LLM judge), ML classifiers (ONNX toxic-bert, an LLM judge or keywords), topicality (embedding similarity to allowed and blocked topics), code safety (OWASP-style rules) and grounding (NLI against the retrieved sources).',
     link: '/features/guardrails',
   },
   {
     title: 'Evaluation Framework',
     description:
-      'Dataset-driven evals with candidates, graders, and experiments. LLM prompt runner and HTTP endpoint runner. Compare baseline vs challenger. Drizzle ORM with SQLite/Postgres.',
+      'Test cases scored by built-in or custom scorers and an LLM judge with criteria presets. Two runs compared side by side; reports in JSON, Markdown or HTML.',
     link: '/features/evaluation-guide',
   },
   {
     title: 'Capability Discovery',
     description:
-      '3-tier semantic discovery: category summaries (150 tokens) \u2192 top-5 matches (200 tokens) \u2192 full schemas on demand. 89% token reduction. Agents self-discover tools mid-conversation.',
+      'Three tiers held to token budgets: category summaries (200 tokens) \u2192 the top 5 matches (800) \u2192 full schemas for the top 2 (2,000), plus a discover_capabilities tool for active search.',
     link: '/features/capability-discovery',
   },
   {
     title: 'Provenance & Audit',
     description:
-      'Signed event ledger (Ed25519 + SHA-256 hash chain), soft-delete tombstones, revision history, autonomy guard. Merkle anchoring for tamper-evident external verification.',
+      'Signed event ledger (Ed25519 signatures over a SHA-256 hash chain), revision snapshots, tombstones for deletes, an autonomy guard, and Merkle roots anchored outside the database.',
     link: '/features/provenance-immutability',
   },
   {
@@ -825,13 +821,13 @@ const features = [
   {
     title: 'Immutable Agents',
     description:
-      'Sealed storage policy, toolset pinning, secret rotation, soft-forget memory. Full provenance audit trail. Deploy agents that cannot be tampered with after initialization.',
+      'Sealed storage policy with the signed ledger, revisions, tombstones and anchors, and a design guide for toolset pinning, secret rotation and forgetting. A sealed agent\'s changes are tamper-evident.',
     link: '/features/immutable-agents',
   },
   {
     title: 'Video & Audio Generation',
     description:
-      'generateVideo(), analyzeVideo(), detectScenes(), generateMusic(), generateSFX() APIs. 3 video providers (Runway, Replicate, Fal) + 8 audio providers. Fallback chains, scene detection, RAG indexing.',
+      'generateVideo(), analyzeVideo(), detectScenes(), generateMusic(), generateSFX() APIs. 3 video providers (Runway, Replicate, Fal) + 8 audio providers. Fallback chains and scene detection.',
     link: '/features/video-pipeline',
   },
   {
@@ -843,7 +839,7 @@ const features = [
   {
     title: 'Self-Improving Agents',
     description:
-      'Bounded self-modification: adapt_personality (HEXACO mutation with per-session budgets), manage_skills, create_workflow, self_evaluate. Ebbinghaus decay ensures unreinforced changes fade.',
+      'Bounded self-modification: adapt_personality (HEXACO mutation with per-session budgets), manage_skills, create_workflow, self_evaluate. Recorded mutations decay when adapt_personality runs; the live trait keeps its change.',
     link: '/features/self-improving-agents',
   },
 ];
