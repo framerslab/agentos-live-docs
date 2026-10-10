@@ -20,24 +20,24 @@ Both APIs support automatic provider detection, fallback chains via [`FallbackAu
 
 | Provider | Env Var | ID | Notes |
 |---|---|---|---|
-| **Suno** | `SUNO_API_KEY` | `suno` | Up to ~240s, highest quality |
-| **Udio** | `UDIO_API_KEY` | `udio` | Cloud music generation |
-| **Stable Audio** | `STABILITY_API_KEY` | `stable-audio` | Up to ~47s |
-| **Replicate** | `REPLICATE_API_TOKEN` | `replicate-audio` | Various music models |
-| **Fal** | `FAL_API_KEY` | `fal-audio` | Various music models |
-| **MusicGen Local** | (none) | `musicgen-local` | Local via HuggingFace Transformers.js |
+| **Suno** | `SUNO_API_KEY` | `suno` | Replicate predictions API, model `suno-ai/suno` (the key is a Replicate token) |
+| **Udio** | `UDIO_API_KEY` | `udio` | Replicate predictions API, model `udio/udio` |
+| **Stable Audio** | `STABILITY_API_KEY` | `stable-audio` | Stability AI `v2beta` API, model `stable-audio-open-1.0`; one synchronous request |
+| **Replicate** | `REPLICATE_API_TOKEN` | `replicate-audio` | `meta/musicgen` by default |
+| **Fal** | `FAL_API_KEY` | `fal-audio` | Queue API, `fal-ai/stable-audio` by default |
+| **MusicGen Local** | (none) | `musicgen-local` | `Xenova/musicgen-small` through `@huggingface/transformers` |
 
 ### SFX providers
 
 | Provider | Env Var | ID | Notes |
 |---|---|---|---|
-| **ElevenLabs** | `ELEVENLABS_API_KEY` | `elevenlabs-sfx` | Highest quality SFX |
-| **Stable Audio** | `STABILITY_API_KEY` | `stable-audio` | Also supports SFX |
-| **Replicate** | `REPLICATE_API_TOKEN` | `replicate-audio` | Various SFX models |
-| **Fal** | `FAL_API_KEY` | `fal-audio` | Various SFX models |
-| **AudioGen Local** | (none) | `audiogen-local` | Local via HuggingFace Transformers.js |
+| **ElevenLabs** | `ELEVENLABS_API_KEY` | `elevenlabs-sfx` | ElevenLabs Sound Generation API |
+| **Stable Audio** | `STABILITY_API_KEY` | `stable-audio` | Same model as for music |
+| **Replicate** | `REPLICATE_API_TOKEN` | `replicate-audio` | `meta/audiogen` by default |
+| **Fal** | `FAL_API_KEY` | `fal-audio` | `fal-ai/stable-audio` by default |
+| **AudioGen Local** | (none) | `audiogen-local` | Defaults to `Xenova/audiogen-medium`, which Hugging Face does not serve (see [Local generation](#local-generation)) |
 
-Provider resolution follows priority order (top of table = highest priority). When multiple providers are configured, a [`FallbackAudioProxy`](https://github.com/framerslab/agentos/blob/master/src/io/media/audio/FallbackAudioProxy.ts) wraps the chain for automatic failover.
+Provider resolution follows priority order (top of table = highest priority). A cloud provider joins the chain when its environment variable is set; the local provider needs none and always comes last. A named `provider` goes first, followed by the other configured providers. When the chain holds more than one provider, a [`FallbackAudioProxy`](https://github.com/framerslab/agentos/blob/master/src/io/media/audio/FallbackAudioProxy.ts) wraps the chain for automatic failover.
 
 ## `generateMusic()`
 
@@ -81,10 +81,11 @@ const result = await generateMusic({
 | `outputFormat` | [`AudioOutputFormat`](https://github.com/framerslab/agentos/blob/master/src/io/media/audio/types.ts) | `"mp3"` / `"wav"` / `"flac"` / `"ogg"` / `"aac"` |
 | `seed` | `number` | Seed for reproducible generation |
 | `timeoutMs` | `number` | Maximum wait time in milliseconds |
-| `n` | `number` | Number of clips to generate (default: 1) |
+| `n` | `number` | Number of clips to request |
 | `onProgress` | `(event) => void` | Progress callback with [`AudioProgressEvent`](https://github.com/framerslab/agentos/blob/master/src/io/media/audio/types.ts) |
 | `providerPreferences` | [`MediaProviderPreference`](https://github.com/framerslab/agentos/blob/master/src/io/media/ProviderPreferences.ts) | Reorder or filter the fallback chain |
-| `apiKey` | `string` | Override the API key |
+| `apiKey` | `string` | Override the API key of the first provider |
+| `providerOptions` | `Record<string, unknown>` | Provider-specific options passed through |
 
 ## `generateSFX()`
 
@@ -111,10 +112,11 @@ console.log(result.audio[0].url);
 | `outputFormat` | [`AudioOutputFormat`](https://github.com/framerslab/agentos/blob/master/src/io/media/audio/types.ts) | `"mp3"` / `"wav"` / `"flac"` / `"ogg"` / `"aac"` |
 | `seed` | `number` | Seed for reproducible generation |
 | `timeoutMs` | `number` | Maximum wait time in milliseconds |
-| `n` | `number` | Number of clips to generate (default: 1) |
+| `n` | `number` | Number of clips to request |
 | `onProgress` | `(event) => void` | Progress callback with [`AudioProgressEvent`](https://github.com/framerslab/agentos/blob/master/src/io/media/audio/types.ts) |
 | `providerPreferences` | [`MediaProviderPreference`](https://github.com/framerslab/agentos/blob/master/src/io/media/ProviderPreferences.ts) | Reorder or filter the fallback chain |
-| `apiKey` | `string` | Override the API key |
+| `apiKey` | `string` | Override the API key of the first provider |
+| `providerOptions` | `Record<string, unknown>` | Provider-specific options passed through |
 
 ## Result types
 
@@ -122,7 +124,7 @@ Both `generateMusic()` and `generateSFX()` return a similar result envelope:
 
 ```typescript
 interface GenerateMusicResult {
-  model: string;     // e.g. "suno-v3.5"
+  model: string;     // e.g. "suno-ai/suno"
   provider: string;  // e.g. "suno"
   created: number;   // Unix timestamp (seconds)
   audio: GeneratedAudio[];
@@ -153,11 +155,11 @@ interface AudioProgressEvent {
 }
 ```
 
-Synchronous providers (Stable Audio, ElevenLabs) may jump directly from `processing` to `complete`.
+`generateMusic()` and `generateSFX()` report `queued` (0), `processing` (25), then `complete` (100) or `failed`; the providers report no progress of their own.
 
 ## Local generation
 
-Both `musicgen-local` and `audiogen-local` providers run entirely on the local machine via HuggingFace Transformers.js. No API key is required. They serve as the lowest-priority fallback in the provider chain, ensuring audio generation is always available even without cloud credentials.
+Both `musicgen-local` and `audiogen-local` run on the local machine through `@huggingface/transformers`, which must be installed, and download their model on first use. No API key is required. They come last in the auto-detected chain, and with no cloud key set they are the whole chain. `musicgen-local` loads `Xenova/musicgen-small`. `audiogen-local` defaults to `Xenova/audiogen-medium`, a repository Hugging Face does not serve (Xenova publishes no AudioGen export), so local SFX generation fails unless a provider with a key comes earlier in the chain.
 
 ## Observability
 
