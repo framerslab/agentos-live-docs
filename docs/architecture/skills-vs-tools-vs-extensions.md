@@ -9,7 +9,7 @@ description: "Which capability system to reach for when. The decision is rarely 
 >
 > — *The Bell System Technical Journal*, M. D. McIlroy, E. N. Pinson, and B. A. Tague, 1978
 
-The Unix philosophy is the right starting frame for the three capability systems in AgentOS. Each one does exactly one thing. Skills tell the LLM *when* to do something. Tools are the things the LLM actually invokes. Extensions are the npm-package distribution mechanism for reusable tool sets, guardrail packs, and voice pipelines. Confusion only sets in when someone reaches for one of them to do another's job — writing a skill that tries to "execute," writing an extension that needs to know which user is asking. The page below is a map for picking the right one the first time.
+The Unix philosophy is the right starting frame for the three capability systems in AgentOS. Each one does exactly one thing. Skills tell the LLM *when* to do something. Tools are the things the LLM actually invokes. Extensions are the npm-package distribution mechanism for reusable tool sets, guardrail packs, and voice pipelines. Confusion only sets in when someone reaches for one of them to do another's job — writing a skill that tries to "execute," writing an extension tool that needs values only the app holds for each request. The page below is a map for picking the right one the first time.
 
 ## At a glance
 
@@ -19,7 +19,7 @@ The Unix philosophy is the right starting frame for the three capability systems
 | **How it loads** | [`SkillRegistry`](https://github.com/framerslab/agentos/blob/master/src/cognition/skills/SkillRegistry.ts) reads the directories you pass to `loadFromDirs()` | Inline on `agent({...tools})`, or registered on the full runtime from an extension manifest | [`createCuratedManifest()`](https://github.com/framerslab/agentos-extensions-registry) imports the installed curated packages into a manifest; `AgentOS.create({ extensionManifest })` activates it |
 | **What the LLM sees** | Text injected into the system prompt | A function-call schema (name, description, parameter shape) | Nothing directly — extensions provide tools, the LLM sees the tools |
 | **When it runs** | At agent construction (prompt assembly) | During generation, when the LLM emits a tool-call | At app initialization (one-time setup) |
-| **Can capture request-scoped state?** | No — prompt text only, written before the request exists | **Yes** — closures capture actorId, sessionId, policy tier, anything in scope | No — package-scoped config only |
+| **Can capture request-scoped state?** | No — prompt text only, written before the request exists | **Yes** — closures capture actorId, sessionId, policy tier, anything in scope | Not by closure. On the full runtime each call receives the request's user id and session ids in its `ToolExecutionContext`; everything else is package-scoped config |
 | **Right for** | Behavioral guidelines, workflow instructions, "how to" knowledge | API calls, DB queries, vision analysis, media search, memory retrieval | Reusable bundles published once and consumed across many agents |
 
 ## The decision
@@ -66,9 +66,14 @@ import { agent } from '@framers/agentos';
 const registry = new SkillRegistry();
 await registry.loadFromDirs(['./skills']);
 
-// strict: true drops skills whose requires.env / requires.bins /
-// requires.config are not met on this host (runtimeConfig feeds config checks).
-const snapshot = registry.buildSnapshot({ platform: process.platform, strict: true });
+// strict: true drops skills whose requires.env / requires.bins are not met on
+// this host. requires.config paths are read from runtimeConfig: a skill that
+// lists one is dropped unless the path is truthy there.
+const snapshot = registry.buildSnapshot({
+  platform: process.platform,
+  strict: true,
+  runtimeConfig: { browser: { enabled: true } },
+});
 
 const myAgent = agent({
   instructions: baseInstructions + '\n\n' + snapshot.prompt,
@@ -76,7 +81,7 @@ const myAgent = agent({
 });
 ```
 
-`loadFromDirs()` reads the files once. A `SKILL.md` changed while the process runs takes effect after `registry.clear()` and another `loadFromDirs()`, or after `registry.reload()` with the directories (`workspaceDir`, `managedSkillsDir`, `bundledSkillsDir`, `extraDirs`). `buildSnapshot()` filters by the frontmatter's `os` list when given a `platform`; with `strict: true` it also checks `requires.env`, `requires.bins`, `requires.anyBins` and `requires.config` against the host, so a skill that needs `SERPAPI_API_KEY` is left out of the snapshot when the key isn't set. Without `strict`, those requirements are not checked.
+`loadFromDirs()` reads the files once. A `SKILL.md` changed while the process runs takes effect after `registry.clear()` and another `loadFromDirs()`, or after `registry.reload()` with the directories (`workspaceDir`, `managedSkillsDir`, `bundledSkillsDir`, `extraDirs`). `buildSnapshot()` filters by the frontmatter's `os` list when given a `platform`; with `strict: true` it also checks `requires.bins` and `requires.anyBins` against the `PATH`, `requires.env` against the environment (or the skill's `env` and `apiKey` entries in the registry's config), and `requires.config` against `runtimeConfig`, where each listed dotted path must be truthy. A skill that needs `SERPAPI_API_KEY` is left out of the snapshot when the key isn't set, and a skill that lists a `requires.config` path is left out when `runtimeConfig` is not passed. A skill whose metadata sets `always: true`, next to its `requires`, skips these checks. Without `strict`, those requirements are not checked.
 
 ## Tools — callable functions
 
@@ -118,7 +123,7 @@ function buildCompanionAgent(actorId: string, slug: string, policyTier: string) 
 
 Memory recall for the current user, media generation under the current content policy and attachment lookup in the current conversation all close over values like these. None of those values exist at registry-load time. They only exist per-request.
 
-If a tool needs to know *who is asking*, it has to be inline. There is no other shape that fits.
+On `agent()`, every tool's `execute()` receives a context whose user id is `'system'` and whose session id is made up for the call ([`generateText.ts`](https://github.com/framerslab/agentos/blob/master/src/api/generateText.ts)), so a tool there learns who is asking only from a closure. On the full runtime (`AgentOS.processRequest()`), each call's [`ToolExecutionContext`](https://github.com/framerslab/agentos/blob/master/src/core/tools/ITool.ts) carries the request's `userContext` (its `userId` included) and, in `sessionData`, the session, conversation and organization ids, so an extension tool there knows the user and the session. Values the runtime does not carry, such as an app's content-policy tier, reach a tool only through a closure.
 
 ### Extension tools
 
