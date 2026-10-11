@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 640" width="1100" height="640">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 772" width="1100" height="772">
   <defs>
     <linearGradient id="hitl-brand" x1="0%" y1="0%" x2="100%" y2="0%">
       <stop offset="0%" stop-color="#6366f1" />
@@ -30,73 +30,75 @@
     </marker>
   </defs>
 
-  <rect class="bg" x="0" y="0" width="1100" height="640"/>
+  <rect class="bg" x="0" y="0" width="1100" height="772"/>
 
   <!-- Title strip -->
-  <text x="40" y="38" class="h1">Human-in-the-Loop · Three integration surfaces, one decision contract</text>
+  <text x="40" y="38" class="h1">Human-in-the-Loop · Three integration surfaces, three decision contracts</text>
   <line x1="40" y1="52" x2="1060" y2="52" stroke="url(#hitl-brand)" stroke-width="2" />
 
-  <!-- LANE 1: Agency / Agent declarative HITL -->
-  <rect x="40" y="74" width="320" height="408" rx="12" class="lane-bg" />
-  <text x="56" y="100" class="h3">Lane 1 · Agency / Agent</text>
+  <!-- LANE 1: agency() declarative HITL -->
+  <rect x="40" y="74" width="320" height="420" rx="12" class="lane-bg" />
+  <text x="56" y="100" class="h3">Lane 1 · Agency</text>
   <text x="56" y="118" class="h2">HitlConfig (declarative)</text>
 
   <rect x="56" y="132" width="288" height="60" rx="8" class="card" />
   <text x="70" y="152" class="b">agency({ hitl: { approvals, handler, ... } })</text>
-  <text x="70" y="170" class="m">src/api/types.ts:205</text>
+  <text x="70" y="170" class="m">src/api/types.ts · src/api/hitl.ts</text>
   <text x="70" y="184" class="lbl">Public config interface</text>
 
   <text x="56" y="216" class="h3">Five opt-in approval triggers</text>
   <rect x="56" y="226" width="288" height="22" rx="5" class="trigger" />
-  <text x="68" y="241" class="b"><tspan font-weight="600">beforeTool</tspan> — gate listed tool names</text>
+  <text x="68" y="241" class="b"><tspan font-weight="600">beforeTool</tspan> — listed tool names, or '*'</text>
   <rect x="56" y="252" width="288" height="22" rx="5" class="trigger" />
-  <text x="68" y="267" class="b"><tspan font-weight="600">beforeAgent</tspan> — gate listed agent names</text>
+  <text x="68" y="267" class="b"><tspan font-weight="600">beforeAgent</tspan> — listed agent names</text>
   <rect x="56" y="278" width="288" height="22" rx="5" class="trigger" />
   <text x="68" y="293" class="b"><tspan font-weight="600">beforeEmergent</tspan> — gate spawn_specialist</text>
   <rect x="56" y="304" width="288" height="22" rx="5" class="trigger" />
-  <text x="68" y="319" class="b"><tspan font-weight="600">beforeReturn</tspan> — gate final answer</text>
+  <text x="68" y="319" class="b"><tspan font-weight="600">beforeReturn</tspan> — gate the final answer</text>
   <rect x="56" y="330" width="288" height="22" rx="5" class="trigger" />
-  <text x="68" y="345" class="b"><tspan font-weight="600">beforeStrategyOverride</tspan> — gate runtime swap</text>
+  <text x="68" y="345" class="b"><tspan font-weight="600">beforeStrategyOverride</tspan> — pauses nothing</text>
 
   <text x="56" y="378" class="h3">Six handler factories</text>
-  <rect x="56" y="388" width="288" height="86" rx="8" class="handler" />
-  <text x="70" y="408" class="m">hitl.cli()</text>
-  <text x="70" y="424" class="m">hitl.autoApprove() · hitl.autoReject(reason?)</text>
-  <text x="70" y="440" class="m">hitl.webhook(url)</text>
-  <text x="70" y="456" class="m">hitl.slack({ channel, token })</text>
-  <text x="70" y="470" class="m">hitl.llmJudge({ criteria, fallback, ... })</text>
+  <rect x="56" y="386" width="288" height="100" rx="8" class="handler" />
+  <text x="70" y="402" class="m">hitl.cli()</text>
+  <text x="70" y="416" class="m">hitl.autoApprove()</text>
+  <text x="70" y="430" class="m">hitl.autoReject(reason?)</text>
+  <text x="70" y="444" class="m">hitl.webhook(url)</text>
+  <text x="70" y="458" class="m">hitl.slack({ channel, token })</text>
+  <text x="70" y="472" class="m">hitl.llmJudge({ criteria, ... })</text>
 
-  <!-- LANE 2: Workflow / AgentGraph human node -->
-  <rect x="384" y="74" width="332" height="408" rx="12" class="lane-bg" />
+  <!-- LANE 2: AgentGraph human node / workflow() human step -->
+  <rect x="384" y="74" width="332" height="420" rx="12" class="lane-bg" />
   <text x="400" y="100" class="h3">Lane 2 · Workflow / Graph</text>
-  <text x="400" y="118" class="h2">human step / node</text>
+  <text x="400" y="118" class="h2">human node</text>
 
   <rect x="400" y="132" width="300" height="60" rx="8" class="card" />
-  <text x="414" y="152" class="b">workflow().step({ human: { prompt, ... } })</text>
-  <text x="414" y="170" class="m">src/orchestration/builders/WorkflowBuilder.ts</text>
-  <text x="414" y="184" class="lbl">Typed DAG node, suspends + resumes</text>
+  <text x="414" y="150" class="b">AgentGraph: humanNode({ prompt, ... })</text>
+  <text x="414" y="166" class="b">workflow(): step(id, { human: { prompt } })</text>
+  <text x="414" y="184" class="m">src/orchestration/builders/nodes.ts</text>
 
-  <text x="400" y="216" class="h3">Three resolution modes</text>
-  <rect x="400" y="226" width="300" height="24" rx="5" class="trigger" />
-  <text x="412" y="242" class="b">autoAccept — non-interactive bypass</text>
-  <rect x="400" y="254" width="300" height="24" rx="5" class="trigger" />
-  <text x="412" y="270" class="b">autoReject — dry-run / read-only</text>
-  <rect x="400" y="282" width="300" height="24" rx="5" class="trigger" />
-  <text x="412" y="298" class="b">judge — LLM verdict + human fallback</text>
+  <text x="400" y="216" class="h3">humanNode() modes, in this order</text>
+  <rect x="400" y="226" width="300" height="22" rx="5" class="trigger" />
+  <text x="412" y="241" class="b"><tspan font-weight="600">autoAccept</tspan> — approved at once</text>
+  <rect x="400" y="252" width="300" height="22" rx="5" class="trigger" />
+  <text x="412" y="267" class="b"><tspan font-weight="600">autoReject</tspan> — rejected at once</text>
+  <rect x="400" y="278" width="300" height="22" rx="5" class="trigger" />
+  <text x="412" y="293" class="b"><tspan font-weight="600">judge</tspan> — verdict at confidence ≥ threshold</text>
+  <rect x="400" y="304" width="300" height="22" rx="5" class="trigger" />
+  <text x="412" y="319" class="b"><tspan font-weight="600">none</tspan> (or judge unsure, failed) — suspend</text>
+  <text x="400" y="344" class="b">A workflow() step takes no mode: it suspends.</text>
 
-  <text x="400" y="334" class="h3">Effect classification</text>
-  <rect x="400" y="344" width="300" height="38" rx="6" class="handler" />
-  <text x="414" y="362" class="m">effectClass: 'pure' | 'read' | 'write'</text>
-  <text x="414" y="376" class="m">                 | 'external' | 'human'</text>
+  <text x="400" y="372" class="h3">Effect class</text>
+  <rect x="400" y="382" width="300" height="38" rx="6" class="handler" />
+  <text x="414" y="398" class="m">effectClass 'human' on every human node</text>
+  <text x="414" y="413" class="m">resume() replays its recorded output</text>
 
-  <text x="400" y="408" class="h3">Suspend / resume protocol</text>
-  <rect x="400" y="418" width="300" height="56" rx="6" class="card" />
-  <text x="414" y="436" class="b">1 — Runtime hits human node</text>
-  <text x="414" y="450" class="b">2 — Graph state checkpointed</text>
-  <text x="414" y="464" class="b">3 — Host resumes with decision payload</text>
+  <text x="400" y="444" class="h3">Node timeout</text>
+  <rect x="400" y="454" width="300" height="22" rx="5" class="card" />
+  <text x="414" y="469" class="m">onTimeout: 'accept' | 'reject' | 'error'</text>
 
-  <!-- LANE 3: Runtime manager -->
-  <rect x="740" y="74" width="320" height="408" rx="12" class="lane-bg" />
+  <!-- LANE 3: runtime HumanInteractionManager -->
+  <rect x="740" y="74" width="320" height="420" rx="12" class="lane-bg" />
   <text x="756" y="100" class="h3">Lane 3 · Runtime</text>
   <text x="756" y="118" class="h2">HumanInteractionManager</text>
 
@@ -118,7 +120,7 @@
   <rect x="756" y="356" width="288" height="20" rx="4" class="handler" />
   <text x="770" y="370" class="b">requestApproval(PendingAction)</text>
   <rect x="756" y="380" width="288" height="20" rx="4" class="handler" />
-  <text x="770" y="394" class="b">requestClarification(...)</text>
+  <text x="770" y="394" class="b">requestClarification(ClarificationRequest)</text>
   <rect x="756" y="404" width="288" height="20" rx="4" class="handler" />
   <text x="770" y="418" class="b">requestEdit(DraftOutput)</text>
   <rect x="756" y="428" width="288" height="20" rx="4" class="handler" />
@@ -127,34 +129,81 @@
   <text x="756" y="466" class="lbl">Escalation reasons:</text>
   <text x="756" y="478" class="lbl">low_confidence · safety_concern · …</text>
 
-  <!-- Common decision contract at bottom -->
-  <rect x="40" y="502" width="1020" height="118" rx="12" class="lane-bg" />
-  <text x="56" y="528" class="h3">Common decision contract</text>
-  <text x="56" y="546" class="h2">ApprovalRequest → handler → ApprovalDecision → guardrail veto → action</text>
+  <!-- Each lane flows into its own decision contract -->
+  <path d="M 200 494 L 200 510" class="arrow-soft" marker-end="url(#arrowhead-soft)" />
+  <path d="M 550 494 L 550 510" class="arrow-soft" marker-end="url(#arrowhead-soft)" />
+  <path d="M 900 494 L 900 510" class="arrow-soft" marker-end="url(#arrowhead-soft)" />
 
-  <rect x="56" y="558" width="240" height="50" rx="6" class="card" />
-  <text x="68" y="576" class="b">ApprovalRequest</text>
-  <text x="68" y="592" class="m">id · type · agent · action · details</text>
+  <!-- Contract 1: agency() -->
+  <rect x="40" y="512" width="320" height="236" rx="12" class="lane-bg" />
+  <text x="56" y="536" class="h3">Agency contract</text>
 
-  <rect x="316" y="558" width="220" height="50" rx="6" class="handler" />
-  <text x="328" y="576" class="b">Your handler runs</text>
-  <text x="328" y="592" class="m">timeoutMs + onTimeout policy</text>
+  <rect x="56" y="548" width="288" height="36" rx="6" class="card" />
+  <text x="68" y="563" class="b">ApprovalRequest</text>
+  <text x="68" y="577" class="m">id · type · agent · action · details</text>
 
-  <rect x="556" y="558" width="220" height="50" rx="6" class="card" />
-  <text x="568" y="576" class="b">ApprovalDecision</text>
-  <text x="568" y="592" class="m">approved · reason · modifications</text>
+  <rect x="56" y="594" width="288" height="50" rx="6" class="handler" />
+  <text x="68" y="609" class="b">Your handler decides</text>
+  <text x="68" y="623" class="m">timeoutMs + onTimeout apply on</text>
+  <text x="68" y="637" class="m">beforeTool and beforeReturn</text>
 
-  <rect x="796" y="558" width="244" height="50" rx="6" class="trigger" />
-  <text x="808" y="576" class="b">guardrailOverride (post-approval)</text>
-  <text x="808" y="592" class="m">postApprovalGuardrails veto a yes</text>
+  <rect x="56" y="654" width="288" height="36" rx="6" class="card" />
+  <text x="68" y="669" class="b">ApprovalDecision</text>
+  <text x="68" y="683" class="m">approved · reason · modifications</text>
 
-  <!-- Arrows -->
-  <path d="M 296 588 L 314 588" class="arrow" marker-end="url(#arrowhead)" />
-  <path d="M 536 588 L 554 588" class="arrow" marker-end="url(#arrowhead)" />
-  <path d="M 776 588 L 794 588" class="arrow" marker-end="url(#arrowhead)" />
+  <rect x="56" y="700" width="288" height="36" rx="6" class="trigger" />
+  <text x="68" y="715" class="b">A post-approval check can veto a yes</text>
+  <text x="68" y="729" class="m">code-safety · pii-redaction</text>
 
-  <!-- Lane → bottom flow lines (soft) -->
-  <path d="M 200 482 Q 200 495 200 502" class="arrow-soft" marker-end="url(#arrowhead-soft)" />
-  <path d="M 550 482 Q 550 495 550 502" class="arrow-soft" marker-end="url(#arrowhead-soft)" />
-  <path d="M 900 482 Q 900 495 900 502" class="arrow-soft" marker-end="url(#arrowhead-soft)" />
+  <path d="M 200 584 L 200 592" class="arrow" marker-end="url(#arrowhead)" />
+  <path d="M 200 644 L 200 652" class="arrow" marker-end="url(#arrowhead)" />
+  <path d="M 200 690 L 200 698" class="arrow" marker-end="url(#arrowhead)" />
+
+  <!-- Contract 2: graph human node -->
+  <rect x="384" y="512" width="332" height="236" rx="12" class="lane-bg" />
+  <text x="400" y="536" class="h3">Graph contract (no handler)</text>
+
+  <rect x="400" y="548" width="300" height="36" rx="6" class="card" />
+  <text x="412" y="563" class="b">A mode decides: the node's output</text>
+  <text x="412" y="577" class="m">{ approved, decidedBy, ... }</text>
+
+  <rect x="400" y="594" width="300" height="50" rx="6" class="trigger" />
+  <text x="412" y="609" class="b">A yes no human gave is checked</text>
+  <text x="412" y="623" class="m">deps.guardrailEngine, when wired:</text>
+  <text x="412" y="637" class="m">pii-redaction · code-safety</text>
+
+  <rect x="400" y="654" width="300" height="36" rx="6" class="handler" />
+  <text x="412" y="669" class="b">No decision: checkpoint saved</text>
+  <text x="412" y="683" class="m">interrupt event, 'human_approval'</text>
+
+  <rect x="400" y="700" width="300" height="36" rx="6" class="card" />
+  <text x="412" y="715" class="b">The host writes the answer, resumes</text>
+  <text x="412" y="729" class="m">fork(checkpointId, patch) · resume()</text>
+
+  <path d="M 550 584 L 550 592" class="arrow" marker-end="url(#arrowhead)" />
+  <path d="M 550 690 L 550 698" class="arrow" marker-end="url(#arrowhead)" />
+
+  <!-- Contract 3: runtime manager -->
+  <rect x="740" y="512" width="320" height="236" rx="12" class="lane-bg" />
+  <text x="756" y="536" class="h3">Runtime contract</text>
+
+  <rect x="756" y="548" width="288" height="36" rx="6" class="card" />
+  <text x="768" y="563" class="b">requestApproval(PendingAction)</text>
+  <text x="768" y="577" class="m">notificationHandler: approval_required</text>
+
+  <rect x="756" y="594" width="288" height="36" rx="6" class="handler" />
+  <text x="768" y="609" class="b">A human answers</text>
+  <text x="768" y="623" class="m">submitApprovalDecision(decision)</text>
+
+  <rect x="756" y="640" width="288" height="50" rx="6" class="card" />
+  <text x="768" y="655" class="b">ApprovalDecision, its own type</text>
+  <text x="768" y="669" class="m">actionId · approved · decidedBy</text>
+  <text x="768" y="683" class="m">rejectionReason? · decidedAt</text>
+
+  <rect x="756" y="700" width="288" height="36" rx="6" class="runtime" />
+  <text x="768" y="715" class="b">Asked by ToolOrchestrator, step gate</text>
+  <text x="768" y="729" class="m">hasSideEffects tools, hitl.enabled</text>
+
+  <path d="M 900 584 L 900 592" class="arrow" marker-end="url(#arrowhead)" />
+  <path d="M 900 630 L 900 638" class="arrow" marker-end="url(#arrowhead)" />
 </svg>

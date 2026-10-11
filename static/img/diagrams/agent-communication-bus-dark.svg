@@ -1,6 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 520" role="img" aria-labelledby="ac-title ac-desc" font-family="Inter, system-ui, -apple-system, sans-serif">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 610" role="img" aria-labelledby="ac-title ac-desc" font-family="Inter, system-ui, -apple-system, sans-serif">
   <title id="ac-title">AgentCommunicationBus architecture</title>
-  <desc id="ac-desc">Three-layer architecture inside the AgentCommunicationBus. The top Message Router layer dispatches messages via four strategies: point-to-point, role-based, topic router, and load balancer. The middle Subscription Manager layer handles agent subscriptions, topic subscriptions, and message filters. The bottom Delivery Manager layer runs queue management, retry handling, ACK tracking, and a history store.</desc>
+  <desc id="ac-desc">One in-process class a host builds and wires its agents to, with three steps for every message. Routing picks the target agents: sendToAgent for one agent by id, sendToRole for one agent holding a role (by default a random one when several do), broadcast for every agent in the agency but the sender, publishToTopic for each handler subscribed to a topic; requestResponse waits for a reply and handoff is a request that waits 60 seconds. Subscriptions decide which handlers get a message: subscribe with filters on message type, sender role, minimum priority and thread, subscribeToTopic for a topic made by createTopic, and registerAgent for the agency and role map that routing reads. Delivery runs in process, at once: the matching handlers are awaited one by one, a handler that throws does not stop the rest, each message gets a delivery status, retryDelivery re-sends a failed message when the host calls it, and the bus keeps the last 100 messages per agent by default. There is no queue and no automatic retry.</desc>
 
   <defs>
     <style>
@@ -25,72 +25,89 @@
     </marker>
   </defs>
 
-  <rect class="bg" x="0" y="0" width="1000" height="520"/>
+  <rect class="bg" x="0" y="0" width="1000" height="610"/>
 
   <!-- Header -->
   <text x="500" y="32" text-anchor="middle" class="heading">AgentCommunicationBus</text>
-  <text x="500" y="54" text-anchor="middle" class="subtitle">Pub/sub · request/response · broadcast · handoff · threading. Three layers, one bus.</text>
+  <text x="500" y="54" text-anchor="middle" class="subtitle">One in-process class a host builds and wires its agents to · three steps for every message</text>
 
   <!-- Outer container -->
-  <rect x="40" y="80" width="920" height="420" rx="14" class="container"/>
+  <rect x="40" y="80" width="920" height="508" rx="14" class="container"/>
 
-  <!-- Layer 1: Message Router -->
-  <rect x="70" y="110" width="860" height="110" rx="10" class="layer acc-route"/>
-  <text x="90" y="132" class="layer-title">1 · Message Router</text>
-  <text x="90" y="150" class="layer-text">Dispatch strategy per-message · supports four routing modes</text>
+  <!-- Step 1: routing -->
+  <rect x="70" y="110" width="860" height="146" rx="10" class="layer acc-route"/>
+  <text x="90" y="132" class="layer-title">1 · Routing</text>
+  <text x="90" y="150" class="layer-text">Picks the target agents of each send</text>
 
-  <rect x="100" y="160" width="180" height="48" rx="6" class="mini acc-route"/>
-  <text x="190" y="178" text-anchor="middle" class="mini-text">Point-to-Point</text>
-  <text x="190" y="195" text-anchor="middle" class="layer-text">addressed to one agent</text>
+  <rect x="90" y="162" width="190" height="58" rx="6" class="mini acc-route"/>
+  <text x="185" y="180" text-anchor="middle" class="mini-text">sendToAgent()</text>
+  <text x="185" y="197" text-anchor="middle" class="layer-text">one agent, by its id</text>
 
-  <rect x="300" y="160" width="180" height="48" rx="6" class="mini acc-route"/>
-  <text x="390" y="178" text-anchor="middle" class="mini-text">Role-Based</text>
-  <text x="390" y="195" text-anchor="middle" class="layer-text">all agents with role X</text>
+  <rect x="300" y="162" width="190" height="58" rx="6" class="mini acc-route"/>
+  <text x="395" y="180" text-anchor="middle" class="mini-text">sendToRole()</text>
+  <text x="395" y="197" text-anchor="middle" class="layer-text">one agent with the role:</text>
+  <text x="395" y="211" text-anchor="middle" class="layer-text">random if several, by default</text>
 
-  <rect x="500" y="160" width="180" height="48" rx="6" class="mini acc-route"/>
-  <text x="590" y="178" text-anchor="middle" class="mini-text">Topic Router</text>
-  <text x="590" y="195" text-anchor="middle" class="layer-text">subscribers of topic T</text>
+  <rect x="510" y="162" width="190" height="58" rx="6" class="mini acc-route"/>
+  <text x="605" y="180" text-anchor="middle" class="mini-text">broadcast()</text>
+  <text x="605" y="197" text-anchor="middle" class="layer-text">every agent in the agency</text>
+  <text x="605" y="211" text-anchor="middle" class="layer-text">but the sender</text>
 
-  <rect x="700" y="160" width="200" height="48" rx="6" class="mini acc-route"/>
-  <text x="800" y="178" text-anchor="middle" class="mini-text">Load Balancer</text>
-  <text x="800" y="195" text-anchor="middle" class="layer-text">round-robin across pool</text>
+  <rect x="720" y="162" width="190" height="58" rx="6" class="mini acc-route"/>
+  <text x="815" y="180" text-anchor="middle" class="mini-text">publishToTopic()</text>
+  <text x="815" y="197" text-anchor="middle" class="layer-text">each handler subscribed</text>
+  <text x="815" y="211" text-anchor="middle" class="layer-text">to the topic</text>
 
-  <line class="arrow-line" x1="500" y1="220" x2="500" y2="248" marker-end="url(#ac-arrow)"/>
+  <text x="90" y="242" class="layer-text">broadcastToRoles(): chosen roles only · requestResponse(): waits for a reply, 30 s default · handoff(): a request, 60 s</text>
 
-  <!-- Layer 2: Subscription Manager -->
-  <rect x="70" y="248" width="860" height="100" rx="10" class="layer acc-sub"/>
-  <text x="90" y="270" class="layer-title">2 · Subscription Manager</text>
-  <text x="90" y="288" class="layer-text">Routes resolved messages to interested handlers</text>
+  <line class="arrow-line" x1="500" y1="256" x2="500" y2="278" marker-end="url(#ac-arrow)"/>
 
-  <rect x="120" y="298" width="220" height="40" rx="6" class="mini acc-sub"/>
-  <text x="230" y="324" text-anchor="middle" class="mini-text">Agent subscriptions</text>
+  <!-- Step 2: subscriptions -->
+  <rect x="70" y="280" width="860" height="118" rx="10" class="layer acc-sub"/>
+  <text x="90" y="302" class="layer-title">2 · Subscriptions</text>
+  <text x="90" y="320" class="layer-text">Decide which handlers get a message</text>
 
-  <rect x="380" y="298" width="220" height="40" rx="6" class="mini acc-sub"/>
-  <text x="490" y="324" text-anchor="middle" class="mini-text">Topic subscriptions</text>
+  <rect x="90" y="332" width="260" height="56" rx="6" class="mini acc-sub"/>
+  <text x="220" y="350" text-anchor="middle" class="mini-text">subscribe(agentId, handler, options)</text>
+  <text x="220" y="367" text-anchor="middle" class="layer-text">filters: messageTypes, fromRoles,</text>
+  <text x="220" y="381" text-anchor="middle" class="layer-text">minPriority, threadId</text>
 
-  <rect x="640" y="298" width="220" height="40" rx="6" class="mini acc-sub"/>
-  <text x="750" y="324" text-anchor="middle" class="mini-text">Filters</text>
+  <rect x="370" y="332" width="260" height="56" rx="6" class="mini acc-sub"/>
+  <text x="500" y="350" text-anchor="middle" class="mini-text">subscribeToTopic()</text>
+  <text x="500" y="367" text-anchor="middle" class="layer-text">a handler for a topic</text>
+  <text x="500" y="381" text-anchor="middle" class="layer-text">made by createTopic()</text>
 
-  <line class="arrow-line" x1="500" y1="348" x2="500" y2="376" marker-end="url(#ac-arrow)"/>
+  <rect x="650" y="332" width="260" height="56" rx="6" class="mini acc-sub"/>
+  <text x="780" y="350" text-anchor="middle" class="mini-text">registerAgent(agent, agency, role)</text>
+  <text x="780" y="367" text-anchor="middle" class="layer-text">the agency and role map</text>
+  <text x="780" y="381" text-anchor="middle" class="layer-text">that routing reads</text>
 
-  <!-- Layer 3: Delivery Manager -->
-  <rect x="70" y="376" width="860" height="110" rx="10" class="layer acc-deliver"/>
-  <text x="90" y="398" class="layer-title">3 · Delivery Manager</text>
-  <text x="90" y="416" class="layer-text">Reliable transport · in-order, retried, ACK-tracked, audit-logged</text>
+  <line class="arrow-line" x1="500" y1="398" x2="500" y2="420" marker-end="url(#ac-arrow)"/>
 
-  <rect x="100" y="426" width="180" height="48" rx="6" class="mini acc-deliver"/>
-  <text x="190" y="444" text-anchor="middle" class="mini-text">Queue Manager</text>
-  <text x="190" y="461" text-anchor="middle" class="layer-text">per-agent inbox</text>
+  <!-- Step 3: delivery -->
+  <rect x="70" y="422" width="860" height="146" rx="10" class="layer acc-deliver"/>
+  <text x="90" y="444" class="layer-title">3 · Delivery</text>
+  <text x="90" y="462" class="layer-text">In process, at once, to every matching handler</text>
 
-  <rect x="300" y="426" width="180" height="48" rx="6" class="mini acc-deliver"/>
-  <text x="390" y="444" text-anchor="middle" class="mini-text">Retry Handler</text>
-  <text x="390" y="461" text-anchor="middle" class="layer-text">backoff + dead-letter</text>
+  <rect x="90" y="474" width="190" height="58" rx="6" class="mini acc-deliver"/>
+  <text x="185" y="492" text-anchor="middle" class="mini-text">Handlers, in turn</text>
+  <text x="185" y="509" text-anchor="middle" class="layer-text">a handler that throws</text>
+  <text x="185" y="523" text-anchor="middle" class="layer-text">does not stop the rest</text>
 
-  <rect x="500" y="426" width="180" height="48" rx="6" class="mini acc-deliver"/>
-  <text x="590" y="444" text-anchor="middle" class="mini-text">ACK Tracker</text>
-  <text x="590" y="461" text-anchor="middle" class="layer-text">at-least-once delivery</text>
+  <rect x="300" y="474" width="190" height="58" rx="6" class="mini acc-deliver"/>
+  <text x="395" y="492" text-anchor="middle" class="mini-text">Delivery status</text>
+  <text x="395" y="509" text-anchor="middle" class="layer-text">delivered · failed ·</text>
+  <text x="395" y="523" text-anchor="middle" class="layer-text">acknowledged</text>
 
-  <rect x="700" y="426" width="200" height="48" rx="6" class="mini acc-deliver"/>
-  <text x="800" y="444" text-anchor="middle" class="mini-text">History Store</text>
-  <text x="800" y="461" text-anchor="middle" class="layer-text">replay + audit log</text>
+  <rect x="510" y="474" width="190" height="58" rx="6" class="mini acc-deliver"/>
+  <text x="605" y="492" text-anchor="middle" class="mini-text">retryDelivery(messageId)</text>
+  <text x="605" y="509" text-anchor="middle" class="layer-text">re-sends a failed message</text>
+  <text x="605" y="523" text-anchor="middle" class="layer-text">when the host calls it</text>
+
+  <rect x="720" y="474" width="190" height="58" rx="6" class="mini acc-deliver"/>
+  <text x="815" y="492" text-anchor="middle" class="mini-text">Message history</text>
+  <text x="815" y="509" text-anchor="middle" class="layer-text">the last 100 per agent</text>
+  <text x="815" y="523" text-anchor="middle" class="layer-text">by default</text>
+
+  <text x="90" y="554" class="layer-text">No queue and no automatic retry: a message no handler takes, or that every handler throws on, is marked failed at once.</text>
 </svg>

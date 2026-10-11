@@ -40,7 +40,7 @@ The benchmarks below measure this runtime against alternative memory libraries a
 
 AgentOS routes memory with small LLM-as-judge classifier calls, up to three per query. When the host runs the `QueryClassifier` gate, trivial queries (greetings, small talk, general knowledge answerable from context) skip retrieval. The `MemoryRouter` classifies the query's category and picks the retrieval architecture for it, `selectReader()` picks the reader model from that category with no further call, and the `ReadRouter` picks the read strategy.
 
-![AgentOS classifier-driven memory pipeline: query enters QueryClassifier (T0 short-circuits), MemoryRouter picks retrieval architecture, canonical-hybrid retrieval (BM25 + dense + RRF + Cohere rerank + 6-signal cognitive composite), ReaderRouter picks the reader model, ReadRouter picks the strategy, grounded answer returns. Background consolidation loop on the same brain.](/img/diagrams/memory-system-overview.svg)
+![AgentOS memory pipeline: the QueryClassifier gate, when the host runs it, labels a retrieval tier, and the host can skip recall on T0; the MemoryRouter's classifier call picks one of six query categories and a backend from its preset's table; the canonical-hybrid backend, HybridRetriever, fuses a dense MemoryStore search scored on six signals with a BM25 search by RRF, blends in an optional reranker's score and passes the top traces on; selectReader() looks up the reader model from the category with no LLM call; the ReadRouter picks the read strategy for the grounded answer. Below, two consolidation boxes: ConsolidationLoop for the Memory facade and ConsolidationPipeline for CognitiveMemoryManager.](/img/diagrams/memory-system-overview.svg)
 
 | Stage | Primitive | Decision per query |
 |---|---|---|
@@ -52,12 +52,13 @@ AgentOS routes memory with small LLM-as-judge classifier calls, up to three per 
 
 ## Where to start
 
+- [**High-Level API**](/getting-started/high-level-api) — the one-import functions: `generateText()`, `streamText()`, `generateObject()`, image, video and audio generation, `agent()`, `gmi()` and `agency()`, how each call picks its provider, and the full runtime's `AgentOS` class.
 - [**Cognitive Memory**](/features/cognitive-memory) — why memory should forget. Eight neuroscience-grounded mechanisms, primary-source citations, the consolidation loop. The story is the page.
-- [**GMI architecture**](/architecture/gmi) — what an agent actually is between turns. The turn loop, model calls through a completion gateway with fallback hops, and the chunks a turn streams.
+- [**GMI architecture**](/architecture/gmi) — the Generalized Mind Instances (GMIs) that run the sessions of the full runtime and of `agent({ runtime: 'gmi' })` or `gmi()`; a plain `agent()` builds none. What a GMI holds, the turn loop, model calls through a completion gateway with fallback hops, and the chunks a turn streams.
 - [**System Architecture**](/architecture/system-architecture) — the runtime's layers and the eleven top-level directories of its source.
 - [**Deep Research**](/features/rag-memory#query-classification) — the 3-phase pipeline behind sourced answers.
 - [**Emergent Capabilities**](/features/emergent-capabilities) — runtime tool forging, judge approval, sandboxed execution.
-- [**Examples Cookbook**](/getting-started/examples) — 17 recipes for agents, agencies, query routing and orchestration, and the 18 runnable files in `examples/`.
+- [**Examples Cookbook**](/getting-started/examples) — 17 recipes for agents, agencies, query routing and orchestration, and a table of 18 of the runnable files in `examples/`.
 - [**TypeDoc API**](/api/) — every class, interface, function in the runtime.
 
 ## Paracosm — the swarm-simulation companion

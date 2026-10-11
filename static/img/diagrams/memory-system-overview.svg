@@ -1,6 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 980" role="img" aria-labelledby="memsys-title memsys-desc" font-family="Inter, system-ui, -apple-system, sans-serif">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1120" role="img" aria-labelledby="memsys-title memsys-desc" font-family="Inter, system-ui, -apple-system, sans-serif">
   <title id="memsys-title">AgentOS Memory System — classifier-driven dispatch pipeline</title>
-  <desc id="memsys-desc">A top-down pipeline. User query enters QueryClassifier (T0 short-circuits, T1+ proceeds with one shared classification). MemoryRouter picks a retrieval architecture. The canonical-hybrid retriever runs BM25 plus dense embeddings, fuses via RRF, then a Cohere rerank-v3.5 cross-encoder, then a six-signal cognitive composite scorer (optional HyDE). Reranked traces feed ReaderRouter (picks gpt-4o vs gpt-5-mini) then ReadRouter (picks reader strategy). A background consolidation loop runs Ebbinghaus decay, Hebbian merge, derive, compact, reindex on the same brain, plus eight cognitive mechanisms.</desc>
+  <desc id="memsys-desc">A top-down pipeline with up to three classifier calls per query. A user query enters QueryClassifier when the host runs that gate: one LLM call that labels a retrieval tier, after which a T0 query (answerable from context) can skip recall and T1 to T3 go on. MemoryRouter makes one classifier call that labels the query with one of six categories and picks a backend from its preset's table; the host's dispatcher runs it. The canonical-hybrid backend, HybridRetriever, runs a dense search through MemoryStore.query, which scores each hit on six signals, and a BM25 search over an in-memory index the caller fills, recallTopK times three each; it fuses the two rankings with RRF (0.7 dense, 0.3 sparse, k 60), keeping only traces the dense side returned, blends an optional reranker's score with the composite (0.7 composite, 0.3 rerank) and passes the top recallTopK to the reader. selectReader looks up the reader model from the MemoryRouter's category with no LLM call, and ReadRouter makes one classifier call (none with manualIntent) to pick a read strategy for the grounded answer. Consolidation is separate for each memory facade: ConsolidationLoop serves the Memory facade when consolidate() or memory_reflect runs it, and ConsolidationPipeline serves CognitiveMemoryManager on a timer, hourly by default: a decay sweep, co-activation replay, schema integration and conflict resolution (these three need the memory graph, and schema integration an LLM invoker), spaced repetition, then the mechanisms' consolidation-time hooks. The eight cognitive mechanisms run only when CognitiveMemoryManager is given a cognitiveMechanisms config.</desc>
 
   <defs>
     <style>
@@ -34,11 +34,11 @@
     </marker>
   </defs>
 
-  <rect class="bg" x="0" y="0" width="1000" height="980"/>
+  <rect class="bg" x="0" y="0" width="1000" height="1120"/>
 
   <!-- Header -->
   <text x="500" y="32" text-anchor="middle" class="heading">AgentOS memory pipeline</text>
-  <text x="500" y="54" text-anchor="middle" class="subtitle">Classifier-driven dispatch over a SQL-backed brain · 85.6% LongMemEval-S at $0.0090/correct</text>
+  <text x="500" y="54" text-anchor="middle" class="subtitle">Classifier-driven dispatch · up to three classifier calls per query</text>
 
   <!-- 1. User query (input pill) -->
   <rect x="420" y="80" width="160" height="34" rx="17" class="pill acc-input"/>
@@ -46,75 +46,93 @@
   <line class="arrow-line" x1="500" y1="114" x2="500" y2="138" marker-end="url(#memsys-arrow)"/>
 
   <!-- 2. QueryClassifier -->
-  <rect x="280" y="138" width="440" height="74" rx="10" class="stage acc-classify"/>
-  <text x="500" y="162" text-anchor="middle" class="stage-title">QueryClassifier</text>
-  <text x="500" y="180" text-anchor="middle" class="stage-text">"Does this query need memory at all?" · gpt-5-mini · one shared call reused below</text>
-  <text x="500" y="198" text-anchor="middle" class="stage-tag">T0 (greetings, small talk) → answer from context, skip everything else</text>
+  <rect x="200" y="138" width="600" height="74" rx="10" class="stage acc-classify"/>
+  <text x="500" y="162" text-anchor="middle" class="stage-title">QueryClassifier · when the host runs the gate</text>
+  <text x="500" y="180" text-anchor="middle" class="stage-text">Retrieval tier T0–T3 · one LLM call (QueryRouter's default on OpenAI: gpt-4o-mini)</text>
+  <text x="500" y="198" text-anchor="middle" class="stage-tag">T0 (answerable from context) → the host can skip recall · T1–T3 go on to recall</text>
   <line class="arrow-line" x1="500" y1="212" x2="500" y2="236" marker-end="url(#memsys-arrow)"/>
   <text x="525" y="226" class="stage-tag">T1+</text>
 
   <!-- 3. MemoryRouter -->
-  <rect x="280" y="236" width="440" height="74" rx="10" class="stage acc-route"/>
+  <rect x="200" y="236" width="600" height="88" rx="10" class="stage acc-route"/>
   <text x="500" y="260" text-anchor="middle" class="stage-title">MemoryRouter</text>
-  <text x="500" y="278" text-anchor="middle" class="stage-text">Picks retrieval architecture · 6 categories → 3 backends · zero extra LLM calls</text>
-  <text x="500" y="296" text-anchor="middle" class="stage-tag">single-session-user · multi-session · temporal-reasoning → canonical-hybrid</text>
-  <line class="arrow-line" x1="500" y1="310" x2="500" y2="332" marker-end="url(#memsys-arrow)"/>
+  <text x="500" y="278" text-anchor="middle" class="stage-text">One classifier call → one of six query categories → a backend from the preset's table</text>
+  <text x="500" y="296" text-anchor="middle" class="stage-tag">minimize-cost (default): multi-session, single-session-preference → observational-memory-v11</text>
+  <text x="500" y="312" text-anchor="middle" class="stage-tag">the other four categories → canonical-hybrid · the host's dispatcher runs the chosen backend</text>
+  <line class="arrow-line" x1="500" y1="324" x2="500" y2="348" marker-end="url(#memsys-arrow)"/>
 
-  <!-- 4. canonical-hybrid retrieval container -->
-  <rect x="60" y="332" width="880" height="294" rx="12" class="container"/>
-  <text x="80" y="356" class="lane-label">CANONICAL-HYBRID RETRIEVAL</text>
+  <!-- 4. canonical-hybrid backend container -->
+  <rect x="60" y="348" width="880" height="318" rx="12" class="container"/>
+  <text x="80" y="372" class="lane-label">CANONICAL-HYBRID BACKEND · HybridRetriever</text>
+  <text x="920" y="372" text-anchor="end" class="stage-tag">optional HyDE: a hypothesis replaces the query in both searches</text>
 
-  <!-- BM25 + Dense side-by-side -->
-  <rect x="120" y="368" width="320" height="60" rx="8" class="stage acc-retrieve"/>
-  <text x="280" y="390" text-anchor="middle" class="stage-title">BM25 (FTS5)</text>
-  <text x="280" y="408" text-anchor="middle" class="stage-text">lexical · catches exact / rare terms</text>
+  <!-- Dense + sparse side-by-side -->
+  <rect x="100" y="386" width="380" height="76" rx="8" class="stage acc-retrieve"/>
+  <text x="290" y="408" text-anchor="middle" class="stage-title">Dense · MemoryStore.query()</text>
+  <text x="290" y="426" text-anchor="middle" class="stage-text">embeddings + the six-signal composite score</text>
+  <text x="290" y="444" text-anchor="middle" class="stage-tag">similarity · strength · recency · mood · graph · importance</text>
 
-  <rect x="560" y="368" width="320" height="60" rx="8" class="stage acc-retrieve"/>
-  <text x="720" y="390" text-anchor="middle" class="stage-title">Dense (text-embedding-3-small)</text>
-  <text x="720" y="408" text-anchor="middle" class="stage-text">paraphrase · multi-hop · semantic</text>
+  <rect x="520" y="386" width="380" height="76" rx="8" class="stage acc-retrieve"/>
+  <text x="710" y="408" text-anchor="middle" class="stage-title">Sparse · BM25Index (in memory)</text>
+  <text x="710" y="426" text-anchor="middle" class="stage-text">lexical ranks: exact and rare terms</text>
+  <text x="710" y="444" text-anchor="middle" class="stage-tag">the caller fills it: hybrid.bm25.addDocument()</text>
 
   <!-- RRF merge -->
-  <line class="arrow-line" x1="280" y1="428" x2="430" y2="450" marker-end="url(#memsys-arrow)"/>
-  <line class="arrow-line" x1="720" y1="428" x2="570" y2="450" marker-end="url(#memsys-arrow)"/>
-  <rect x="380" y="450" width="240" height="32" rx="6" class="pill acc-retrieve"/>
-  <text x="500" y="471" text-anchor="middle" class="pill-text">RRF rank fusion</text>
-  <line class="arrow-line" x1="500" y1="482" x2="500" y2="500" marker-end="url(#memsys-arrow)"/>
+  <line class="arrow-line" x1="290" y1="462" x2="430" y2="486" marker-end="url(#memsys-arrow)"/>
+  <line class="arrow-line" x1="710" y1="462" x2="570" y2="486" marker-end="url(#memsys-arrow)"/>
+  <text x="500" y="476" text-anchor="middle" class="stage-tag">recallTopK × 3 each (30 at the defaults)</text>
+  <rect x="330" y="486" width="340" height="32" rx="6" class="pill acc-retrieve"/>
+  <text x="500" y="507" text-anchor="middle" class="pill-text">RRF merge · 0.7 dense, 0.3 sparse, k = 60</text>
+  <text x="500" y="532" text-anchor="middle" class="stage-tag">keeps only traces the dense side returned</text>
+  <line class="arrow-line" x1="500" y1="538" x2="500" y2="556" marker-end="url(#memsys-arrow)"/>
 
-  <!-- Cohere rerank -->
-  <rect x="200" y="500" width="600" height="50" rx="8" class="stage acc-rerank"/>
-  <text x="500" y="520" text-anchor="middle" class="stage-title">Cohere rerank-v3.5 · cross-encoder</text>
-  <text x="500" y="538" text-anchor="middle" class="stage-text">load-bearing — kills the topically-adjacent-but-irrelevant chunks BM25+dense leave in the pool</text>
-  <line class="arrow-line" x1="500" y1="550" x2="500" y2="566" marker-end="url(#memsys-arrow)"/>
+  <!-- Optional rerank -->
+  <rect x="200" y="556" width="600" height="50" rx="8" class="stage acc-rerank"/>
+  <text x="500" y="576" text-anchor="middle" class="stage-title">Optional reranker · Cohere rerank-v3.5 in the benchmark runs</text>
+  <text x="500" y="594" text-anchor="middle" class="stage-text">score = 0.7 × composite + 0.3 × rerank score · without one, the RRF order stands</text>
+  <line class="arrow-line" x1="500" y1="606" x2="500" y2="622" marker-end="url(#memsys-arrow)"/>
 
-  <!-- 6-signal composite -->
-  <rect x="200" y="566" width="600" height="50" rx="8" class="stage acc-score"/>
-  <text x="500" y="586" text-anchor="middle" class="stage-title">6-signal cognitive composite</text>
-  <text x="500" y="604" text-anchor="middle" class="stage-text">similarity · strength · recency · mood congruence · graph activation · importance · [optional HyDE]</text>
+  <rect x="330" y="622" width="340" height="32" rx="6" class="pill acc-score"/>
+  <text x="500" y="643" text-anchor="middle" class="pill-text">top recallTopK (10) to the reader</text>
 
   <!-- Out of container -->
-  <line class="arrow-line" x1="500" y1="626" x2="500" y2="650" marker-end="url(#memsys-arrow)"/>
+  <line class="arrow-line" x1="500" y1="666" x2="500" y2="690" marker-end="url(#memsys-arrow)"/>
 
-  <!-- 5. ReaderRouter -->
-  <rect x="280" y="650" width="440" height="74" rx="10" class="stage acc-reader"/>
-  <text x="500" y="674" text-anchor="middle" class="stage-title">ReaderRouter</text>
-  <text x="500" y="692" text-anchor="middle" class="stage-text">Picks reader model · reuses the QueryClassifier category · zero extra LLM calls</text>
-  <text x="500" y="710" text-anchor="middle" class="stage-tag">temporal-reasoning + single-session-user → gpt-4o · everything else → gpt-5-mini (12× cheaper)</text>
-  <line class="arrow-line" x1="500" y1="724" x2="500" y2="746" marker-end="url(#memsys-arrow)"/>
+  <!-- 5. selectReader -->
+  <rect x="200" y="690" width="600" height="74" rx="10" class="stage acc-reader"/>
+  <text x="500" y="714" text-anchor="middle" class="stage-title">selectReader(category, preset)</text>
+  <text x="500" y="732" text-anchor="middle" class="stage-text">Picks the reader model · a table lookup over the MemoryRouter's category · no LLM call</text>
+  <text x="500" y="750" text-anchor="middle" class="stage-tag">min-cost-best-cat-2026-04-28: temporal-reasoning, single-session-user → gpt-4o · the rest → gpt-5-mini</text>
+  <line class="arrow-line" x1="500" y1="764" x2="500" y2="788" marker-end="url(#memsys-arrow)"/>
 
   <!-- 6. ReadRouter -->
-  <rect x="280" y="746" width="440" height="74" rx="10" class="stage acc-strategy"/>
-  <text x="500" y="770" text-anchor="middle" class="stage-title">ReadRouter</text>
-  <text x="500" y="788" text-anchor="middle" class="stage-text">Picks reader strategy · 5 intents → 5 strategies · zero extra LLM calls</text>
-  <text x="500" y="806" text-anchor="middle" class="stage-tag">precise-fact · synthesis · time-interval · abstain-y · …</text>
-  <line class="arrow-line" x1="500" y1="820" x2="500" y2="842" marker-end="url(#memsys-arrow)"/>
+  <rect x="200" y="788" width="600" height="88" rx="10" class="stage acc-strategy"/>
+  <text x="500" y="812" text-anchor="middle" class="stage-title">ReadRouter</text>
+  <text x="500" y="830" text-anchor="middle" class="stage-text">Picks the read strategy · one classifier call (none with manualIntent) → one of five intents</text>
+  <text x="500" y="848" text-anchor="middle" class="stage-tag">the precise-fact preset (the default) maps them to four strategies:</text>
+  <text x="500" y="864" text-anchor="middle" class="stage-tag">single-call · two-call-extract-answer · scratchpad-then-answer · commit-vs-abstain</text>
+  <line class="arrow-line" x1="500" y1="876" x2="500" y2="898" marker-end="url(#memsys-arrow)"/>
 
   <!-- 7. Grounded answer -->
-  <rect x="380" y="842" width="240" height="34" rx="17" class="pill acc-output"/>
-  <text x="500" y="864" text-anchor="middle" class="pill-text">Grounded answer</text>
+  <rect x="380" y="898" width="240" height="34" rx="17" class="pill acc-output"/>
+  <text x="500" y="920" text-anchor="middle" class="pill-text">Grounded answer</text>
 
-  <!-- 8. Background consolidation -->
-  <text x="80" y="916" class="lane-label">BACKGROUND · ON THE SAME BRAIN</text>
-  <rect x="60" y="924" width="880" height="46" rx="10" class="substrate"/>
-  <text x="500" y="946" text-anchor="middle" class="stage-title">Consolidation loop · slow-wave-sleep analogue</text>
-  <text x="500" y="962" text-anchor="middle" class="stage-text">prune (Ebbinghaus) → merge → strengthen (Hebbian) → derive (LLM) → compact → reindex · plus 8 cognitive mechanisms</text>
+  <!-- 8. Consolidation, one per memory facade -->
+  <text x="80" y="968" class="lane-label">CONSOLIDATION · EACH MEMORY FACADE HAS ITS OWN</text>
+
+  <rect x="60" y="978" width="430" height="100" rx="10" class="substrate"/>
+  <text x="275" y="1000" text-anchor="middle" class="stage-title">ConsolidationLoop · Memory facade</text>
+  <text x="275" y="1018" text-anchor="middle" class="stage-text">runs when consolidate() or the memory_reflect tool calls it</text>
+  <text x="275" y="1036" text-anchor="middle" class="stage-tag">with selfImprove on (the default) · no timer of its own</text>
+  <text x="275" y="1052" text-anchor="middle" class="stage-tag">prune → merge → strengthen → derive → compact → re-index</text>
+  <text x="275" y="1068" text-anchor="middle" class="stage-tag">derive needs an LLM invoker, which the facade does not pass</text>
+
+  <rect x="510" y="978" width="430" height="100" rx="10" class="substrate"/>
+  <text x="725" y="1000" text-anchor="middle" class="stage-title">ConsolidationPipeline · CognitiveMemoryManager</text>
+  <text x="725" y="1018" text-anchor="middle" class="stage-text">hourly by default · built with a consolidation config or a graph</text>
+  <text x="725" y="1036" text-anchor="middle" class="stage-tag">decay sweep → co-activation replay → schema integration → conflicts</text>
+  <text x="725" y="1052" text-anchor="middle" class="stage-tag">→ spaced repetition → consolidation-time mechanisms</text>
+  <text x="725" y="1068" text-anchor="middle" class="stage-tag">replay, schemas and conflicts need the graph; schemas also an LLM invoker</text>
+
+  <text x="500" y="1102" text-anchor="middle" class="stage-text">The eight cognitive mechanisms run only when CognitiveMemoryManager is given a cognitiveMechanisms config.</text>
 </svg>

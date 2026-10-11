@@ -31,7 +31,7 @@ It detects:
 npm install @framers/agentos-ext-pii-redaction
 ```
 
-`openredaction`, `compromise` and `@huggingface/transformers` are optional dependencies of the package, installed with it unless optional dependencies are skipped. Without `openredaction`, detection throws; without `compromise` or `@huggingface/transformers`, their tiers are skipped. The LLM judge needs no extra package. Peer dependency: `@framers/agentos` 0.12.0 or later.
+`openredaction`, `compromise` and `@huggingface/transformers` are optional dependencies of the package, installed with it unless optional dependencies are skipped. Without `openredaction`, detection throws unless none of the requested types has an openredaction pattern (`ORGANIZATION`, `LOCATION`, `MEDICAL_TERM` and `UNKNOWN_PII` have none); without `compromise` or `@huggingface/transformers`, their tiers are skipped. The LLM judge needs no extra package. Peer dependency: `@framers/agentos` 0.12.0 or later.
 
 ---
 
@@ -45,10 +45,12 @@ import { redactPii } from '@framers/agentos-ext-pii-redaction';
 const result = await redactPii('Write to sam@mail.invalid or call +1 415 555 0100 about the 1919 treaty.');
 // result.found: true
 // result.types: ['EMAIL', 'PHONE']
-// result.text:  the sentence with [EMAIL] and [PHONE] in place of the address and the number
+// result.text:  'Write to [EMAIL] or call +1 [PHONE] about the 1919 treaty.'
 ```
 
-With no options, `redactPii()` looks for the regex tier's types (`REGEX_TIER_TYPES`: `EMAIL`, `PHONE`, `SSN`, `CREDIT_CARD`, `IBAN`, `API_KEY`, `AWS_KEY`, `GOV_ID`, `PASSPORT`, `DRIVERS_LICENSE`, `IP_ADDRESS`) with the NER model off, so no model loads and names stay as they are. Its options are `entityTypes`, `redactionStyle`, `enableNerModel` (default `false`) and `pipeline` (any other pack option below). It builds one pipeline per set of options and reuses it, and it throws when detection fails, for example when `openredaction` is missing. openredaction leaves addresses at documentation domains such as `example.com` in the text.
+The `+1` stays: openredaction's phone patterns begin with a word boundary (`\b`), which a `+` after a space does not have, so the match starts at `415`.
+
+With no options, `redactPii()` looks for the regex tier's types (`REGEX_TIER_TYPES`: `EMAIL`, `PHONE`, `SSN`, `CREDIT_CARD`, `IBAN`, `API_KEY`, `AWS_KEY`, `GOV_ID`, `PASSPORT`, `DRIVERS_LICENSE`, `IP_ADDRESS`) with the NER model off, so no model loads and names stay as they are. Its options are `entityTypes`, `redactionStyle`, `enableNerModel` (default `false`) and `pipeline` (any other pack option below). It builds one pipeline per set of options and reuses it, and it throws when detection fails, for example when `openredaction` is missing. openredaction's email pattern leaves an address at `example.com`, `test.com` or a few other placeholder domains in the text, unless the address or the 50 characters on either side of it contain one of a list of strings such as `test`, `api` or `documentation`.
 
 ### The guardrail and tools in AgentOS
 
@@ -146,7 +148,7 @@ The pipeline (`PiiDetectionPipeline.detect()`) runs the tiers in order, merges o
 
 ### Tier 1: Regex (always runs)
 
-openredaction's patterns, with its false-positive filter off: that filter drops a phone number when a word beginning "on", "after" or "address" sits within 50 characters of it, and an email address near a link's "//". Each pattern's own validator still runs. Matches score at least 0.85. Keywords within 50 characters raise a score by 0.2 or 0.15 (for example `social security` for an SSN, `date of birth` for a date of birth, `name:` for a person).
+openredaction's patterns, with its false-positive filter off: among its rules, that filter drops a phone number when a word beginning "on", "after" or "address" sits within 50 characters of it, and an email address near a link's "//". Each pattern's own validator still runs. Matches score at least 0.85. Keywords within 50 characters raise a score by 0.2 or 0.15 (for example `social security` for an SSN, `date of birth` for a date of birth, `name:` for a person).
 
 ### Tier 2: NLP pre-filter
 
@@ -168,7 +170,7 @@ The judge re-examines each merged entity scoring above 0.3 and below 0.7. When i
 |---|---|---|---|
 | `placeholder` | `John Smith` | `[PERSON]` | The entity type. Default. |
 | `mask` | `John Smith` | `J*** S****` | Each word keeps its first character; the rest is starred. |
-| `hash` | `John Smith` | `[PERSON:a1b2c3d4e5]` | The type and the first 10 hex characters of the text's SHA-256. The same text always gives the same hash; not reversible. |
+| `hash` | `John Smith` | `[PERSON:a1b2c3d4e5]` | The type and the first 10 hex characters of the text's SHA-256, with no key. The same text always gives the same token, so repeated values stay linkable, and anyone can hash a guessed value (a phone number, an SSN) and compare: this is pseudonymization, not anonymization. |
 | `category-tag` | `John Smith` | `<PII type="PERSON">REDACTED</PII>` | An XML-style tag. |
 
 ---
@@ -178,7 +180,7 @@ The judge re-examines each merged entity scoring above 0.3 and below 0.7. When i
 The guardrail's config sets `canSanitize: true`, so AgentOS runs it among the sanitising guardrails, `failClosed` from the option (default `true`: when detection throws, the dispatcher blocks the text instead of passing it through unredacted) and `evaluateStreamingChunks` from the option of that name.
 
 - **Input**: the user's text is scanned and returned redacted.
-- **Output**: each stream's text is buffered by stream ID. With `evaluateStreamingChunks: true`, the buffer is scanned whenever it holds a sentence boundary (`. `, `? `, `! ` or a newline), up to `maxStreamingEvaluations` times; the final response is always scanned, and its buffer is then dropped.
+- **Output**: each stream's text is buffered by stream ID. With `evaluateStreamingChunks: true`, the buffer is scanned whenever it holds a sentence boundary (`.`, `?` or `!` followed by whitespace, or a newline), up to `maxStreamingEvaluations` times; the final response is always scanned, and its buffer is then dropped.
 
 ---
 

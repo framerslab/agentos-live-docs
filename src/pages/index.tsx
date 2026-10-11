@@ -416,11 +416,12 @@ console.log(\`Total tokens: \${usage.totalTokens}\`);`,
 
   'Agency': `import { agency } from '@framers/agentos';
 
-// Agency composes a team of GMI brains. Each agent in the roster has its
-// own cognition, memory, persona, tools. The agency layer adds an
-// orchestration strategy that routes outputs between brains, HITL approval
-// gates on every member's tool calls, run limits (controls) and structured
-// output. It accepts memory, rag and guardrails options without applying them.
+// Each roster member is an agent(): its instructions and HEXACO traits in a
+// system prompt, its tools and its hooks. A member whose config sets
+// runtime: 'gmi' is served by GMIs. The agency layer adds an orchestration
+// strategy that routes outputs between members, HITL approval gates on every
+// member's tool calls, run limits (controls) and structured output. It
+// accepts memory, rag and guardrails options without applying them.
 const team = agency({
   provider: 'openai',
   model: 'gpt-4o',
@@ -716,6 +717,11 @@ function QuickStartTabs() {
       <CodeBlock language={active.includes('YAML') ? 'yaml' : 'typescript'}>
         {quickStartCode[active]}
       </CodeBlock>
+      <p style={{ textAlign: 'center', marginTop: '0.75rem' }}>
+        <Link to="/getting-started/high-level-api" style={{ fontSize: '0.9rem' }}>
+          High-Level API guide &rarr;
+        </Link>
+      </p>
     </section>
   );
 }
@@ -734,7 +740,7 @@ function ArchitectureDiagram() {
       <div style={{ overflow: 'auto' }}>
         <DiagramImg
           src="/img/diagrams/system-architecture.svg"
-          alt="AgentOS layered architecture: 7 cooperating layers from API surface (generateText, streamText, agent, agency, mission) through cognitive substrate (GMI coordinator, PersonaOverlayManager, SentimentTracker, MetapromptExecutor), memory and RAG pipeline (working / episodic / semantic / observational memory, 8 cognitive mechanisms, HyDE, GraphRAG, 7 vector backends), tools and capabilities (ToolOrchestrator, 100+ extension packs, 88 SKILL.md modules, CapabilityDiscovery, ForgeToolMetaTool), guardrails and HITL (GuardrailDispatcher, 4-tier PII redaction, ML classifiers, Grounding Guard, HumanInteract), orchestration (workflow, mission, AgentGraph, CompiledExecutionGraph, CheckpointStore), down to I/O and providers (voice pipeline, channels, media generation, 13 LLM providers, OpenRouter fanout)."
+          alt="AgentOS layered architecture: 7 cooperating layers from the API surface (generateText, streamText, generateObject, generateImage, agent, agency, mission) through the cognitive substrate (GMI, GMIManager, PersonaOverlayManager, SentimentTracker, MetapromptExecutor), memory and RAG (working memory, five trace types, Ebbinghaus decay, 8 cognitive mechanisms, observer and reflector, HyDE, GraphRAG, hybrid retrieval, 7 vector stores), tools, skills and extensions (ToolOrchestrator, ExtensionRegistry, SkillRegistry, CapabilityDiscoveryEngine, ForgeToolMetaTool, 100+ extension packs, 88 SKILL.md skills), guardrails and HITL (ParallelGuardrailDispatcher, 4-tier PII redaction, ML classifiers, Grounding Guard, HumanInteractionManager), orchestration (workflow, mission, AgentGraph, CompiledExecutionGraph, ICheckpointStore), down to I/O and providers (voice pipeline, channels, media generation, 13 LLM providers, fallback chains)."
           style={{ width: '100%', height: 'auto', borderRadius: '12px' }}
         />
       </div>
