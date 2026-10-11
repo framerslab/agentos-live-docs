@@ -48,7 +48,7 @@ AgentOS routes memory with small LLM-as-judge classifier calls, up to three per 
 | 2 | `MemoryRouter` | canonical-hybrid · observational-memory-v10 · v11 |
 | 3 | `selectReader()` (ReaderRouter) | gpt-4o vs gpt-5-mini per category, from Stage 2's category |
 
-`CognitivePipeline.recallAndRead()` makes two classifier calls per query, the MemoryRouter's and the ReadRouter's, and the gate adds one when the host runs it; Stage 3 is a table lookup. With the `min-cost-best-cat-2026-04-28` preset, the reader lookup sends four of the six LongMemEval categories to gpt-5-mini, about 12× cheaper per token than gpt-4o, and lifts single-session-preference by 10 points in the benchmark runs; the gate gives queries that need no memory a path that skips retrieval. Reproducible run JSONs in [agentos-bench](https://github.com/framerslab/agentos-bench).
+`CognitivePipeline.recallAndRead()` makes two classifier calls per query, the MemoryRouter's and the ReadRouter's, and the gate adds one when the host runs it; Stage 3 is a table lookup. With the `min-cost-best-cat-2026-04-28` preset, the reader lookup sends four of the six LongMemEval categories to gpt-5-mini, whose [list price](https://developers.openai.com/api/docs/pricing) is a tenth of gpt-4o's per input token and a fifth per output token, and lifts single-session-preference by 10 points in the benchmark runs; the gate gives queries that need no memory a path that skips retrieval. Reproducible run JSONs in [agentos-bench](https://github.com/framerslab/agentos-bench).
 
 ## Where to start
 

@@ -1,6 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 610" role="img" aria-labelledby="ac-title ac-desc" font-family="Inter, system-ui, -apple-system, sans-serif">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 638" role="img" aria-labelledby="ac-title ac-desc" font-family="Inter, system-ui, -apple-system, sans-serif">
   <title id="ac-title">AgentCommunicationBus architecture</title>
-  <desc id="ac-desc">One in-process class a host builds and wires its agents to, with three steps for every message. Routing picks the target agents: sendToAgent for one agent by id, sendToRole for one agent holding a role (by default a random one when several do), broadcast for every agent in the agency but the sender, publishToTopic for each handler subscribed to a topic; requestResponse waits for a reply and handoff is a request that waits 60 seconds. Subscriptions decide which handlers get a message: subscribe with filters on message type, sender role, minimum priority and thread, subscribeToTopic for a topic made by createTopic, and registerAgent for the agency and role map that routing reads. Delivery runs in process, at once: the matching handlers are awaited one by one, a handler that throws does not stop the rest, each message gets a delivery status, retryDelivery re-sends a failed message when the host calls it, and the bus keeps the last 100 messages per agent by default. There is no queue and no automatic retry.</desc>
+  <desc id="ac-desc">One in-process class a host builds and wires its agents to, with three steps for every message. Routing picks the target agents: sendToAgent for one agent by id, sendToRole for one agent holding a role (by default a random one when several do), broadcast for every agent in the agency but the sender, publishToTopic for each handler subscribed to a topic; requestResponse waits for a reply and handoff is a request that waits 60 seconds. Subscriptions decide which handlers get a message: subscribe with filters on message type, sender role, minimum priority and thread, subscribeToTopic for a topic made by createTopic, and registerAgent for the agency and role map that routing reads. Delivery runs in process, at once: the matching handlers are awaited one by one, and a handler that throws does not stop the rest. A send gets a delivery status, the bus keeps the last 100 messages per agent by default, and retryDelivery re-sends a failed send from that history when the host calls it; a send that no handler takes, or that every handler throws on, is marked failed at once, unless it answers a pending request. publishToTopic calls the topic's handlers itself: its messages stay out of the history, so retryDelivery cannot re-send them, and a topic with no subscribers returns no statuses. There is no queue and no automatic retry.</desc>
 
   <defs>
     <style>
@@ -25,19 +25,19 @@
     </marker>
   </defs>
 
-  <rect class="bg" x="0" y="0" width="1000" height="610"/>
+  <rect class="bg" x="0" y="0" width="1000" height="638"/>
 
   <!-- Header -->
   <text x="500" y="32" text-anchor="middle" class="heading">AgentCommunicationBus</text>
   <text x="500" y="54" text-anchor="middle" class="subtitle">One in-process class a host builds and wires its agents to · three steps for every message</text>
 
   <!-- Outer container -->
-  <rect x="40" y="80" width="920" height="508" rx="14" class="container"/>
+  <rect x="40" y="80" width="920" height="536" rx="14" class="container"/>
 
   <!-- Step 1: routing -->
   <rect x="70" y="110" width="860" height="146" rx="10" class="layer acc-route"/>
   <text x="90" y="132" class="layer-title">1 · Routing</text>
-  <text x="90" y="150" class="layer-text">Picks the target agents of each send</text>
+  <text x="90" y="150" class="layer-text">Picks the target agents of each message</text>
 
   <rect x="90" y="162" width="190" height="58" rx="6" class="mini acc-route"/>
   <text x="185" y="180" text-anchor="middle" class="mini-text">sendToAgent()</text>
@@ -85,7 +85,7 @@
   <line class="arrow-line" x1="500" y1="398" x2="500" y2="420" marker-end="url(#ac-arrow)"/>
 
   <!-- Step 3: delivery -->
-  <rect x="70" y="422" width="860" height="146" rx="10" class="layer acc-deliver"/>
+  <rect x="70" y="422" width="860" height="174" rx="10" class="layer acc-deliver"/>
   <text x="90" y="444" class="layer-title">3 · Delivery</text>
   <text x="90" y="462" class="layer-text">In process, at once, to every matching handler</text>
 
@@ -101,13 +101,15 @@
 
   <rect x="510" y="474" width="190" height="58" rx="6" class="mini acc-deliver"/>
   <text x="605" y="492" text-anchor="middle" class="mini-text">retryDelivery(messageId)</text>
-  <text x="605" y="509" text-anchor="middle" class="layer-text">re-sends a failed message</text>
-  <text x="605" y="523" text-anchor="middle" class="layer-text">when the host calls it</text>
+  <text x="605" y="509" text-anchor="middle" class="layer-text">re-sends a failed send from</text>
+  <text x="605" y="523" text-anchor="middle" class="layer-text">history when the host calls it</text>
 
   <rect x="720" y="474" width="190" height="58" rx="6" class="mini acc-deliver"/>
   <text x="815" y="492" text-anchor="middle" class="mini-text">Message history</text>
   <text x="815" y="509" text-anchor="middle" class="layer-text">the last 100 per agent</text>
   <text x="815" y="523" text-anchor="middle" class="layer-text">by default</text>
 
-  <text x="90" y="554" class="layer-text">No queue and no automatic retry: a message no handler takes, or that every handler throws on, is marked failed at once.</text>
+  <text x="90" y="554" class="layer-text">No queue and no automatic retry: a send that no handler takes, or that every handler throws on, is marked failed at once,</text>
+  <text x="90" y="568" class="layer-text">unless it answers a pending request. publishToTopic() calls the topic's handlers itself: its messages stay out of the history,</text>
+  <text x="90" y="582" class="layer-text">so retryDelivery() cannot re-send them, and a topic with no subscribers returns no statuses.</text>
 </svg>

@@ -59,8 +59,8 @@
 
   <rect x="896" y="112" width="168" height="64" rx="8" class="state" />
   <text x="908" y="132" class="b">Updates applied</text>
-  <text x="908" y="148" class="m">the next turn's</text>
-  <text x="908" y="160" class="m">prompt reads them</text>
+  <text x="908" y="148" class="m">to GMI state and</text>
+  <text x="908" y="160" class="m">working memory</text>
 
   <path d="M 216 144 L 238 144" class="arrow" marker-end="url(#ai-arrow)" />
   <path d="M 440 144 L 462 144" class="arrow" marker-end="url(#ai-arrow)" />
@@ -124,7 +124,7 @@
   <!-- Bottom band: state surfaces metaprompts write -->
   <rect x="40" y="474" width="1040" height="158" rx="12" class="lane-bg" />
   <text x="56" y="500" class="h3">State surfaces metaprompts write</text>
-  <text x="56" y="518" class="h2">Applied from the metaprompt's JSON reply · read by the next turn's prompt assembly</text>
+  <text x="56" y="518" class="h2">Applied from the metaprompt's JSON reply · prompt assembly reads mood, skill level and complexity, not imprints</text>
 
   <rect x="56" y="532" width="186" height="84" rx="8" class="state" />
   <text x="68" y="552" class="b">GMI mood</text>
