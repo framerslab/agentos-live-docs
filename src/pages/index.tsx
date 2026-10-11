@@ -416,12 +416,14 @@ console.log(\`Total tokens: \${usage.totalTokens}\`);`,
 
   'Agency': `import { agency } from '@framers/agentos';
 
-// Each roster member is an agent(): its instructions and HEXACO traits in a
-// system prompt, its tools and its hooks. A member whose config sets
-// runtime: 'gmi' is served by GMIs. The agency layer adds an orchestration
-// strategy that routes outputs between members, HITL approval gates on every
-// member's tool calls, run limits (controls) and structured output. It
-// accepts memory, rag and guardrails options without applying them.
+// A roster seat written as a config, as here, is built with agent(): its
+// instructions and HEXACO traits in a system prompt, and its tools. A seat
+// whose config sets runtime: 'gmi' is served by GMIs, and a pre-built Agent
+// can take a seat as it is. The agency layer adds an orchestration strategy
+// that routes outputs between members, opt-in HITL approvals (before listed
+// tools or agents, an emergent agent or the final answer), run limits
+// (controls) and structured output. It accepts memory, rag and guardrails
+// options without applying them.
 const team = agency({
   provider: 'openai',
   model: 'gpt-4o',
@@ -797,7 +799,7 @@ const features = [
   {
     title: 'Streaming Guardrails',
     description:
-      'Five guardrail packs: PII redaction (regex, NLP, NER and an LLM judge), ML classifiers (ONNX toxic-bert, an LLM judge or keywords), topicality (embedding similarity to allowed and blocked topics), code safety (OWASP-style rules) and grounding (NLI against the retrieved sources).',
+      'Six guardrail packs: PII redaction (regex, NLP, NER and an LLM judge), ML classifiers (ONNX toxic-bert, an LLM judge or keywords), topicality (embedding similarity to allowed and blocked topics), code safety (OWASP-style rules), grounding (NLI against the retrieved sources) and a content policy rewriter (keyword checks on streamed text, then an LLM judge and rewriter that block or rewrite the final response).',
     link: '/features/guardrails',
   },
   {
