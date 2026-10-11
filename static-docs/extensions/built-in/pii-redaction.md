@@ -50,7 +50,12 @@ const result = await redactPii('Write to sam@mail.invalid or call +1 415 555 010
 
 The `+1` stays: openredaction's phone patterns begin with a word boundary (`\b`), which a `+` after a space does not have, so the match starts at `415`.
 
-With no options, `redactPii()` looks for the regex tier's types (`REGEX_TIER_TYPES`: `EMAIL`, `PHONE`, `SSN`, `CREDIT_CARD`, `IBAN`, `API_KEY`, `AWS_KEY`, `GOV_ID`, `PASSPORT`, `DRIVERS_LICENSE`, `IP_ADDRESS`) with the NER model off, so no model loads and names stay as they are. Its options are `entityTypes`, `redactionStyle`, `enableNerModel` (default `false`) and `pipeline` (any other pack option below). It builds one pipeline per set of options and reuses it, and it throws when detection fails, for example when `openredaction` is missing. openredaction's email pattern leaves an address at `example.com`, `test.com` or a few other placeholder domains in the text, unless the address or the 50 characters on either side of it contain one of a list of strings such as `test`, `api` or `documentation`.
+With no options, `redactPii()` looks for the regex tier's types (`REGEX_TIER_TYPES`: `EMAIL`, `PHONE`, `SSN`, `CREDIT_CARD`, `IBAN`, `API_KEY`, `AWS_KEY`, `GOV_ID`, `PASSPORT`, `DRIVERS_LICENSE`, `IP_ADDRESS`) with the NER model off, so no model loads and names stay as they are. Its options are `entityTypes`, `redactionStyle`, `enableNerModel` (default `false`) and `pipeline` (any other pack option below). It builds one pipeline per set of options and reuses it, and it throws when detection fails, for example when `openredaction` is missing.
+
+openredaction's email pattern leaves an address in the text when either check below holds. Both read the address together with the 50 characters on either side of it, and both ignore case:
+
+- The address contains `@example.com`, `@sample.com`, `@demo.com`, `@fake.com` or `@placeholder.com`, and none of `test`, `spec`, `api`, `reference`, `guide`, `template`, `documentation`, `john+`, `!!!`, `+tag` or `john@` appears.
+- `your.email`, `placeholder` or `fake` appears, and none of `test`, `sample`, `demo`, `spec`, `api`, `reference`, `guide`, `template` or `documentation` does.
 
 ### The guardrail and tools in AgentOS
 
