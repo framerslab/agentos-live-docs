@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 760" width="1100" height="760">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 772" width="1100" height="772">
   <defs>
     <linearGradient id="hitl-brand" x1="0%" y1="0%" x2="100%" y2="0%">
       <stop offset="0%" stop-color="#6366f1" />
@@ -30,14 +30,14 @@
     </marker>
   </defs>
 
-  <rect class="bg" x="0" y="0" width="1100" height="760"/>
+  <rect class="bg" x="0" y="0" width="1100" height="772"/>
 
   <!-- Title strip -->
   <text x="40" y="38" class="h1">Human-in-the-Loop · Three integration surfaces, three decision contracts</text>
   <line x1="40" y1="52" x2="1060" y2="52" stroke="url(#hitl-brand)" stroke-width="2" />
 
   <!-- LANE 1: agency() declarative HITL -->
-  <rect x="40" y="74" width="320" height="408" rx="12" class="lane-bg" />
+  <rect x="40" y="74" width="320" height="420" rx="12" class="lane-bg" />
   <text x="56" y="100" class="h3">Lane 1 · Agency</text>
   <text x="56" y="118" class="h2">HitlConfig (declarative)</text>
 
@@ -59,7 +59,7 @@
   <text x="68" y="345" class="b"><tspan font-weight="600">beforeStrategyOverride</tspan> — pauses nothing</text>
 
   <text x="56" y="378" class="h3">Six handler factories</text>
-  <rect x="56" y="386" width="288" height="90" rx="8" class="handler" />
+  <rect x="56" y="386" width="288" height="100" rx="8" class="handler" />
   <text x="70" y="402" class="m">hitl.cli()</text>
   <text x="70" y="416" class="m">hitl.autoApprove()</text>
   <text x="70" y="430" class="m">hitl.autoReject(reason?)</text>
@@ -68,7 +68,7 @@
   <text x="70" y="472" class="m">hitl.llmJudge({ criteria, ... })</text>
 
   <!-- LANE 2: AgentGraph human node / workflow() human step -->
-  <rect x="384" y="74" width="332" height="408" rx="12" class="lane-bg" />
+  <rect x="384" y="74" width="332" height="420" rx="12" class="lane-bg" />
   <text x="400" y="100" class="h3">Lane 2 · Workflow / Graph</text>
   <text x="400" y="118" class="h2">human node</text>
 
@@ -98,7 +98,7 @@
   <text x="414" y="469" class="m">onTimeout: 'accept' | 'reject' | 'error'</text>
 
   <!-- LANE 3: runtime HumanInteractionManager -->
-  <rect x="740" y="74" width="320" height="408" rx="12" class="lane-bg" />
+  <rect x="740" y="74" width="320" height="420" rx="12" class="lane-bg" />
   <text x="756" y="100" class="h3">Lane 3 · Runtime</text>
   <text x="756" y="118" class="h2">HumanInteractionManager</text>
 
@@ -130,80 +130,80 @@
   <text x="756" y="478" class="lbl">low_confidence · safety_concern · …</text>
 
   <!-- Each lane flows into its own decision contract -->
-  <path d="M 200 482 L 200 498" class="arrow-soft" marker-end="url(#arrowhead-soft)" />
-  <path d="M 550 482 L 550 498" class="arrow-soft" marker-end="url(#arrowhead-soft)" />
-  <path d="M 900 482 L 900 498" class="arrow-soft" marker-end="url(#arrowhead-soft)" />
+  <path d="M 200 494 L 200 510" class="arrow-soft" marker-end="url(#arrowhead-soft)" />
+  <path d="M 550 494 L 550 510" class="arrow-soft" marker-end="url(#arrowhead-soft)" />
+  <path d="M 900 494 L 900 510" class="arrow-soft" marker-end="url(#arrowhead-soft)" />
 
   <!-- Contract 1: agency() -->
-  <rect x="40" y="500" width="320" height="236" rx="12" class="lane-bg" />
-  <text x="56" y="524" class="h3">Agency contract</text>
+  <rect x="40" y="512" width="320" height="236" rx="12" class="lane-bg" />
+  <text x="56" y="536" class="h3">Agency contract</text>
 
-  <rect x="56" y="536" width="288" height="36" rx="6" class="card" />
-  <text x="68" y="551" class="b">ApprovalRequest</text>
-  <text x="68" y="565" class="m">id · type · agent · action · details</text>
+  <rect x="56" y="548" width="288" height="36" rx="6" class="card" />
+  <text x="68" y="563" class="b">ApprovalRequest</text>
+  <text x="68" y="577" class="m">id · type · agent · action · details</text>
 
-  <rect x="56" y="582" width="288" height="50" rx="6" class="handler" />
-  <text x="68" y="597" class="b">Your handler decides</text>
-  <text x="68" y="611" class="m">timeoutMs + onTimeout apply on</text>
-  <text x="68" y="625" class="m">beforeTool and beforeReturn</text>
+  <rect x="56" y="594" width="288" height="50" rx="6" class="handler" />
+  <text x="68" y="609" class="b">Your handler decides</text>
+  <text x="68" y="623" class="m">timeoutMs + onTimeout apply on</text>
+  <text x="68" y="637" class="m">beforeTool and beforeReturn</text>
 
-  <rect x="56" y="642" width="288" height="36" rx="6" class="card" />
-  <text x="68" y="657" class="b">ApprovalDecision</text>
-  <text x="68" y="671" class="m">approved · reason · modifications</text>
+  <rect x="56" y="654" width="288" height="36" rx="6" class="card" />
+  <text x="68" y="669" class="b">ApprovalDecision</text>
+  <text x="68" y="683" class="m">approved · reason · modifications</text>
 
-  <rect x="56" y="688" width="288" height="36" rx="6" class="trigger" />
-  <text x="68" y="703" class="b">A post-approval check can veto a yes</text>
-  <text x="68" y="717" class="m">code-safety · pii-redaction</text>
+  <rect x="56" y="700" width="288" height="36" rx="6" class="trigger" />
+  <text x="68" y="715" class="b">A post-approval check can veto a yes</text>
+  <text x="68" y="729" class="m">code-safety · pii-redaction</text>
 
-  <path d="M 200 572 L 200 580" class="arrow" marker-end="url(#arrowhead)" />
-  <path d="M 200 632 L 200 640" class="arrow" marker-end="url(#arrowhead)" />
-  <path d="M 200 678 L 200 686" class="arrow" marker-end="url(#arrowhead)" />
+  <path d="M 200 584 L 200 592" class="arrow" marker-end="url(#arrowhead)" />
+  <path d="M 200 644 L 200 652" class="arrow" marker-end="url(#arrowhead)" />
+  <path d="M 200 690 L 200 698" class="arrow" marker-end="url(#arrowhead)" />
 
   <!-- Contract 2: graph human node -->
-  <rect x="384" y="500" width="332" height="236" rx="12" class="lane-bg" />
-  <text x="400" y="524" class="h3">Graph contract (no handler)</text>
+  <rect x="384" y="512" width="332" height="236" rx="12" class="lane-bg" />
+  <text x="400" y="536" class="h3">Graph contract (no handler)</text>
 
-  <rect x="400" y="536" width="300" height="36" rx="6" class="card" />
-  <text x="412" y="551" class="b">A mode decides: the node's output</text>
-  <text x="412" y="565" class="m">{ approved, decidedBy, ... }</text>
+  <rect x="400" y="548" width="300" height="36" rx="6" class="card" />
+  <text x="412" y="563" class="b">A mode decides: the node's output</text>
+  <text x="412" y="577" class="m">{ approved, decidedBy, ... }</text>
 
-  <rect x="400" y="582" width="300" height="50" rx="6" class="trigger" />
-  <text x="412" y="597" class="b">A yes no human gave is checked</text>
-  <text x="412" y="611" class="m">deps.guardrailEngine, when wired:</text>
-  <text x="412" y="625" class="m">pii-redaction · code-safety</text>
+  <rect x="400" y="594" width="300" height="50" rx="6" class="trigger" />
+  <text x="412" y="609" class="b">A yes no human gave is checked</text>
+  <text x="412" y="623" class="m">deps.guardrailEngine, when wired:</text>
+  <text x="412" y="637" class="m">pii-redaction · code-safety</text>
 
-  <rect x="400" y="642" width="300" height="36" rx="6" class="handler" />
-  <text x="412" y="657" class="b">No decision: checkpoint saved</text>
-  <text x="412" y="671" class="m">interrupt event, 'human_approval'</text>
+  <rect x="400" y="654" width="300" height="36" rx="6" class="handler" />
+  <text x="412" y="669" class="b">No decision: checkpoint saved</text>
+  <text x="412" y="683" class="m">interrupt event, 'human_approval'</text>
 
-  <rect x="400" y="688" width="300" height="36" rx="6" class="card" />
-  <text x="412" y="703" class="b">The host writes the answer, resumes</text>
-  <text x="412" y="717" class="m">fork(checkpointId, patch) · resume()</text>
+  <rect x="400" y="700" width="300" height="36" rx="6" class="card" />
+  <text x="412" y="715" class="b">The host writes the answer, resumes</text>
+  <text x="412" y="729" class="m">fork(checkpointId, patch) · resume()</text>
 
-  <path d="M 550 572 L 550 580" class="arrow" marker-end="url(#arrowhead)" />
-  <path d="M 550 678 L 550 686" class="arrow" marker-end="url(#arrowhead)" />
+  <path d="M 550 584 L 550 592" class="arrow" marker-end="url(#arrowhead)" />
+  <path d="M 550 690 L 550 698" class="arrow" marker-end="url(#arrowhead)" />
 
   <!-- Contract 3: runtime manager -->
-  <rect x="740" y="500" width="320" height="236" rx="12" class="lane-bg" />
-  <text x="756" y="524" class="h3">Runtime contract</text>
+  <rect x="740" y="512" width="320" height="236" rx="12" class="lane-bg" />
+  <text x="756" y="536" class="h3">Runtime contract</text>
 
-  <rect x="756" y="536" width="288" height="36" rx="6" class="card" />
-  <text x="768" y="551" class="b">requestApproval(PendingAction)</text>
-  <text x="768" y="565" class="m">notificationHandler: approval_required</text>
+  <rect x="756" y="548" width="288" height="36" rx="6" class="card" />
+  <text x="768" y="563" class="b">requestApproval(PendingAction)</text>
+  <text x="768" y="577" class="m">notificationHandler: approval_required</text>
 
-  <rect x="756" y="582" width="288" height="36" rx="6" class="handler" />
-  <text x="768" y="597" class="b">A human answers</text>
-  <text x="768" y="611" class="m">submitApprovalDecision(decision)</text>
+  <rect x="756" y="594" width="288" height="36" rx="6" class="handler" />
+  <text x="768" y="609" class="b">A human answers</text>
+  <text x="768" y="623" class="m">submitApprovalDecision(decision)</text>
 
-  <rect x="756" y="628" width="288" height="50" rx="6" class="card" />
-  <text x="768" y="643" class="b">ApprovalDecision, its own type</text>
-  <text x="768" y="657" class="m">actionId · approved · decidedBy</text>
-  <text x="768" y="671" class="m">rejectionReason? · decidedAt</text>
+  <rect x="756" y="640" width="288" height="50" rx="6" class="card" />
+  <text x="768" y="655" class="b">ApprovalDecision, its own type</text>
+  <text x="768" y="669" class="m">actionId · approved · decidedBy</text>
+  <text x="768" y="683" class="m">rejectionReason? · decidedAt</text>
 
-  <rect x="756" y="688" width="288" height="36" rx="6" class="runtime" />
-  <text x="768" y="703" class="b">Asked by ToolOrchestrator, step gate</text>
-  <text x="768" y="717" class="m">hasSideEffects tools, hitl.enabled</text>
+  <rect x="756" y="700" width="288" height="36" rx="6" class="runtime" />
+  <text x="768" y="715" class="b">Asked by ToolOrchestrator, step gate</text>
+  <text x="768" y="729" class="m">hasSideEffects tools, hitl.enabled</text>
 
-  <path d="M 900 572 L 900 580" class="arrow" marker-end="url(#arrowhead)" />
-  <path d="M 900 618 L 900 626" class="arrow" marker-end="url(#arrowhead)" />
+  <path d="M 900 584 L 900 592" class="arrow" marker-end="url(#arrowhead)" />
+  <path d="M 900 630 L 900 638" class="arrow" marker-end="url(#arrowhead)" />
 </svg>
