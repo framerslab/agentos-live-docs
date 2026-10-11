@@ -416,11 +416,12 @@ console.log(\`Total tokens: \${usage.totalTokens}\`);`,
 
   'Agency': `import { agency } from '@framers/agentos';
 
-// Agency composes a team of GMI brains. Each agent in the roster has its
-// own cognition, memory, persona, tools. The agency layer adds an
-// orchestration strategy that routes outputs between brains, HITL approval
-// gates on every member's tool calls, run limits (controls) and structured
-// output. It accepts memory, rag and guardrails options without applying them.
+// Each roster member is an agent(): its instructions and HEXACO traits in a
+// system prompt, its tools and its hooks. A member whose config sets
+// runtime: 'gmi' is served by GMIs. The agency layer adds an orchestration
+// strategy that routes outputs between members, HITL approval gates on every
+// member's tool calls, run limits (controls) and structured output. It
+// accepts memory, rag and guardrails options without applying them.
 const team = agency({
   provider: 'openai',
   model: 'gpt-4o',
@@ -716,6 +717,11 @@ function QuickStartTabs() {
       <CodeBlock language={active.includes('YAML') ? 'yaml' : 'typescript'}>
         {quickStartCode[active]}
       </CodeBlock>
+      <p style={{ textAlign: 'center', marginTop: '0.75rem' }}>
+        <Link to="/getting-started/high-level-api" style={{ fontSize: '0.9rem' }}>
+          High-Level API guide &rarr;
+        </Link>
+      </p>
     </section>
   );
 }

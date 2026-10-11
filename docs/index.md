@@ -52,12 +52,13 @@ AgentOS routes memory with small LLM-as-judge classifier calls, up to three per 
 
 ## Where to start
 
+- [**High-Level API**](/getting-started/high-level-api) — the one-import functions: `generateText()`, `streamText()`, `generateObject()`, image, video and audio generation, `agent()`, `gmi()` and `agency()`, how each call picks its provider, and the full runtime's `AgentOS` class.
 - [**Cognitive Memory**](/features/cognitive-memory) — why memory should forget. Eight neuroscience-grounded mechanisms, primary-source citations, the consolidation loop. The story is the page.
-- [**GMI architecture**](/architecture/gmi) — what an agent actually is between turns. The turn loop, model calls through a completion gateway with fallback hops, and the chunks a turn streams.
+- [**GMI architecture**](/architecture/gmi) — the Generalized Mind Instances (GMIs) that run the sessions of the full runtime and of `agent({ runtime: 'gmi' })` or `gmi()`; a plain `agent()` builds none. What a GMI holds, the turn loop, model calls through a completion gateway with fallback hops, and the chunks a turn streams.
 - [**System Architecture**](/architecture/system-architecture) — the runtime's layers and the eleven top-level directories of its source.
 - [**Deep Research**](/features/rag-memory#query-classification) — the 3-phase pipeline behind sourced answers.
 - [**Emergent Capabilities**](/features/emergent-capabilities) — runtime tool forging, judge approval, sandboxed execution.
-- [**Examples Cookbook**](/getting-started/examples) — 17 recipes for agents, agencies, query routing and orchestration, and the 18 runnable files in `examples/`.
+- [**Examples Cookbook**](/getting-started/examples) — 17 recipes for agents, agencies, query routing and orchestration, and a table of 18 of the runnable files in `examples/`.
 - [**TypeDoc API**](/api/) — every class, interface, function in the runtime.
 
 ## Paracosm — the swarm-simulation companion
