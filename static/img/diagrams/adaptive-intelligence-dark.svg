@@ -30,42 +30,42 @@
 
   <rect class="bg" x="0" y="0" width="1120" height="640"/>
 
-  <text x="40" y="38" class="h1">Adaptive Prompt Intelligence · Per-turn metaprompting + state-driven re-personalization</text>
+  <text x="40" y="38" class="h1">Adaptive Prompt Intelligence · Prompt assembly each turn + metaprompts after it</text>
   <line x1="40" y1="52" x2="1080" y2="52" stroke="url(#ai-brand)" stroke-width="2" />
 
-  <!-- Per-turn loop (top band) -->
+  <!-- One turn of a GMI (top band) -->
   <rect x="40" y="74" width="1040" height="116" rx="12" class="lane-bg" />
-  <text x="56" y="100" class="h3">Per-turn assembly loop</text>
+  <text x="56" y="100" class="h3">One turn of a GMI</text>
 
-  <rect x="56" y="112" width="184" height="64" rx="8" class="turn" />
-  <text x="68" y="132" class="b">User message arrives</text>
-  <text x="68" y="148" class="m">Conversation history + working</text>
-  <text x="68" y="160" class="m">memory + retrieved traces</text>
+  <rect x="56" y="112" width="160" height="64" rx="8" class="turn" />
+  <text x="68" y="132" class="b">User message</text>
+  <text x="68" y="148" class="m">SentimentTracker</text>
+  <text x="68" y="160" class="m">scores it (opt-in)</text>
 
-  <rect x="264" y="112" width="200" height="64" rx="8" class="handler" />
-  <text x="276" y="132" class="b">PromptEngine.assemble()</text>
-  <text x="276" y="148" class="m">Merges persona + mood +</text>
-  <text x="276" y="160" class="m">contextual elements + skills</text>
+  <rect x="240" y="112" width="200" height="64" rx="8" class="handler" />
+  <text x="252" y="132" class="b">PromptEngine</text>
+  <text x="252" y="148" class="m">constructPrompt(): persona</text>
+  <text x="252" y="160" class="m">+ elements matching state</text>
 
-  <rect x="488" y="112" width="200" height="64" rx="8" class="handler" />
-  <text x="500" y="132" class="b">MetapromptExecutor</text>
-  <text x="500" y="148" class="m">checkAndTriggerMetaprompts()</text>
-  <text x="500" y="160" class="m">3 trigger types · parallel exec</text>
+  <rect x="464" y="112" width="168" height="64" rx="8" class="card" />
+  <text x="476" y="132" class="b">Model call</text>
+  <text x="476" y="148" class="m">streamed reply, tool</text>
+  <text x="476" y="160" class="m">rounds as needed</text>
 
-  <rect x="712" y="112" width="184" height="64" rx="8" class="state" />
-  <text x="724" y="132" class="b">State updates applied</text>
-  <text x="724" y="148" class="m">mood · userContext ·</text>
-  <text x="724" y="160" class="m">taskContext · imprints</text>
+  <rect x="656" y="112" width="216" height="64" rx="8" class="handler" />
+  <text x="668" y="132" class="b">MetapromptExecutor</text>
+  <text x="668" y="148" class="m">checkAndTriggerMetaprompts()</text>
+  <text x="668" y="160" class="m">fired ones: background batch</text>
 
-  <rect x="920" y="112" width="144" height="64" rx="8" class="card" />
-  <text x="932" y="132" class="b">LLM call</text>
-  <text x="932" y="148" class="m">Fresh system prompt</text>
-  <text x="932" y="160" class="m">reflects every change</text>
+  <rect x="896" y="112" width="168" height="64" rx="8" class="state" />
+  <text x="908" y="132" class="b">Updates applied</text>
+  <text x="908" y="148" class="m">the next turn's</text>
+  <text x="908" y="160" class="m">prompt reads them</text>
 
-  <path d="M 240 144 L 262 144" class="arrow" marker-end="url(#ai-arrow)" />
-  <path d="M 464 144 L 486 144" class="arrow" marker-end="url(#ai-arrow)" />
-  <path d="M 688 144 L 710 144" class="arrow" marker-end="url(#ai-arrow)" />
-  <path d="M 896 144 L 918 144" class="arrow" marker-end="url(#ai-arrow)" />
+  <path d="M 216 144 L 238 144" class="arrow" marker-end="url(#ai-arrow)" />
+  <path d="M 440 144 L 462 144" class="arrow" marker-end="url(#ai-arrow)" />
+  <path d="M 632 144 L 654 144" class="arrow" marker-end="url(#ai-arrow)" />
+  <path d="M 872 144 L 894 144" class="arrow" marker-end="url(#ai-arrow)" />
 
   <!-- Three trigger lanes (middle band) -->
   <text x="40" y="218" class="h3">Three metaprompt trigger types</text>
@@ -73,30 +73,30 @@
   <!-- Lane: turn_interval -->
   <rect x="40" y="228" width="340" height="220" rx="12" class="lane-bg" />
   <text x="56" y="252" class="h2">turn_interval</text>
-  <text x="56" y="268" class="b">Periodic self-regulation</text>
+  <text x="56" y="268" class="b">Counts user turns</text>
   <rect x="56" y="280" width="308" height="54" rx="6" class="trigger" />
   <text x="68" y="298" class="b">{ type: 'turn_interval',</text>
   <text x="68" y="314" class="b">&#160;&#160;intervalTurns: 5 }</text>
-  <text x="68" y="326" class="lbl">Counter increments each turn</text>
+  <text x="68" y="326" class="lbl">Fires on user turns N, 2N, 3N</text>
 
   <rect x="56" y="346" width="308" height="92" rx="6" class="handler" />
-  <text x="68" y="364" class="b">Built-in handlers fire on cadence:</text>
-  <text x="68" y="380" class="m">• gmi_self_reflection</text>
-  <text x="68" y="394" class="m">• gmi_self_trait_adjustment</text>
-  <text x="68" y="408" class="m">• gmi_strategy_review</text>
-  <text x="68" y="424" class="lbl">Each fires once per N turns</text>
+  <text x="68" y="364" class="b">Handler by metaprompt id:</text>
+  <text x="68" y="380" class="m">• gmi_self_trait_adjustment:</text>
+  <text x="68" y="394" class="m">&#160;&#160;mood, user skill, task context</text>
+  <text x="68" y="408" class="m">• other ids: generic handler</text>
+  <text x="68" y="424" class="lbl">From the persona's metaPrompts</text>
 
   <!-- Lane: event_based -->
   <rect x="392" y="228" width="340" height="220" rx="12" class="lane-bg" />
   <text x="408" y="252" class="h2">event_based</text>
-  <text x="408" y="268" class="b">SentimentTracker-driven</text>
+  <text x="408" y="268" class="b">SentimentTracker events</text>
   <rect x="408" y="280" width="308" height="54" rx="6" class="trigger" />
   <text x="420" y="298" class="b">{ type: 'event_based',</text>
-  <text x="420" y="314" class="b">&#160;&#160;eventName: 'frustration_detected' }</text>
-  <text x="420" y="326" class="lbl">Fires only on pending GMIEvent</text>
+  <text x="420" y="314" class="b">&#160;&#160;eventName: 'user_frustrated' }</text>
+  <text x="420" y="326" class="lbl">Fires on a pending GMIEvent</text>
 
   <rect x="408" y="346" width="308" height="92" rx="6" class="handler" />
-  <text x="420" y="364" class="b">Built-in event handlers:</text>
+  <text x="420" y="364" class="b">Presets (persona sentimentTracking):</text>
   <text x="420" y="380" class="m">• frustration_recovery</text>
   <text x="420" y="394" class="m">• confusion_clarification</text>
   <text x="420" y="408" class="m">• satisfaction_reinforcement</text>
@@ -106,54 +106,54 @@
   <!-- Lane: manual -->
   <rect x="744" y="228" width="336" height="220" rx="12" class="lane-bg" />
   <text x="760" y="252" class="h2">manual</text>
-  <text x="760" y="268" class="b">Host- or tool-driven</text>
+  <text x="760" y="268" class="b">A flag host code sets</text>
   <rect x="760" y="280" width="304" height="54" rx="6" class="trigger" />
   <text x="772" y="298" class="b">{ type: 'manual' }</text>
-  <text x="772" y="314" class="b">workingMemory.set(flag)</text>
-  <text x="772" y="326" class="lbl">Custom triggers from host code</text>
+  <text x="772" y="314" class="b">workingMemory: manual_trigger_&lt;id&gt;</text>
+  <text x="772" y="326" class="lbl">Checked at the end of each turn</text>
 
   <rect x="760" y="346" width="304" height="92" rx="6" class="handler" />
-  <text x="772" y="364" class="b">Use cases:</text>
-  <text x="772" y="380" class="m">• Tool result triggers re-plan</text>
-  <text x="772" y="394" class="m">• User explicitly asks "re-think"</text>
-  <text x="772" y="408" class="m">• adapt_personality emergent call</text>
-  <text x="772" y="422" class="m">• Drift-mechanism flag</text>
-  <text x="772" y="436" class="lbl">Generic handler signature</text>
+  <text x="772" y="364" class="b">When the flag is set:</text>
+  <text x="772" y="380" class="m">• the metaprompt is queued</text>
+  <text x="772" y="394" class="m">• the flag is then deleted</text>
+  <text x="772" y="408" class="m">• a metaprompt cannot set it</text>
+  <text x="772" y="422" class="m">• known ids: own handler</text>
+  <text x="772" y="436" class="lbl">Fired metaprompts call the LLM</text>
 
-  <!-- Bottom band: state surfaces metaprompts can mutate -->
+  <!-- Bottom band: state surfaces metaprompts write -->
   <rect x="40" y="466" width="1040" height="158" rx="12" class="lane-bg" />
-  <text x="56" y="492" class="h3">State surfaces metaprompts can mutate</text>
-  <text x="56" y="510" class="h2">Mutations flow back through callbacks · all reflected in next turn's prompt</text>
+  <text x="56" y="492" class="h3">State surfaces metaprompts write</text>
+  <text x="56" y="510" class="h2">Applied from the metaprompt's JSON reply · read by the next turn's prompt assembly</text>
 
   <rect x="56" y="524" width="186" height="84" rx="8" class="state" />
   <text x="68" y="544" class="b">GMI mood</text>
   <text x="68" y="560" class="m">currentGmiMood</text>
-  <text x="68" y="574" class="lbl">Valence · Arousal · Dominance</text>
+  <text x="68" y="574" class="lbl">One of 8 named moods</text>
   <text x="68" y="592" class="m">onMoodUpdate(mood)</text>
 
   <rect x="262" y="524" width="186" height="84" rx="8" class="state" />
   <text x="274" y="544" class="b">User context</text>
-  <text x="274" y="560" class="m">UserContext (typed)</text>
-  <text x="274" y="574" class="lbl">Inferred preferences, skill</text>
-  <text x="274" y="592" class="m">onUserContextUpdate(...)</text>
+  <text x="274" y="560" class="m">skillLevel</text>
+  <text x="274" y="574" class="lbl">Inferred user skill</text>
+  <text x="274" y="592" class="m">onUserContextUpdate()</text>
 
   <rect x="468" y="524" width="186" height="84" rx="8" class="state" />
   <text x="480" y="544" class="b">Task context</text>
-  <text x="480" y="560" class="m">TaskContext (typed)</text>
-  <text x="480" y="574" class="lbl">Active goal, complexity, phase</text>
-  <text x="480" y="592" class="m">onTaskContextUpdate(...)</text>
+  <text x="480" y="560" class="m">complexity</text>
+  <text x="480" y="574" class="lbl">Task complexity</text>
+  <text x="480" y="592" class="m">onTaskContextUpdate()</text>
 
   <rect x="674" y="524" width="186" height="84" rx="8" class="state" />
-  <text x="686" y="544" class="b">Working memory imprints</text>
-  <text x="686" y="560" class="m">workingMemory.set(k, v)</text>
-  <text x="686" y="574" class="lbl">Per-turn scratchpad</text>
-  <text x="686" y="592" class="m">onMemoryImprint(content, tags)</text>
+  <text x="686" y="544" class="b">Working-memory imprints</text>
+  <text x="686" y="560" class="m">newMemoryImprints</text>
+  <text x="686" y="574" class="lbl">Key-value entries</text>
+  <text x="686" y="592" class="m">workingMemory.set(k, v)</text>
 
-  <rect x="880" y="524" width="184" height="84" rx="8" class="state" />
+  <rect x="880" y="524" width="184" height="84" rx="8" class="card" />
   <text x="892" y="544" class="b">HEXACO traits</text>
-  <text x="892" y="560" class="m">PersonaOverlayManager</text>
-  <text x="892" y="574" class="lbl">adapt_personality · drift</text>
-  <text x="892" y="592" class="m">maxDeltaPerSession-bounded</text>
+  <text x="892" y="560" class="m">not set by metaprompts</text>
+  <text x="892" y="574" class="lbl">adapt_personality tool</text>
+  <text x="892" y="592" class="m">or setPersonalityTrait()</text>
 
   <!-- Soft links from middle band to state surfaces -->
   <path d="M 210 448 Q 210 460 210 466" class="arrow-soft" marker-end="url(#ai-arrow)" />
