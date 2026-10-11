@@ -40,7 +40,7 @@ The benchmarks below measure this runtime against alternative memory libraries a
 
 AgentOS routes memory with small LLM-as-judge classifier calls, up to three per query. When the host runs the `QueryClassifier` gate, trivial queries (greetings, small talk, general knowledge answerable from context) skip retrieval. The `MemoryRouter` classifies the query's category and picks the retrieval architecture for it, `selectReader()` picks the reader model from that category with no further call, and the `ReadRouter` picks the read strategy.
 
-![AgentOS classifier-driven memory pipeline: query enters QueryClassifier (T0 short-circuits), MemoryRouter picks retrieval architecture, canonical-hybrid retrieval (BM25 + dense + RRF + Cohere rerank + 6-signal cognitive composite), ReaderRouter picks the reader model, ReadRouter picks the strategy, grounded answer returns. Background consolidation loop on the same brain.](/img/diagrams/memory-system-overview.svg)
+![AgentOS memory pipeline: the QueryClassifier gate, when the host runs it, labels a retrieval tier, and the host can skip recall on T0; the MemoryRouter's classifier call picks one of six query categories and a backend from its preset's table; the canonical-hybrid backend, HybridRetriever, fuses a dense MemoryStore search scored on six signals with a BM25 search by RRF, blends in an optional reranker's score and passes the top traces on; selectReader() looks up the reader model from the category with no LLM call; the ReadRouter picks the read strategy for the grounded answer. Below, two consolidation boxes: ConsolidationLoop for the Memory facade and ConsolidationPipeline for CognitiveMemoryManager.](/img/diagrams/memory-system-overview.svg)
 
 | Stage | Primitive | Decision per query |
 |---|---|---|
