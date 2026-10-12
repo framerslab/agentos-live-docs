@@ -222,7 +222,7 @@ sidebar_position: ${position}
 
 # ${title}
 
-Documentation coming soon. See the [extension source](https://github.com/framerslab/agentos-extensions/tree/master/registry/curated/${curatedDir}) for usage details.
+This extension has no README to publish. Its source is in [agentos-extensions](https://github.com/framerslab/agentos-extensions/tree/master/registry/curated/${curatedDir}).
 `,
       );
       console.warn(`  STUB (no README): ${curatedDir}`);
