@@ -175,7 +175,7 @@ The judge re-examines each merged entity scoring above 0.3 and below 0.7. When i
 |---|---|---|---|
 | `placeholder` | `John Smith` | `[PERSON]` | The entity type. Default. |
 | `mask` | `John Smith` | `J*** S****` | Each word keeps its first character; the rest is starred. |
-| `hash` | `John Smith` | `[PERSON:a1b2c3d4e5]` | The type and the first 10 hex characters of the text's SHA-256, with no key. The same text always gives the same token, so repeated values stay linkable, and anyone can hash a guessed value (a phone number, an SSN) and compare: this is pseudonymization, not anonymization. |
+| `hash` | `John Smith` | `[PERSON:ef61a579c9]` | The type and the first 10 hex characters of the text's SHA-256, with no key. The same text always gives the same token, so repeated values stay linkable, and anyone can hash a guessed value (a phone number, an SSN) and compare: this is pseudonymization, not anonymization. |
 | `category-tag` | `John Smith` | `<PII type="PERSON">REDACTED</PII>` | An XML-style tag. |
 
 ---
