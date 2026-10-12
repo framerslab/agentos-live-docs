@@ -52,10 +52,13 @@ The `+1` stays: openredaction's phone patterns begin with a word boundary (`\b`)
 
 With no options, `redactPii()` looks for the regex tier's types (`REGEX_TIER_TYPES`: `EMAIL`, `PHONE`, `SSN`, `CREDIT_CARD`, `IBAN`, `API_KEY`, `AWS_KEY`, `GOV_ID`, `PASSPORT`, `DRIVERS_LICENSE`, `IP_ADDRESS`) with the NER model off, so no model loads and names stay as they are. Its options are `entityTypes`, `redactionStyle`, `enableNerModel` (default `false`) and `pipeline` (any other pack option below). It builds one pipeline per set of options and reuses it, and it throws when detection fails, for example when `openredaction` is missing.
 
-openredaction's email pattern leaves an address in the text when either check below holds. Both read the address together with the 50 characters on either side of it, and both ignore case:
+openredaction's email validator turns a match down, and the address stays in the text, when any of these holds:
 
+- The domain has no dot (`root@localhost`), the part before the `@` is longer than 64 characters, or the domain is longer than 255 characters.
 - The address contains `@example.com`, `@sample.com`, `@demo.com`, `@fake.com` or `@placeholder.com`, and none of `test`, `spec`, `api`, `reference`, `guide`, `template`, `documentation`, `john+`, `!!!`, `+tag` or `john@` appears.
 - `your.email`, `placeholder` or `fake` appears, and none of `test`, `sample`, `demo`, `spec`, `api`, `reference`, `guide`, `template` or `documentation` does.
+
+The last two read the address together with the 50 characters on either side of it, and both ignore case. A match the validator passes can still be dropped: openredaction scores each match from the text it sits in, through its context analysis and its proximity rules, and drops a match that scores under 0.5. Both are on by default, and the pack turns neither off.
 
 ### The guardrail and tools in AgentOS
 
