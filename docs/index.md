@@ -59,7 +59,7 @@ AgentOS routes memory with small LLM-as-judge classifier calls, up to three per 
 - [**Deep Research**](/features/rag-memory#query-classification) — the 3-phase pipeline behind sourced answers.
 - [**Emergent Capabilities**](/features/emergent-capabilities) — runtime tool forging, judge approval, sandboxed execution.
 - [**Examples Cookbook**](/getting-started/examples) — 17 recipes for agents, agencies, query routing and orchestration, and a table of 18 of the runnable files in `examples/`.
-- [**TypeDoc API**](/api/) — every class, interface, function in the runtime.
+- [**TypeDoc API**](/api/) — the reference TypeDoc generates from the package's root entry point, `@framers/agentos` ([`src/index.ts`](https://github.com/framerslab/agentos/blob/master/src/index.ts)). A symbol exported only from a subpath, such as `MemoryRouter` from `@framers/agentos/memory-router`, has no page there.
 
 ## Paracosm — the swarm-simulation companion
 
