@@ -33,6 +33,7 @@ This site hosts guides, API reference, architecture docs, and tutorials for buil
 - [HEXACO Personality Model](https://docs.agentos.sh/features/hexaco-personality)
 - [Multi-Agent Teams (6 Strategies)](https://docs.agentos.sh/features/agency-collaboration)
 - [RAG & Memory Configuration](https://docs.agentos.sh/features/rag-memory)
+- [Text Processing & Search](https://docs.agentos.sh/text)
 - [Orchestration Guide](https://docs.agentos.sh/features/orchestration-guide)
 - [Workflow DSL](https://docs.agentos.sh/features/workflow-dsl)
 - [Planning Engine](https://docs.agentos.sh/features/planning-engine)

@@ -33,7 +33,7 @@ jobs:
         with:
           path: apps/agentos-live-docs
 
-      # .gitignore lists the folders the build fills. A file tracked there goes stale: every build
+      # .gitignore covers the folders the build fills. A file tracked there goes stale: every build
       # rewrites it and nobody commits the result.
       - name: No tracked file is under an ignored path
         working-directory: apps/agentos-live-docs

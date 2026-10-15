@@ -75,9 +75,10 @@ To run one test file: `node --test scripts/pull-docs-links.test.mjs`.
 ## Conventions
 
 - Fix a page at its source. A wrong statement in a pulled guide is corrected in the repository that holds it, never by editing the copy under `docs/`.
+- The counts on the documentation landing page (`docs/index.md`), such as the cookbook's recipes and runnable files, are written by hand, and no check compares them with agentos. Update them when a change in agentos alters one.
 - Check links with the full build. The guides mode ignores broken links.
 - When a page's address changes or a page is removed, add a redirect to the `redirects` list in `docusaurus.config.ts`.
-- A build writes into `docs/`, where many generated files are tracked. Commit only the files you edited by hand.
+- A build writes into `docs/`. Git ignores everything inside the folders there except the committed files `.gitignore` lists: the five `siteDoc(...)` pages and the Paracosm reference under `docs/paracosm/`, whose files a local build can rewrite. Commit only the files you edited by hand.
 - Comments in the configuration, scripts and plugins say why a rule exists. Keep them accurate when you change the rule.
 - A bug in a first-party package the site reads (`@framers/agentos`, an extension pack) is fixed in that package's repository. Do not copy a workaround into this repository.
 
@@ -90,6 +91,8 @@ To run one test file: `node --test scripts/pull-docs-links.test.mjs`.
 ## Deployment
 
 A push to `master` builds the site and deploys it to GitHub Pages. A pull request builds and does not deploy. The workflow also runs daily and on a manual start. Every run builds from the latest agentos and agentos-extensions, so a change merged there reaches the site at the next run. After a deploy the workflow commits `deployed-sources.json`, which names the two source commits the live site was built from.
+
+A ruleset on `master` blocks deleting the branch and force-pushing to it, with no exemption. No status check is required: the `record-sources` job pushes its commit to `master` with the workflow token, which a ruleset cannot exempt, so a required check would reject it. Merge only when CI is green.
 
 ## Automated review threads
 
