@@ -547,6 +547,7 @@ const config = (githubStars: number): Config => ({
             { label: 'Adaptive Prompt Intelligence', to: '/features/adaptive-prompt-intelligence' },
             { label: 'RAG & Vector Storage', to: '/features/rag-memory' },
             { label: 'Vector Scaling', to: '/features/sql-storage' },
+            { label: 'Text Processing & Search', to: '/text' },
             { label: 'Guardrails', to: '/features/guardrails' },
             { label: 'Human-in-the-Loop (HITL)', to: '/features/human-in-the-loop' },
             { label: 'PII Redaction & PHI Scrubbing', to: '/features/pii-redaction' },
