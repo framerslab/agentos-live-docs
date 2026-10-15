@@ -147,6 +147,24 @@ test('public docs tree has no unmanaged markdown after sync', () => {
   assert.deepEqual(orphans.sort(), []);
 });
 
+test('a pull leaves no untracked file under docs/', () => {
+  const siteRoot = resolve(MONO_ROOT, 'apps/agentos-live-docs');
+
+  execFileSync('node', ['scripts/pull-docs.mjs'], { cwd: siteRoot, stdio: 'pipe' });
+
+  // .gitignore keeps the pages pull-docs copies in out of `git status`. A folder it does not
+  // cover shows up as untracked after every local build: docs/text/ did when the manifest
+  // added its section.
+  const untracked = execFileSync('git', ['ls-files', '--others', '--exclude-standard', '--', 'docs'], {
+    cwd: siteRoot,
+    encoding: 'utf8',
+  })
+    .split('\n')
+    .filter(Boolean);
+
+  assert.deepEqual(untracked, []);
+});
+
 test('pull-docs check mode detects stale generated docs', () => {
   const docsRoot = resolve(MONO_ROOT, 'apps/agentos-live-docs/docs');
   const target = resolve(docsRoot, 'skills/agentos-skills.md');
@@ -203,6 +221,7 @@ test('publication verification scripts are wired into the docs packages', () => 
   );
   assert.match(docusaurusConfig, /label: 'Skills',\s*to: '\/skills'/);
   assert.match(docusaurusConfig, /label: 'Extensions',\s*to: '\/extensions'/);
+  assert.match(docusaurusConfig, /label: 'Text Processing & Search',\s*to: '\/text'/);
   assert.match(docusaurusConfig, /from: '\/skills\/overview',\s*to: '\/skills'/);
   assert.match(docusaurusConfig, /from: '\/extensions\/overview',\s*to: '\/extensions'/);
   assert.doesNotMatch(docusaurusConfig, /skills\/skills-extension/);
