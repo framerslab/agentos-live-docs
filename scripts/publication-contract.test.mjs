@@ -172,11 +172,29 @@ test("the landing page's tests badge reads the count agentos's release publishes
   // said "9,300+ passed" while the count agentos's release writes said "10,500+". The release
   // refreshes .github/badges/tests.json and ships it in the package; agentos's README reads it
   // through unpkg, since shields.io refuses github.com addresses.
-  assert.doesNotMatch(landing, /img\.shields\.io\/badge\/(?:tests|coverage)-/i);
-  assert.match(
-    landing,
-    /\[!\[tests\]\(https:\/\/img\.shields\.io\/endpoint\?url=https:\/\/unpkg\.com\/@framers\/agentos@latest\/\.github\/badges\/tests\.json[^)\s]*\)\]/,
-  );
+  const testsBadges = [...landing.matchAll(/\[!\[tests\]\(([^)\s]+)\)\]\(([^)\s]+)\)/gi)];
+  assert.equal(testsBadges.length, 1);
+  const [, source, target] = testsBadges[0];
+  const image = new URL(source);
+  assert.equal(`${image.origin}${image.pathname}`, 'https://img.shields.io/endpoint');
+  assert.equal(image.searchParams.get('url'), 'https://unpkg.com/@framers/agentos@latest/.github/badges/tests.json');
+  // Parameters that change how the badge looks; none of them changes the count it shows.
+  const looks = new Set(['url', 'style', 'logo', 'logoColor', 'logoSize', 'labelColor', 'color', 'cacheSeconds']);
+  assert.deepEqual([...image.searchParams.keys()].filter((key) => !looks.has(key)), []);
+  assert.equal(target, 'https://github.com/framerslab/agentos/actions/workflows/ci.yml');
+
+  // No other badge on the page types a test or coverage figure, in either static form shields.io
+  // serves: /badge/<label>-<message>-<color> and /static/v1?label=<label>&message=<message>.
+  const typed = [...landing.matchAll(/https:\/\/img\.shields\.io\/[^\s)"'<>]+/g)]
+    .map(([address]) => new URL(address.replaceAll('&amp;', '&')))
+    .filter(
+      (address) =>
+        (address.pathname.startsWith('/badge/') && !address.pathname.startsWith('/badge/dynamic/')) ||
+        address.pathname.startsWith('/static/'),
+    )
+    .filter((address) => /\b(?:tests?|coverage)\b/i.test(decodeURIComponent(`${address.pathname} ${address.search}`)))
+    .map(String);
+  assert.deepEqual(typed, []);
 });
 
 test('pull-docs check mode detects stale generated docs', () => {
