@@ -165,6 +165,20 @@ test('a pull leaves no untracked file under docs/', () => {
   assert.deepEqual(untracked, []);
 });
 
+test("the landing page's tests badge reads the count agentos's release publishes", () => {
+  const landing = readFileSync(resolve(MONO_ROOT, 'apps/agentos-live-docs/docs/index.md'), 'utf8');
+
+  // A count typed into a static shields.io badge goes stale. In October 2026 this page's badge
+  // said "9,300+ passed" while the count agentos's release writes said "10,500+". The release
+  // refreshes .github/badges/tests.json and ships it in the package; agentos's README reads it
+  // through unpkg, since shields.io refuses github.com addresses.
+  assert.doesNotMatch(landing, /img\.shields\.io\/badge\/(?:tests|coverage)-/i);
+  assert.match(
+    landing,
+    /\[!\[tests\]\(https:\/\/img\.shields\.io\/endpoint\?url=https:\/\/unpkg\.com\/@framers\/agentos@latest\/\.github\/badges\/tests\.json[^)\s]*\)\]/,
+  );
+});
+
 test('pull-docs check mode detects stale generated docs', () => {
   const docsRoot = resolve(MONO_ROOT, 'apps/agentos-live-docs/docs');
   const target = resolve(docsRoot, 'skills/agentos-skills.md');
