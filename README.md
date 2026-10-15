@@ -74,7 +74,7 @@ graph LR
     DOCS --> PARA["paracosm/<br/><i>Paracosm API reference (committed)</i>"]
 ```
 
-Git ignores everything inside the folders under `docs/` except the committed files, which `.gitignore` lists as exceptions, so a local build leaves no untracked file.
+Git ignores everything inside the folders under `docs/` except the committed files, which `.gitignore` lists as exceptions, so the pages a local build pulls never show up as changes. A build with the Paracosm source beside this repository (`../paracosm/`) rewrites the committed `docs/paracosm/`; leave those changes out of a commit.
 
 ## Deployment
 
