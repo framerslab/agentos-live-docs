@@ -71,7 +71,7 @@ CI ([`deploy.yml`](https://github.com/framerslab/agentos-live-docs/blob/master/.
 
 `npm run build` runs `clean:cache` and `pull-docs` first, then `docusaurus build`. The build is strict: a broken link or a broken Markdown link stops it. The build job takes about 25 minutes in CI.
 
-Maintainers merge a pull request only when CI is green.
+Maintainers merge a pull request only when CI is green. No rule enforces it, because the deploy workflow's last job commits `deployed-sources.json` straight to `master` with the workflow's own token: a required status check would reject that push, and GitHub's [list of actors a ruleset can exempt](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/creating-rulesets-for-a-repository) does not include that token. A ruleset on `master` blocks deleting the branch and force-pushing to it, with no exemption.
 
 For work on guide pages, `npm run start:guides` and `npm run build:guides` skip the API reference, the Paracosm reference, local search and the search manifest, and they do not stop on broken links. Use them to iterate. The full build is the one CI runs.
 
