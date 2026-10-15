@@ -32,7 +32,7 @@ Three rules follow from this:
 
 - An edit to a pulled page under `docs/` is overwritten by the next build. Edit the source.
 - A Markdown file under `docs/` that the manifest does not list is deleted by the build. The exceptions are `docs/index.md` and the files under `docs/api/` and `docs/paracosm/`.
-- A build writes into `docs/`. Git ignores the folders it fills (`docs/api/` and the pulled guide folders), so those files never show up as changes; the three pages written here that the manifest lists with `siteDoc(...)` are tracked through exceptions in `.gitignore`. `docs/paracosm/` is tracked: leave a local build's changes to it out of your commit.
+- A build writes into `docs/`. Git ignores everything inside the folders under `docs/`: the pulled guide folders, including a folder that a new manifest section adds, and `docs/api/`. Those files never show up as changes. The five pages written here that the manifest lists with `siteDoc(...)` and the Paracosm reference under `docs/paracosm/` are tracked through exceptions in `.gitignore`; leave a local build's changes to `docs/paracosm/` out of your commit.
 
 ### Adding a page
 
