@@ -31,7 +31,7 @@ npm run start:guides  # Faster local mode: guides/docs only, skips API, Paracosm
 ```bash
 npm run build    # Runs pull-docs + docusaurus build
 npm run build:guides  # Faster local build for guides/docs only
-npm run test:publication  # Contract + link + search manifest tests
+npm run test:publication  # Contract, link, search manifest and star badge tests
 npm run verify:publication # Strict publication check + full production build
 npm run serve    # Preview production build
 ```

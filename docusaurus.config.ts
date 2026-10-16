@@ -23,7 +23,8 @@ const paracosmSrcAvailable = existsSync(paracosmSrcPath);
 
 // The star badge on the home page. plugins/github-stars.js reads the count from GitHub's API at
 // build time, with the GH_PAT token when CI passes one, so a visitor's browser never calls GitHub
-// and shields.io's unauthenticated rate limit never renders an "invalid" badge.
+// and shields.io's unauthenticated rate limit never renders an "invalid" badge. When the read
+// fails, the badge names the repository and shows no count.
 async function buildConfig(): Promise<Config> {
   const githubStars = await fetchGithubStars('framerslab/agentos', { token: process.env.GH_PAT });
   return config(starsBadge('framerslab/agentos', githubStars));

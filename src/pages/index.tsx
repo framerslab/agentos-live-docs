@@ -39,7 +39,7 @@ function Hero() {
           <a href="https://github.com/framerslab/agentos" className="hero-badge" target="_blank" rel="noopener noreferrer">
             {/* A static badge docusaurus.config.ts made when the site was built (plugins/github-stars.js),
                 so a visitor's browser never calls GitHub and shields.io's unauthenticated rate limit
-                never renders "invalid" on it. */}
+                never renders "invalid" on it. With no count read, it names the repository. */}
             <img src={starBadge.src} alt={starBadge.alt} />
           </a>
         )}

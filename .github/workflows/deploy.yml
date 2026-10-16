@@ -87,7 +87,8 @@ jobs:
         working-directory: apps/agentos-live-docs
         run: npm ci
 
-      # The publication manifest and pull contract, link rewriting and the search manifest plugin.
+      # The publication manifest and pull contract, link rewriting, the search manifest plugin and the
+      # home page's star badge.
       - name: Check the publication contract
         working-directory: apps/agentos-live-docs
         run: npm run test:publication
@@ -97,10 +98,11 @@ jobs:
         run: npm run build
         env:
           NODE_OPTIONS: --max-old-space-size=8192
-          # PAT used by docusaurus.config.ts to fetch the live GitHub
-          # star count for the hero badge at build time. Falls back to
-          # a hardcoded count if missing or if the call fails. Pull request
-          # builds do not receive it: they run code the pull request changed.
+          # PAT that plugins/github-stars.js sends when it reads the GitHub star
+          # count for the home page's badge at build time. Without it the read is
+          # unauthenticated; when the read fails, the badge names the repository
+          # and shows no count. Pull request builds do not receive it: they run
+          # code the pull request changed.
           GH_PAT: ${{ github.event_name != 'pull_request' && secrets.GH_PAT || '' }}
 
       - name: Upload artifact
