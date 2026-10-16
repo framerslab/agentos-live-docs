@@ -11,6 +11,7 @@ import DiagramImg from '@site/src/components/DiagramImg';
 
 function Hero() {
   const { siteConfig } = useDocusaurusContext();
+  const starBadge = siteConfig.customFields?.githubStarsBadge as { src: string; alt: string } | undefined;
   return (
     <header className="hero-agentos">
       <div className="hero-agentos__logo">
@@ -34,17 +35,14 @@ function Hero() {
       <p className="hero-agentos__subtitle">{siteConfig.tagline}</p>
 
       <div className="hero-badges">
-        <a href="https://github.com/framerslab/agentos" className="hero-badge" target="_blank" rel="noopener noreferrer">
-          {/* Static badge with the star count baked in at build time —
-              avoids shields.io's unauthenticated rate-limit fallback
-              that intermittently rendered "invalid" on this badge.
-              The count comes from a GH_PAT-authenticated API call in
-              docusaurus.config.ts and refreshes every deploy. */}
-          <img
-            src={`https://img.shields.io/badge/stars-${(siteConfig.customFields?.githubStars as number | undefined) ?? 268}-6366f1?style=for-the-badge&logo=github&logoColor=white&labelColor=4f46e5`}
-            alt={`GitHub stars: ${(siteConfig.customFields?.githubStars as number | undefined) ?? 268}`}
-          />
-        </a>
+        {starBadge && (
+          <a href="https://github.com/framerslab/agentos" className="hero-badge" target="_blank" rel="noopener noreferrer">
+            {/* A static badge docusaurus.config.ts made when the site was built (plugins/github-stars.js),
+                so a visitor's browser never calls GitHub and shields.io's unauthenticated rate limit
+                never renders "invalid" on it. */}
+            <img src={starBadge.src} alt={starBadge.alt} />
+          </a>
+        )}
         <a href="https://www.npmjs.com/package/@framers/agentos" className="hero-badge" target="_blank" rel="noopener noreferrer">
           <img src="https://img.shields.io/npm/v/@framers/agentos?style=for-the-badge&logo=npm&logoColor=white&label=npm&color=6366f1&labelColor=4f46e5" alt="npm version" />
         </a>
