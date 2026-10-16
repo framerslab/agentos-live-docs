@@ -63,7 +63,7 @@ CI runs (job "build" in [`.github/workflows/deploy.yml`](https://github.com/fram
 3. `npm run test:publication` in this repository: the `node --test` suites (the publication manifest and pull contract, link rewriting, the search manifest plugin, the star badge)
 4. `npm run build` in this repository, with `NODE_OPTIONS=--max-old-space-size=8192` (runs `clean:cache` and `pull-docs`, then `docusaurus build`)
 
-The build is strict: a broken link or a broken Markdown link stops it. The build job takes about 25 minutes.
+The build is strict: a broken link or a broken Markdown link stops it. The build job takes 25 to 40 minutes.
 
 Available scripts that CI does not run:
 
