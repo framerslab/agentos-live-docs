@@ -76,6 +76,7 @@ To run one test file: `node --test scripts/pull-docs-links.test.mjs`.
 
 - Fix a page at its source. A wrong statement in a pulled guide is corrected in the repository that holds it, never by editing the copy under `docs/`.
 - The counts on the documentation landing page (`docs/index.md`), such as the cookbook's recipes and runnable files, are written by hand, and no check compares them with agentos. Update them when a change in agentos alters one.
+- The badges on the documentation landing page read their figures where they are kept: the version from npm, the CI status from GitHub Actions, the test count from the `tests.json` that agentos's release ships in the package (through unpkg, as agentos's README reads it) and coverage from Codecov. Never type a figure into a badge: a publication test fails on a tests or coverage badge with its figure typed in, and on a tests badge that reads anything but that `tests.json`.
 - Check links with the full build. The guides mode ignores broken links.
 - When a page's address changes or a page is removed, add a redirect to the `redirects` list in `docusaurus.config.ts`.
 - A build writes into `docs/`. Git ignores everything inside the folders there except the committed files `.gitignore` lists: the five `siteDoc(...)` pages and the Paracosm reference under `docs/paracosm/`, whose files a local build can rewrite. Commit only the files you edited by hand.
