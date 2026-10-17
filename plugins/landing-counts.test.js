@@ -4,7 +4,7 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 
-const { countCookbook, cookbookPlaceholders, remarkFillPlaceholders } = require('./landing-counts.js');
+const { countCookbook, landingCountsPlugin, remarkCookbookCounts } = require('./landing-counts.js');
 
 const RUNNABLE_FILES_TABLE = [
   '| File | Description |',
@@ -13,6 +13,7 @@ const RUNNABLE_FILES_TABLE = [
   '| [`b.mjs`](https://example.com/b.mjs) | B |',
   '| [`c.mjs`](https://example.com/c.mjs) | C |',
 ].join('\n');
+const FOUR_ROW_TABLE = `${RUNNABLE_FILES_TABLE}\n| [\`d.mjs\`](https://example.com/d.mjs) | D |`;
 
 // The shape of agentos's docs/getting-started/EXAMPLES.md as pull-docs copies it in, with code blocks
 // that hold a numbered heading and tables, which the page does not render as either.
@@ -57,8 +58,34 @@ function examplesPage(runnableFiles = RUNNABLE_FILES_TABLE) {
   ].join('\n');
 }
 
-test('the cookbook counts are the numbered recipe headings and the rows of the runnable files table', () => {
-  assert.deepEqual(countCookbook(examplesPage()), { recipes: 2, runnableFiles: 3 });
+/** A folder for one test's files, removed when the test ends. */
+function tempDir(t) {
+  // The real path: webpack names a module by the real path of its file, and the macOS temporary
+  // folder sits behind a symbolic link.
+  const dir = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'landing-counts-')));
+  t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
+  return dir;
+}
+
+test('the cookbook counts are the numbered recipe headings and the rows of the runnable files table', async () => {
+  assert.deepEqual(await countCookbook(examplesPage()), { recipes: 2, runnableFiles: 3 });
+});
+
+test('a thematic break straight after the runnable files table is not one of its rows', async () => {
+  // GFM ends a table at a line that opens another block, so the built page shows three rows.
+  assert.deepEqual(await countCookbook(examplesPage(`${RUNNABLE_FILES_TABLE}\n---`)), {
+    recipes: 2,
+    runnableFiles: 3,
+  });
+});
+
+test('a line of backticks indented as code opens no fenced block, so the headings after it count', async () => {
+  // Four spaces of indent make the line an indented code block.
+  const page = examplesPage().replace(
+    '## 1. Customer Service Agency\n\n',
+    '## 1. Customer Service Agency\n\n    ```\n\n',
+  );
+  assert.deepEqual(await countCookbook(page), { recipes: 2, runnableFiles: 3 });
 });
 
 for (const [what, markdown, message] of [
@@ -79,73 +106,122 @@ for (const [what, markdown, message] of [
     /the table under "Runnable Example Files" has no rows/,
   ],
 ]) {
-  test(`a page with ${what} is not counted`, () => {
-    assert.throws(() => countCookbook(markdown), message);
+  test(`a page with ${what} is not counted`, async () => {
+    await assert.rejects(async () => countCookbook(markdown), message);
   });
 }
 
-test('the placeholder values are counted in the examples page, or say why they are missing', () => {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'landing-counts-'));
-  try {
-    const page = path.join(dir, 'examples.md');
-    fs.writeFileSync(page, examplesPage());
-    assert.deepEqual(cookbookPlaceholders(page), {
-      values: { 'examples.recipes': 2, 'examples.runnableFiles': 3 },
-      problem: null,
-    });
+test('the landing page takes its counts from the examples page as it reads when the page compiles', async (t) => {
+  const dir = tempDir(t);
+  const landingPage = path.join(dir, 'index.md');
+  const examplesFile = path.join(dir, 'examples.md');
+  const other = path.join(dir, 'other', 'index.md');
+  fs.writeFileSync(landingPage, '');
+  fs.mkdirSync(path.dirname(other));
+  fs.writeFileSync(other, '');
+  fs.writeFileSync(examplesFile, examplesPage());
+  const tree = () => ({
+    type: 'root',
+    children: [
+      {
+        type: 'paragraph',
+        children: [
+          { type: 'text', value: '{{examples.recipes}} recipes and a table of {{ examples.runnableFiles }} files in ' },
+          { type: 'inlineCode', value: '{{examples.recipes}}' },
+        ],
+      },
+    ],
+  });
+  const fill = remarkCookbookCounts({ landingPage, examplesPage: examplesFile });
 
-    const missing = cookbookPlaceholders(path.join(dir, 'missing.md'));
-    assert.deepEqual(missing.values, {});
-    assert.match(missing.problem, /^cannot count the examples cookbook in .*missing\.md: ENOENT/);
-  } finally {
-    fs.rmSync(dir, { recursive: true, force: true });
-  }
+  const first = tree();
+  await fill(first, { path: landingPage });
+  assert.deepEqual(first.children[0].children, [
+    { type: 'text', value: '2 recipes and a table of 3 files in ' },
+    { type: 'inlineCode', value: '{{examples.recipes}}' },
+  ]);
+
+  // pull-docs rewrites the examples page while a dev server runs: the next compile counts it again.
+  fs.writeFileSync(examplesFile, examplesPage(FOUR_ROW_TABLE));
+  const second = tree();
+  await fill(second, { path: landingPage });
+  assert.equal(second.children[0].children[0].value, '2 recipes and a table of 4 files in ');
+
+  // Another page with the same file name keeps its text as written.
+  const elsewhere = tree();
+  await fill(elsewhere, { path: other });
+  assert.deepEqual(elsewhere, tree());
 });
 
-test('the plugin fills the placeholders of its own page and stops on one with no value', () => {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'landing-counts-'));
-  try {
-    const landing = path.join(dir, 'index.md');
-    const other = path.join(dir, 'other', 'index.md');
-    fs.writeFileSync(landing, '');
-    fs.mkdirSync(path.dirname(other));
-    fs.writeFileSync(other, '');
-    const tree = () => ({
-      type: 'root',
-      children: [
-        {
-          type: 'paragraph',
-          children: [
-            { type: 'text', value: '{{examples.recipes}} recipes and a table of {{ examples.runnableFiles }} files in ' },
-            { type: 'inlineCode', value: '{{examples.recipes}}' },
-          ],
-        },
-      ],
+test('a placeholder with no value stops the landing page from compiling, with the reason', async (t) => {
+  const dir = tempDir(t);
+  const landingPage = path.join(dir, 'index.md');
+  const examplesFile = path.join(dir, 'examples.md');
+  fs.writeFileSync(landingPage, '');
+  fs.writeFileSync(examplesFile, examplesPage());
+  const page = (value) => ({ type: 'root', children: [{ type: 'paragraph', children: [{ type: 'text', value }] }] });
+
+  // A name the plugin does not know.
+  await assert.rejects(
+    async () =>
+      remarkCookbookCounts({ landingPage, examplesPage: examplesFile })(page('{{examples.recipe}} recipes'), {
+        path: landingPage,
+      }),
+    /\{\{examples\.recipe\}\} has no value/,
+  );
+  // An examples page that is not there.
+  await assert.rejects(
+    async () =>
+      remarkCookbookCounts({ landingPage, examplesPage: path.join(dir, 'missing.md') })(page('{{examples.recipes}} recipes'), {
+        path: landingPage,
+      }),
+    /\{\{examples\.recipes\}\} has no value; cannot count the examples cookbook in .*missing\.md: ENOENT/,
+  );
+});
+
+test("a changed examples page compiles the landing page again instead of taking it from webpack's cache", async (t) => {
+  const webpack = require('webpack');
+  const dir = tempDir(t);
+  const landingPage = path.join(dir, 'index.md');
+  const examplesFile = path.join(dir, 'examples.md');
+  const entry = path.join(dir, 'entry.js');
+  fs.writeFileSync(landingPage, 'a table of {{examples.runnableFiles}} of the runnable files\n');
+  fs.writeFileSync(examplesFile, examplesPage());
+  fs.writeFileSync(entry, "module.exports = require('./index.md');\n");
+  const { rules } = landingCountsPlugin({}, { landingPage, examplesPage: examplesFile }).configureWebpack().module;
+
+  // One build with a persistent cache in the folder, as a machine that built the site before
+  // rebuilds it. Answers whether the build compiled the landing page or took it from the cache.
+  const compile = () =>
+    new Promise((resolve, reject) => {
+      const compiler = webpack({
+        mode: 'production',
+        context: dir,
+        entry,
+        output: { path: path.join(dir, 'out') },
+        cache: { type: 'filesystem', cacheDirectory: path.join(dir, 'cache') },
+        // Content hashes decide whether a file changed, so a rewrite inside the clock's resolution counts.
+        snapshot: { module: { hash: true } },
+        module: { rules: [...rules, { test: /\.md$/, type: 'asset/source' }] },
+        optimization: { minimize: false },
+        infrastructureLogging: { level: 'error' },
+      });
+      compiler.run((runError, stats) => {
+        let compiled = false;
+        if (!runError && !stats.hasErrors()) {
+          const landing = [...stats.compilation.modules].find((module) => module.resource === landingPage);
+          compiled = landing !== undefined && stats.compilation.builtModules.has(landing);
+        }
+        compiler.close((closeError) => {
+          if (runError || closeError) reject(runError || closeError);
+          else if (stats.hasErrors()) reject(new Error(stats.toString('errors-only')));
+          else resolve(compiled);
+        });
+      });
     });
-    const fill = remarkFillPlaceholders({
-      file: landing,
-      values: { 'examples.recipes': 17, 'examples.runnableFiles': 23 },
-    });
 
-    const filled = tree();
-    fill(filled, { path: landing });
-    assert.deepEqual(filled.children[0].children, [
-      { type: 'text', value: '17 recipes and a table of 23 files in ' },
-      { type: 'inlineCode', value: '{{examples.recipes}}' },
-    ]);
-
-    // Another page with the same file name keeps its text as written.
-    const elsewhere = tree();
-    fill(elsewhere, { path: other });
-    assert.deepEqual(elsewhere, tree());
-
-    // A placeholder the values do not name stops the build, with the reason they are missing.
-    const unread = remarkFillPlaceholders({ file: landing, values: {}, problem: 'cannot count the examples cookbook' });
-    assert.throws(
-      () => unread(tree(), { path: landing }),
-      /\{\{examples\.recipes\}\} has no value; cannot count the examples cookbook/,
-    );
-  } finally {
-    fs.rmSync(dir, { recursive: true, force: true });
-  }
+  assert.equal(await compile(), true, 'the first build compiles the landing page');
+  assert.equal(await compile(), false, 'a build with nothing changed takes the landing page from the cache');
+  fs.writeFileSync(examplesFile, examplesPage(FOUR_ROW_TABLE));
+  assert.equal(await compile(), true, 'a build after the examples page changed compiles the landing page again');
 });
