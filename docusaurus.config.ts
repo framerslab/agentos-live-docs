@@ -3,6 +3,7 @@ import type { Config } from '@docusaurus/types';
 import type * as Preset from '@docusaurus/preset-classic';
 import { existsSync } from 'fs';
 import { resolve } from 'path';
+import { fetchGithubStars, starsBadge } from './plugins/github-stars.js';
 
 const disableLocalSearch = process.env.AGENTOS_DOCS_DISABLE_LOCAL_SEARCH === '1';
 const disableSearchManifest = process.env.AGENTOS_DOCS_DISABLE_SEARCH_MANIFEST === '1';
@@ -20,48 +21,16 @@ const strictDocs = process.env.AGENTOS_DOCS_STRICT !== '0';
 const paracosmSrcPath = resolve(__dirname, '../paracosm/src');
 const paracosmSrcAvailable = existsSync(paracosmSrcPath);
 
-// Fetch the GitHub star count for `framerslab/agentos` at build time.
-// Doing this at build time (server-side, with a PAT) instead of letting
-// the browser hit shields.io's `/github/stars/...` endpoint avoids two
-// problems: shields.io's unauthenticated rate-limit fallback that
-// renders an "invalid" badge, and the cold-cache flicker on first
-// page-loads. The PAT comes from the GH_PAT env var (set as a repo
-// secret in CI). If the fetch fails or no PAT is available, the count
-// falls back to a hardcoded floor — the badge stays valid even when
-// GitHub is unreachable.
-const STAR_COUNT_FALLBACK = 268;
-async function fetchGithubStars(repo: string): Promise<number> {
-  const headers: Record<string, string> = {
-    Accept: 'application/vnd.github+json',
-    'User-Agent': 'agentos-live-docs-build',
-  };
-  if (process.env.GH_PAT) {
-    headers.Authorization = `Bearer ${process.env.GH_PAT}`;
-  }
-  try {
-    const res = await fetch(`https://api.github.com/repos/${repo}`, { headers });
-    if (!res.ok) {
-      console.warn(`[stars] ${repo} fetch returned ${res.status}; using fallback ${STAR_COUNT_FALLBACK}`);
-      return STAR_COUNT_FALLBACK;
-    }
-    const data = (await res.json()) as { stargazers_count?: number };
-    if (typeof data.stargazers_count !== 'number') {
-      return STAR_COUNT_FALLBACK;
-    }
-    console.log(`[stars] ${repo}: ${data.stargazers_count}`);
-    return data.stargazers_count;
-  } catch (err) {
-    console.warn(`[stars] ${repo} fetch failed: ${(err as Error).message}; using fallback`);
-    return STAR_COUNT_FALLBACK;
-  }
-}
-
+// The star badge on the home page. plugins/github-stars.js reads the count from GitHub's API at
+// build time, with the GH_PAT token when CI passes one, so a visitor's browser never calls GitHub
+// and shields.io's unauthenticated rate limit never renders an "invalid" badge. When the read
+// fails, the badge names the repository and shows no count.
 async function buildConfig(): Promise<Config> {
-  const githubStars = await fetchGithubStars('framerslab/agentos');
-  return config(githubStars);
+  const githubStars = await fetchGithubStars('framerslab/agentos', { token: process.env.GH_PAT });
+  return config(starsBadge('framerslab/agentos', githubStars));
 }
 
-const config = (githubStars: number): Config => ({
+const config = (githubStarsBadge: { src: string; alt: string }): Config => ({
   title: 'AgentOS Docs · Guides, API Reference, Recipes',
   tagline:
     'AgentOS documentation: getting started guides, full API reference, runtime recipes, extension catalog, and benchmark results for the open-source TypeScript AI agent runtime.',
@@ -71,11 +40,9 @@ const config = (githubStars: number): Config => ({
   organizationName: 'framerslab',
   projectName: 'agentos-live-docs',
   customFields: {
-    // Resolved at build time via the GH_PAT-authenticated GitHub API call
-    // above. The landing page reads this through useDocusaurusContext()
-    // and renders a static shields.io badge with the count baked in,
-    // so visitors never trigger an unauthenticated GitHub call.
-    githubStars,
+    // The star badge buildConfig() made at build time. The home page reads it through
+    // useDocusaurusContext() and renders it as given.
+    githubStarsBadge,
   },
   onBrokenLinks: guidesOnly ? 'ignore' : strictDocs ? 'throw' : 'warn',
   clientModules: [

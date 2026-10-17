@@ -11,9 +11,10 @@ The Docusaurus 3 site behind [docs.agentos.sh](https://docs.agentos.sh): guides,
 - `docusaurus.config.ts`: the site configuration: strict link handling, the two TypeDoc plugins, redirects, navbar, footer and sitemap rules
 - `sidebars.js`: the sidebar, built from the manifest's `buildGuideSidebar()` plus the generated API sidebar
 - `scripts/pull-docs.mjs`: the prebuild step that copies each manifest source into `docs/`, adds front matter and rewrites links; `scripts/pull-docs-links.mjs` holds the link rewriting
-- `scripts/*.test.mjs`, `plugins/search-manifest.test.js`: `node --test` suites
+- `scripts/*.test.mjs`, `plugins/search-manifest.test.js`, `plugins/github-stars.test.js`: `node --test` suites
 - `plugins/search-manifest.js`: writes `search-docs.json`, the search manifest the agentos.sh site reads
 - `plugins/inject-noindex.js`: marks the generated reference pages under `/api` and `/paracosm` as `noindex`
+- `plugins/github-stars.js`: reads the star count for the home page's badge from GitHub's API when the site builds; when the read fails, the badge names the repository and shows no count
 - `src/pages/`: the home page and the 404 page
 - `src/theme/`, `src/components/`, `src/css/custom.css`: theme overrides, components and styles
 - `src/*.js`: client modules (the Mermaid theme and zoom, scroll behavior)
@@ -59,10 +60,10 @@ CI runs (job "build" in [`.github/workflows/deploy.yml`](https://github.com/fram
 
 1. `pnpm install --frozen-lockfile --ignore-scripts` in `packages/agentos` (TypeDoc needs the types; agentos installs with pnpm 10 from its lockfile)
 2. `npm ci` in this repository
-3. `npm run test:publication` in this repository: the `node --test` suites (the publication manifest and pull contract, link rewriting, the search manifest plugin)
+3. `npm run test:publication` in this repository: the `node --test` suites (the publication manifest and pull contract, link rewriting, the search manifest plugin, the star badge)
 4. `npm run build` in this repository, with `NODE_OPTIONS=--max-old-space-size=8192` (runs `clean:cache` and `pull-docs`, then `docusaurus build`)
 
-The build is strict: a broken link or a broken Markdown link stops it. The build job takes about 25 minutes.
+The build is strict: a broken link or a broken Markdown link stops it. The build job takes 25 to 40 minutes.
 
 Available scripts that CI does not run:
 
@@ -101,7 +102,7 @@ Before a pull request merges, every unresolved thread from a review bot, includi
 
 ## Security
 
-Never commit API keys or tokens. The build reads one optional secret, `GH_PAT`, for the star count on the home page; without it the count falls back to a fixed number. Pull request builds do not receive it. Report vulnerabilities privately as the [security policy](https://github.com/framerslab/agentos-live-docs/blob/master/.github/SECURITY.md) describes.
+Never commit API keys or tokens. The build reads one optional secret, `GH_PAT`, for the star count on the home page; without it the read is unauthenticated, and when the read fails the badge names the repository and shows no count. Pull request builds do not receive it. Report vulnerabilities privately as the [security policy](https://github.com/framerslab/agentos-live-docs/blob/master/.github/SECURITY.md) describes.
 
 ## Do not
 
