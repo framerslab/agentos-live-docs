@@ -87,8 +87,8 @@ jobs:
         working-directory: apps/agentos-live-docs
         run: npm ci
 
-      # The publication manifest and pull contract, link rewriting, the search manifest plugin and the
-      # home page's star badge.
+      # The publication manifest and pull contract, link rewriting, the search manifest plugin, the
+      # home page's star badge and the counting of the landing page's cookbook figures.
       - name: Check the publication contract
         working-directory: apps/agentos-live-docs
         run: npm run test:publication

@@ -4,6 +4,7 @@ import type * as Preset from '@docusaurus/preset-classic';
 import { existsSync } from 'fs';
 import { resolve } from 'path';
 import { fetchGithubStars, starsBadge } from './plugins/github-stars.js';
+import { cookbookPlaceholders, remarkFillPlaceholders } from './plugins/landing-counts.js';
 
 const disableLocalSearch = process.env.AGENTOS_DOCS_DISABLE_LOCAL_SEARCH === '1';
 const disableSearchManifest = process.env.AGENTOS_DOCS_DISABLE_SEARCH_MANIFEST === '1';
@@ -25,12 +26,22 @@ const paracosmSrcAvailable = existsSync(paracosmSrcPath);
 // build time, with the GH_PAT token when CI passes one, so a visitor's browser never calls GitHub
 // and shields.io's unauthenticated rate limit never renders an "invalid" badge. When the read
 // fails, the badge names the repository and shows no count.
+//
+// The cookbook counts on the documentation landing page. docs/index.md writes them as
+// {{examples.recipes}} and {{examples.runnableFiles}}; plugins/landing-counts.js counts the examples
+// page that pull-docs copied in before this config loads (npm's prebuild and prestart run it). A
+// page it cannot count gives no values and the reason, which stops the build when the landing page
+// compiles, and commands that compile no page, such as serve, still load the config.
 async function buildConfig(): Promise<Config> {
   const githubStars = await fetchGithubStars('framerslab/agentos', { token: process.env.GH_PAT });
-  return config(starsBadge('framerslab/agentos', githubStars));
+  const cookbook = cookbookPlaceholders(resolve(__dirname, 'docs/getting-started/examples.md'));
+  return config(starsBadge('framerslab/agentos', githubStars), cookbook);
 }
 
-const config = (githubStarsBadge: { src: string; alt: string }): Config => ({
+const config = (
+  githubStarsBadge: { src: string; alt: string },
+  cookbook: { values: Record<string, number>; problem: string | null },
+): Config => ({
   title: 'AgentOS Docs · Guides, API Reference, Recipes',
   tagline:
     'AgentOS documentation: getting started guides, full API reference, runtime recipes, extension catalog, and benchmark results for the open-source TypeScript AI agent runtime.',
@@ -428,6 +439,10 @@ const config = (githubStarsBadge: { src: string; alt: string }): Config => ({
           sidebarPath: './sidebars.js',
           exclude: guidesOnly ? ['api/**', 'paracosm/**'] : [],
           editUrl: 'https://github.com/framerslab/agentos-live-docs/tree/master/docs/',
+          // Puts the counts buildConfig() read into the landing page. They travel as the plugin's
+          // options because the docs plugin writes its options into a file every docs page depends
+          // on: a changed count recompiles the page instead of serving it from webpack's cache.
+          remarkPlugins: [[remarkFillPlaceholders, { file: resolve(__dirname, 'docs/index.md'), ...cookbook }]],
         },
         // Blog plugin disabled: the canonical AgentOS blog is at
         // agentos.sh/en/blog (Track G consolidation, 2026-04-30). Old
