@@ -98,7 +98,7 @@ To run one test file: `node --test scripts/pull-docs-links.test.mjs`.
 
 A push to `master` builds the site, checks the built pages and deploys it to GitHub Pages. A pull request runs the build and the checks and does not deploy. The workflow also runs daily and on a manual start. Every run builds from the latest agentos and agentos-extensions, so a change merged there reaches the site at the next run. After a deploy the workflow commits `deployed-sources.json`, which names the two source commits the live site was built from.
 
-A ruleset on `master` blocks deleting the branch and force-pushing to it, with no exemption. No status check is required: the `record-sources` job pushes its commit to `master` with the workflow token, which a ruleset cannot exempt, so a required check would reject it. Merge only when CI is green.
+Two rulesets protect `master`. One blocks deleting the branch and force-pushing to it, with no exemption. The other requires the `build` and `links` checks to pass before a commit reaches `master`, admins included, so a pull request merges only when CI is green. A pull request need not be up to date with `master` to merge: the commit `record-sources` adds after each deploy would put every open pull request behind. The ruleset exempts deploy keys and nothing else: the `record-sources` job pushes `deployed-sources.json` with the repository's deploy key, because GitHub refuses the GitHub Actions app, which issues the workflow token, as a bypass actor. The key's private half is the secret `DEPLOYED_SOURCES_DEPLOY_KEY` of the `record-sources` environment, which only `master` may use, so a run for a pull request or on another branch cannot read it. That commit carries `[skip ci]`, so it starts no second build.
 
 ## Automated review threads
 
@@ -106,7 +106,7 @@ Before a pull request merges, every unresolved thread from a review bot, includi
 
 ## Security
 
-Never commit API keys or tokens. The build reads one optional secret, `GH_PAT`, for the star count on the home page; without it the read is unauthenticated, and when the read fails the badge names the repository and shows no count. Pull request builds do not receive it. Report vulnerabilities privately as the [security policy](https://github.com/framerslab/agentos-live-docs/blob/master/.github/SECURITY.md) describes.
+Never commit API keys or tokens. The deploy workflow reads two secrets. The build reads `GH_PAT`, which is optional, for the star count on the home page; without it the read is unauthenticated, and when the read fails the badge names the repository and shows no count. Pull request builds do not receive it. The `record-sources` job, which never runs for a pull request, reads `DEPLOYED_SOURCES_DEPLOY_KEY`, the private half of the deploy key it pushes to `master` with. That secret belongs to the `record-sources` environment, whose only allowed branch is `master`; keep it out of the repository's own secrets, which a workflow on any branch can read. Report vulnerabilities privately as the [security policy](https://github.com/framerslab/agentos-live-docs/blob/master/.github/SECURITY.md) describes.
 
 ## Do not
 
