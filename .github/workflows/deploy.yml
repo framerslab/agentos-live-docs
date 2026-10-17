@@ -142,8 +142,9 @@ jobs:
   # requires the build and links checks, and deploy keys are the one actor it exempts: GitHub
   # refuses the GitHub Actions app, which issues the workflow token, as a bypass actor. The key is
   # a secret of the record-sources environment, which only master may use, so a run for a pull
-  # request or on any other branch cannot read it. A push made with a deploy key starts
-  # workflows, so the commit message carries [skip ci] and the push starts no second build.
+  # request or on any other branch cannot read it. GitHub's rule that a push starts no workflow
+  # run is written for the workflow token alone, so the commit message carries [skip ci] and the
+  # push starts no second build.
   record-sources:
     if: github.event_name != 'pull_request'
     needs: [build, deploy]
