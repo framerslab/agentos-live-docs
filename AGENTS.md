@@ -11,10 +11,12 @@ The Docusaurus 3 site behind [docs.agentos.sh](https://docs.agentos.sh): guides,
 - `docusaurus.config.ts`: the site configuration: strict link handling, the two TypeDoc plugins, redirects, navbar, footer and sitemap rules
 - `sidebars.js`: the sidebar, built from the manifest's `buildGuideSidebar()` plus the generated API sidebar
 - `scripts/pull-docs.mjs`: the prebuild step that copies each manifest source into `docs/`, adds front matter and rewrites links; `scripts/pull-docs-links.mjs` holds the link rewriting
-- `scripts/*.test.mjs`, `plugins/search-manifest.test.js`, `plugins/github-stars.test.js`: `node --test` suites
+- `scripts/*.test.mjs`, `plugins/*.test.js`: `node --test` suites. `scripts/built-site.test.mjs` reads the pages a build wrote, so it runs after the build (`npm run test:built`); the others run before it (`npm run test:publication`)
 - `plugins/search-manifest.js`: writes `search-docs.json`, the search manifest the agentos.sh site reads
 - `plugins/inject-noindex.js`: marks the generated reference pages under `/api` and `/paracosm` as `noindex`
 - `plugins/github-stars.js`: reads the star count for the home page's badge from GitHub's API when the site builds; when the read fails, the badge names the repository and shows no count
+- `plugins/landing-counts.js`: counts the examples cookbook each time the documentation landing page compiles (its numbered recipes and the rows of its "Runnable Example Files" table, read with the parser Docusaurus renders a `.md` page with) and puts the counts into the landing page in place of `{{examples.recipes}}` and `{{examples.runnableFiles}}`
+- `plugins/landing-counts-loader.js`: the webpack loader that makes the examples page a dependency of the landing page, so a change to it compiles the landing page again in `npm start` and past webpack's persistent cache
 - `src/pages/`: the home page and the 404 page
 - `src/theme/`, `src/components/`, `src/css/custom.css`: theme overrides, components and styles
 - `src/*.js`: client modules (the Mermaid theme and zoom, scroll behavior)
@@ -60,15 +62,16 @@ CI runs (job "build" in [`.github/workflows/deploy.yml`](https://github.com/fram
 
 1. `pnpm install --frozen-lockfile --ignore-scripts` in `packages/agentos` (TypeDoc needs the types; agentos installs with pnpm 10 from its lockfile)
 2. `npm ci` in this repository
-3. `npm run test:publication` in this repository: the `node --test` suites (the publication manifest and pull contract, link rewriting, the search manifest plugin, the star badge)
+3. `npm run test:publication` in this repository: the `node --test` suites (the publication manifest and pull contract, link rewriting, the search manifest plugin, the star badge, the landing page's cookbook counts)
 4. `npm run build` in this repository, with `NODE_OPTIONS=--max-old-space-size=8192` (runs `clean:cache` and `pull-docs`, then `docusaurus build`)
+5. `npm run test:built` in this repository: reads the built landing page and examples page and fails when the landing page's cookbook counts are not the examples page's. A failure here stops the deploy.
 
 The build is strict: a broken link or a broken Markdown link stops it. The build job takes 25 to 40 minutes.
 
 Available scripts that CI does not run:
 
 - `npm run start:guides`, `npm run build:guides`: guide pages only, without the API reference, the Paracosm reference, local search and the search manifest, and without stopping on broken links
-- `npm run verify:publication`: the `node --test` suites with `AGENTOS_DOCS_STRICT=1`, `pull-docs --check`, then the strict build
+- `npm run verify:publication`: the `node --test` suites with `AGENTOS_DOCS_STRICT=1`, `pull-docs --check`, the strict build, then `npm run test:built`
 - `npm run typecheck`: `tsc --noEmit` over `src/` and `docusaurus.config.ts`
 
 To run one test file: `node --test scripts/pull-docs-links.test.mjs`.
@@ -76,7 +79,8 @@ To run one test file: `node --test scripts/pull-docs-links.test.mjs`.
 ## Conventions
 
 - Fix a page at its source. A wrong statement in a pulled guide is corrected in the repository that holds it, never by editing the copy under `docs/`.
-- The counts on the documentation landing page (`docs/index.md`), such as the cookbook's recipes and runnable files, are written by hand, and no check compares them with agentos. Update them when a change in agentos alters one.
+- The documentation landing page (`docs/index.md`) writes the examples cookbook's counts as `{{examples.recipes}}` and `{{examples.runnableFiles}}`, never as numbers: the build counts the examples page it pulled and puts the counts in (`plugins/landing-counts.js`), each time the landing page compiles. When that page cannot be counted, or the landing page holds a placeholder with no value, the build stops and says why.
+- The landing page's other figures of what agentos holds, such as its LLM providers, curated skills, extensions and source directories, are written by hand, and no check compares them with agentos. Update them when a change in agentos alters one.
 - The badges on the documentation landing page read their figures where they are kept: the version from npm, the CI status from GitHub Actions, the test count from the `tests.json` that agentos's release ships in the package (through unpkg, as agentos's README reads it) and coverage from Codecov. Never type a figure into a badge: a publication test fails on a tests or coverage badge with its figure typed in, and on a tests badge that reads anything but that `tests.json`.
 - Check links with the full build. The guides mode ignores broken links.
 - When a page's address changes or a page is removed, add a redirect to the `redirects` list in `docusaurus.config.ts`.
@@ -92,7 +96,7 @@ To run one test file: `node --test scripts/pull-docs-links.test.mjs`.
 
 ## Deployment
 
-A push to `master` builds the site and deploys it to GitHub Pages. A pull request builds and does not deploy. The workflow also runs daily and on a manual start. Every run builds from the latest agentos and agentos-extensions, so a change merged there reaches the site at the next run. After a deploy the workflow commits `deployed-sources.json`, which names the two source commits the live site was built from.
+A push to `master` builds the site, checks the built pages and deploys it to GitHub Pages. A pull request runs the build and the checks and does not deploy. The workflow also runs daily and on a manual start. Every run builds from the latest agentos and agentos-extensions, so a change merged there reaches the site at the next run. After a deploy the workflow commits `deployed-sources.json`, which names the two source commits the live site was built from.
 
 A ruleset on `master` blocks deleting the branch and force-pushing to it, with no exemption. No status check is required: the `record-sources` job pushes its commit to `master` with the workflow token, which a ruleset cannot exempt, so a required check would reject it. Merge only when CI is green.
 

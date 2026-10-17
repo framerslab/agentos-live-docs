@@ -223,11 +223,11 @@ test('publication verification scripts are wired into the docs packages', () => 
 
   assert.equal(
     liveDocsPackage.scripts['test:publication'],
-    'node --test scripts/publication-contract.test.mjs scripts/pull-docs-links.test.mjs plugins/search-manifest.test.js plugins/github-stars.test.js',
+    'node --test scripts/publication-contract.test.mjs scripts/pull-docs-links.test.mjs plugins/search-manifest.test.js plugins/github-stars.test.js plugins/landing-counts.test.js',
   );
   assert.equal(
     liveDocsPackage.scripts['verify:publication'],
-    'AGENTOS_DOCS_STRICT=1 npm run test:publication && AGENTOS_DOCS_STRICT=1 node scripts/pull-docs.mjs --check && AGENTOS_DOCS_STRICT=1 npm run build',
+    'AGENTOS_DOCS_STRICT=1 npm run test:publication && AGENTOS_DOCS_STRICT=1 node scripts/pull-docs.mjs --check && AGENTOS_DOCS_STRICT=1 npm run build && npm run test:built',
   );
   assert.equal(
     liveDocsPackage.scripts['build:guides'],

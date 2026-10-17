@@ -4,6 +4,7 @@ import type * as Preset from '@docusaurus/preset-classic';
 import { existsSync } from 'fs';
 import { resolve } from 'path';
 import { fetchGithubStars, starsBadge } from './plugins/github-stars.js';
+import { landingCountsPlugin, remarkCookbookCounts } from './plugins/landing-counts.js';
 
 const disableLocalSearch = process.env.AGENTOS_DOCS_DISABLE_LOCAL_SEARCH === '1';
 const disableSearchManifest = process.env.AGENTOS_DOCS_DISABLE_SEARCH_MANIFEST === '1';
@@ -29,6 +30,17 @@ async function buildConfig(): Promise<Config> {
   const githubStars = await fetchGithubStars('framerslab/agentos', { token: process.env.GH_PAT });
   return config(starsBadge('framerslab/agentos', githubStars));
 }
+
+// The cookbook counts on the documentation landing page. docs/index.md writes them as
+// {{examples.recipes}} and {{examples.runnableFiles}}. Each time the landing page compiles,
+// plugins/landing-counts.js counts the examples page that pull-docs copied in (npm's prebuild and
+// prestart run it) and puts the numbers in; a page it cannot count stops the build and says why.
+// Its webpack plugin makes the examples page a dependency of the landing page, so a changed
+// examples page compiles the landing page again, in a running dev server and past webpack's cache.
+const landingCounts = {
+  landingPage: resolve(__dirname, 'docs/index.md'),
+  examplesPage: resolve(__dirname, 'docs/getting-started/examples.md'),
+};
 
 const config = (githubStarsBadge: { src: string; alt: string }): Config => ({
   title: 'AgentOS Docs · Guides, API Reference, Recipes',
@@ -245,6 +257,9 @@ const config = (githubStarsBadge: { src: string; alt: string }): Config => ({
     // not indexed" buckets and into the intentional "Excluded by noindex"
     // state, while the /api and /paracosm landing pages stay indexable.
     './plugins/inject-noindex.js',
+    // Makes the examples page a webpack dependency of the documentation landing page, which takes
+    // its cookbook counts from it (see landingCounts above).
+    [landingCountsPlugin, landingCounts],
     ...(!guidesOnly
       ? [
           [
@@ -428,6 +443,10 @@ const config = (githubStarsBadge: { src: string; alt: string }): Config => ({
           sidebarPath: './sidebars.js',
           exclude: guidesOnly ? ['api/**', 'paracosm/**'] : [],
           editUrl: 'https://github.com/framerslab/agentos-live-docs/tree/master/docs/',
+          // Counts the examples page when the landing page compiles and puts the counts in place of
+          // the landing page's placeholders (see landingCounts above). It runs before Docusaurus's
+          // own remark plugins, so a placeholder in a heading reaches the table of contents too.
+          beforeDefaultRemarkPlugins: [[remarkCookbookCounts, landingCounts]],
         },
         // Blog plugin disabled: the canonical AgentOS blog is at
         // agentos.sh/en/blog (Track G consolidation, 2026-04-30). Old
