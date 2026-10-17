@@ -15,7 +15,8 @@ The Docusaurus 3 site behind [docs.agentos.sh](https://docs.agentos.sh): guides,
 - `plugins/search-manifest.js`: writes `search-docs.json`, the search manifest the agentos.sh site reads
 - `plugins/inject-noindex.js`: marks the generated reference pages under `/api` and `/paracosm` as `noindex`
 - `plugins/github-stars.js`: reads the star count for the home page's badge from GitHub's API when the site builds; when the read fails, the badge names the repository and shows no count
-- `plugins/landing-counts.js`: counts the examples cookbook when the config loads (its numbered recipes and the rows of its "Runnable Example Files" table) and puts the counts into the documentation landing page in place of `{{examples.recipes}}` and `{{examples.runnableFiles}}`
+- `plugins/landing-counts.js`: counts the examples cookbook each time the documentation landing page compiles (its numbered recipes and the rows of its "Runnable Example Files" table, read with the parser Docusaurus renders a `.md` page with) and puts the counts into the landing page in place of `{{examples.recipes}}` and `{{examples.runnableFiles}}`
+- `plugins/landing-counts-loader.js`: the webpack loader that makes the examples page a dependency of the landing page, so a change to it compiles the landing page again in `npm start` and past webpack's persistent cache
 - `src/pages/`: the home page and the 404 page
 - `src/theme/`, `src/components/`, `src/css/custom.css`: theme overrides, components and styles
 - `src/*.js`: client modules (the Mermaid theme and zoom, scroll behavior)
@@ -78,7 +79,7 @@ To run one test file: `node --test scripts/pull-docs-links.test.mjs`.
 ## Conventions
 
 - Fix a page at its source. A wrong statement in a pulled guide is corrected in the repository that holds it, never by editing the copy under `docs/`.
-- The documentation landing page (`docs/index.md`) writes the examples cookbook's counts as `{{examples.recipes}}` and `{{examples.runnableFiles}}`, never as numbers: the build counts the examples page it pulled and puts the counts in (`plugins/landing-counts.js`). When that page cannot be counted, or the landing page holds a placeholder with no value, the build stops and says why.
+- The documentation landing page (`docs/index.md`) writes the examples cookbook's counts as `{{examples.recipes}}` and `{{examples.runnableFiles}}`, never as numbers: the build counts the examples page it pulled and puts the counts in (`plugins/landing-counts.js`), each time the landing page compiles. When that page cannot be counted, or the landing page holds a placeholder with no value, the build stops and says why.
 - The landing page's other figures of what agentos holds, such as its LLM providers, curated skills, extensions and source directories, are written by hand, and no check compares them with agentos. Update them when a change in agentos alters one.
 - The badges on the documentation landing page read their figures where they are kept: the version from npm, the CI status from GitHub Actions, the test count from the `tests.json` that agentos's release ships in the package (through unpkg, as agentos's README reads it) and coverage from Codecov. Never type a figure into a badge: a publication test fails on a tests or coverage badge with its figure typed in, and on a tests badge that reads anything but that `tests.json`.
 - Check links with the full build. The guides mode ignores broken links.
