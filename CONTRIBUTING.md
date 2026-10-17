@@ -100,7 +100,7 @@ Write the subject in the imperative mood and keep each commit to one change.
 
 ## Deployment
 
-A push to `master`, including a merged pull request, builds the site and deploys it to GitHub Pages. The workflow also runs daily at 07:23 UTC, and a maintainer can start it by hand. Every run builds from the latest agentos and agentos-extensions.
+A push to `master`, including a merged pull request, builds the site, checks the built pages and deploys it to GitHub Pages; a failed check stops the deploy. The workflow also runs daily at 07:23 UTC, and a maintainer can start it by hand. Every run builds from the latest agentos and agentos-extensions.
 
 Nothing in agentos or agentos-extensions can start the workflow, so a change merged there reaches the site at the next deploy, which the daily run provides. After a deploy the workflow commits `deployed-sources.json`, which names the agentos and agentos-extensions commits the live site was built from.
 
