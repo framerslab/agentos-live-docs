@@ -105,6 +105,12 @@ jobs:
           # code the pull request changed.
           GH_PAT: ${{ github.event_name != 'pull_request' && secrets.GH_PAT || '' }}
 
+      # Reads the pages the build wrote, before they deploy: the cookbook counts on the documentation
+      # landing page are the examples page's.
+      - name: Check the built site
+        working-directory: apps/agentos-live-docs
+        run: npm run test:built
+
       - name: Upload artifact
         if: github.event_name != 'pull_request'
         uses: actions/upload-pages-artifact@v3

@@ -6,6 +6,7 @@
     "clean:cache": "node -e \"require('fs').rmSync('.docusaurus', { recursive: true, force: true })\"",
     "pull-docs": "node scripts/pull-docs.mjs",
     "test:publication": "node --test scripts/publication-contract.test.mjs scripts/pull-docs-links.test.mjs plugins/search-manifest.test.js plugins/github-stars.test.js",
+    "test:built": "node --test scripts/built-site.test.mjs",
     "verify:publication": "AGENTOS_DOCS_STRICT=1 npm run test:publication && AGENTOS_DOCS_STRICT=1 node scripts/pull-docs.mjs --check && AGENTOS_DOCS_STRICT=1 npm run build",
     "build:guides": "AGENTOS_DOCS_GUIDES_ONLY=1 AGENTOS_DOCS_DISABLE_LOCAL_SEARCH=1 AGENTOS_DOCS_DISABLE_SEARCH_MANIFEST=1 AGENTOS_DOCS_STRICT=0 npm run build",
     "start:guides": "AGENTOS_DOCS_GUIDES_ONLY=1 AGENTOS_DOCS_DISABLE_LOCAL_SEARCH=1 AGENTOS_DOCS_DISABLE_SEARCH_MANIFEST=1 AGENTOS_DOCS_STRICT=0 npm run start",
