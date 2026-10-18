@@ -31,7 +31,7 @@ npm run start:guides  # Faster local mode: guides/docs only, skips API, Paracosm
 ```bash
 npm run build    # Runs pull-docs + docusaurus build
 npm run build:guides  # Faster local build for guides/docs only
-npm run test:publication  # Contract, link, search manifest, star badge and landing count tests
+npm run test:publication  # Contract, link, search manifest, star badge, landing count and workflow tests
 npm run test:built        # Checks the built pages; run it after a build
 npm run verify:publication # Strict publication check, full production build, then the built-page check
 npm run serve    # Preview production build
@@ -76,7 +76,7 @@ Git ignores everything inside the folders under `docs/` except the committed fil
 
 ## Deployment
 
-Deployed via GitHub Actions on every push to `master`, daily at 07:23 UTC and on a manual run on `master`. The workflow checks out this repository at `apps/agentos-live-docs/`, and the `agentos` and `agentos-extensions` repos at `packages/agentos/` and `packages/agentos-extensions/`, the layout the build's relative paths expect, then builds, checks the built pages (`npm run test:built`) and deploys to GitHub Pages. A failed check stops the deploy.
+Deployed via GitHub Actions on every push to `master`, daily at 07:23 UTC and on a manual run on `master`. The workflow checks out this repository at `apps/agentos-live-docs/`, and the `agentos` and `agentos-extensions` repos at `packages/agentos/` and `packages/agentos-extensions/`, the layout the build's relative paths expect, then builds, checks the built pages (`npm run test:built`) and deploys to GitHub Pages. A failed check stops the deploy. A re-run builds and checks the site and does not deploy; to deploy again, start the workflow on `master`.
 
 ## Contributing and support
 
