@@ -137,16 +137,28 @@ jobs:
   # commit is also the repository activity that keeps the daily run enabled: GitHub disables
   # scheduled workflows in a public repository after 60 days without any. The file is rewritten
   # when a source commit changed, and otherwise once its date is 30 days old.
+  #
+  # The job pushes with the repository's deploy key, not the workflow token. master's ruleset
+  # requires the build and links checks, and deploy keys are the one actor it exempts: GitHub
+  # refuses the GitHub Actions app, which issues the workflow token, as a bypass actor. The key is
+  # a secret of the record-sources environment, which only master may use, so a run for a pull
+  # request or on any other branch cannot read it. GitHub's rule that a push starts no workflow
+  # run is written for the workflow token alone, so the commit message carries [skip ci] and the
+  # push starts no second build.
   record-sources:
     if: github.event_name != 'pull_request'
     needs: [build, deploy]
     runs-on: ubuntu-latest
+    environment: record-sources
     permissions:
-      contents: write
+      contents: read
     steps:
       - uses: actions/checkout@v5
         with:
           ref: master
+          # The private half of the deploy key "record-sources (deploy workflow)". Given a key,
+          # checkout fetches over SSH and leaves the key configured for the push below.
+          ssh-key: ${{ secrets.DEPLOYED_SOURCES_DEPLOY_KEY }}
 
       - name: Update deployed-sources.json
         env:
@@ -182,7 +194,13 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add "$file"
-          git commit -m "chore: record the sources of the deployed site"
+          git commit -m "chore: record the sources of the deployed site [skip ci]"
+          # Without the deploy key, checkout fetched over HTTPS with the workflow token, and the
+          # ruleset would reject the push.
+          case "$(git remote get-url origin)" in
+            git@github.com:*) ;;
+            *) echo "::error::The record-sources environment has no DEPLOYED_SOURCES_DEPLOY_KEY secret, so the push to master would be rejected. See AGENTS.md, Deployment."; exit 1 ;;
+          esac
           # master can move while the site builds; replay the one commit on top and push again.
           git push origin HEAD:master || {
             git pull --rebase origin master
