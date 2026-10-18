@@ -2,10 +2,9 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync, spawnSync } from 'node:child_process';
 import { createRequire } from 'node:module';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { existsSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
-import { fileURLToPath, pathToFileURL } from 'node:url';
+import { fileURLToPath } from 'node:url';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const MONO_ROOT = resolve(ROOT, '..');
@@ -170,7 +169,9 @@ test('a pull leaves no untracked file under docs/', () => {
 // expressions; evaluate() below runs the parts of that language they use (string literals, the
 // github context, ==, !=, !, &&, || and format()) with JavaScript's operators, which give the same
 // result for them: && and || return an operand in both, and each comparison here is between
-// lowercase strings, where GitHub's case-insensitive == makes no difference.
+// lowercase strings, where GitHub's case-insensitive == makes no difference. The status functions
+// cancelled() and always() answer as they do in a run nobody cancelled; any other is undefined
+// here, so a condition that calls one fails its test until the test models it.
 const WORKFLOWS = resolve(MONO_ROOT, 'apps/agentos-live-docs/.github/workflows');
 const loadWorkflow = (name) => require('js-yaml').load(readFileSync(resolve(WORKFLOWS, name), 'utf8'));
 
@@ -178,9 +179,12 @@ function format(template, ...values) {
   return template.replace(/\{(\d+)\}/g, (_, index) => String(values[Number(index)]));
 }
 
+const cancelled = () => false;
+const always = () => true;
+
 function evaluate(source, github) {
   const js = source.replace(/'((?:[^']|'')*)'/g, (_, text) => JSON.stringify(text.replaceAll("''", "'")));
-  return new Function('github', 'format', `return (${js});`)(github, format);
+  return new Function('github', 'format', 'cancelled', 'always', `return (${js});`)(github, format, cancelled, always);
 }
 
 // A value with expressions in it, such as `links-${{ ... }}`.
@@ -237,12 +241,17 @@ test('the deploy workflow cancels a superseded build, never a deploy part way', 
   assert.ok(workflow.jobs.build.concurrency, 'the build job sets a concurrency group');
   assert.equal(workflow.jobs.build.concurrency['cancel-in-progress'], true);
   assertCancelsOnlySupersededRuns(workflow.jobs.build.concurrency.group);
-  // Deploys take turns: a newer run's deploy waits for the one running.
+  // Deploys take turns: a newer run's deploy waits for the one running, and replaces an older one
+  // that is still waiting.
   assert.deepEqual(workflow.jobs.deploy.concurrency, { group: 'pages-deploy', 'cancel-in-progress': false });
-  assert.notEqual(workflow.jobs['record-sources'].concurrency?.['cancel-in-progress'], true);
+  // Source records take turns too, in the order their deploys finished, so an older run's record
+  // cannot land after a newer run's and name sources the live site was not built from. They wait in
+  // a group of their own: in the deploys' group a waiting record and a waiting deploy would replace
+  // each other.
+  assert.deepEqual(workflow.jobs['record-sources'].concurrency, { group: 'pages-record', 'cancel-in-progress': false });
 });
 
-test('the deploy workflow deploys from master alone', () => {
+test('the deploy workflow deploys a first attempt on master alone', () => {
   const workflow = loadWorkflow('deploy.yml');
   const upload = workflow.jobs.build.steps.find((step) => step.uses?.startsWith('actions/upload-pages-artifact@'));
   const parts = {
@@ -252,14 +261,14 @@ test('the deploy workflow deploys from master alone', () => {
   };
 
   for (const [part, condition] of Object.entries(parts)) {
-    for (const github of [
-      context('push', MASTER),
-      context('schedule', MASTER),
-      context('workflow_dispatch', MASTER),
-      context('push', MASTER, { attempt: '2' }),
-    ]) {
+    for (const github of [context('push', MASTER), context('schedule', MASTER), context('workflow_dispatch', MASTER)]) {
       assert.equal(runs(condition, github), true, `${part} runs for a ${github.event_name} run on master`);
     }
+    // A full re-run builds the commit its first attempt built, and a re-run of failed jobs deploys
+    // the first attempt's build: either can be older than a deploy another run made since, and its
+    // deploy, waiting in the deploys' group, would replace a newer deploy waiting there.
+    assert.equal(runs(condition, context('push', MASTER, { attempt: '2' })), false, `${part}, re-run on master`);
+    assert.equal(runs(condition, context('schedule', MASTER, { attempt: '3' })), false, `${part}, second re-run on master`);
     // The github-pages environment refuses a deploy from another branch, so such a run builds and
     // checks the site and stops there.
     assert.equal(runs(condition, context('workflow_dispatch', 'refs/heads/try-a-build')), false, `${part}, manual run elsewhere`);
@@ -267,69 +276,44 @@ test('the deploy workflow deploys from master alone', () => {
   }
 });
 
-test("a re-run deploys only while master holds the pages of the re-run's commit", () => {
-  const { steps } = loadWorkflow('deploy.yml').jobs.deploy;
-  const checkout = steps.findIndex((step) => step.uses?.startsWith('actions/checkout@'));
-  const check = steps.findIndex((step) => step.name === "Check that master holds this re-run's pages");
-  const deploy = steps.findIndex((step) => step.uses?.startsWith('actions/deploy-pages@'));
-  assert.ok(checkout >= 0 && checkout < check && check < deploy, 'the deploy job checks out, checks, then deploys');
-  // The run's own commit: a checkout of master would compare master with itself.
-  assert.equal(steps[checkout].with?.ref, undefined);
-  for (const step of [steps[checkout], steps[check]]) {
-    assert.equal(runs(step.if, context('push', MASTER)), false, `${step.name ?? step.uses} skips a first attempt`);
-    assert.equal(runs(step.if, context('push', MASTER, { attempt: '2' })), true, `${step.name ?? step.uses} runs for a re-run`);
+test('a re-run on master fails with the way to deploy, and waits in no group', () => {
+  const job = loadWorkflow('deploy.yml').jobs.rerun;
+  assert.ok(job, 'deploy.yml has a rerun job');
+
+  // GitHub re-runs a job's dependent jobs with it, so a re-run of build, deploy or record-sources
+  // takes this job along.
+  for (const need of ['build', 'deploy', 'record-sources']) {
+    assert.ok([job.needs].flat().includes(need), `the rerun job needs ${need}`);
   }
-
-  const scratch = mkdtempSync(resolve(tmpdir(), 'deploy-rerun-'));
-  try {
-    const git = (cwd, ...args) =>
-      execFileSync(
-        'git',
-        ['-c', 'init.defaultBranch=master', '-c', 'user.name=CI', '-c', 'user.email=ci@example.invalid', '-c', 'commit.gpgsign=false', ...args],
-        { cwd, encoding: 'utf8', stdio: 'pipe' },
-      ).trim();
-    const origin = resolve(scratch, 'origin');
-    mkdirSync(origin);
-    git(origin, 'init', '--quiet');
-    // GitHub serves a commit asked for by its hash, which actions/checkout relies on.
-    git(origin, 'config', 'uploadpack.allowAnySHA1InWant', 'true');
-    const commit = (files, message) => {
-      for (const [path, text] of Object.entries(files)) writeFileSync(resolve(origin, path), text);
-      git(origin, 'add', '--all');
-      git(origin, 'commit', '--quiet', '--message', message);
-      return git(origin, 'rev-parse', 'HEAD');
-    };
-    const pages = commit({ 'index.md': 'one\n', 'deployed-sources.json': '{"recorded":"1"}\n' }, 'pages');
-    const recorded = commit({ 'deployed-sources.json': '{"recorded":"2"}\n' }, 'record the sources');
-    const newerPages = commit({ 'index.md': 'two\n' }, 'newer pages');
-
-    // The re-run's commit checked out one commit deep, as actions/checkout does, with master at masterAt.
-    const rerun = (sha, masterAt) => {
-      git(origin, 'update-ref', 'refs/heads/master', masterAt);
-      const work = mkdtempSync(resolve(scratch, 'run-'));
-      git(work, 'init', '--quiet');
-      git(work, 'remote', 'add', 'origin', pathToFileURL(origin).href);
-      git(work, 'fetch', '--quiet', '--depth=1', 'origin', `+${sha}:refs/remotes/origin/master`);
-      git(work, 'checkout', '--quiet', '--force', '-B', 'master', 'refs/remotes/origin/master');
-      return spawnSync('bash', ['--noprofile', '--norc', '-eo', 'pipefail', '-c', steps[check].run], {
-        cwd: work,
-        encoding: 'utf8',
-        env: { ...process.env, GITHUB_SHA: sha },
-      });
-    };
-
-    let result = rerun(pages, recorded);
-    assert.equal(result.status, 0, `master moved by its sources record alone: ${result.stdout}${result.stderr}`);
-    result = rerun(pages, newerPages);
-    assert.equal(result.status, 1, `master holds newer pages: ${result.stdout}${result.stderr}`);
-    const error = result.stdout.split('\n').find((line) => line.startsWith('::error::'));
-    assert.match(error ?? '', /\bindex\.md\b/, 'the error names the file master changed');
-    assert.doesNotMatch(error, /deployed-sources/);
-    result = rerun(newerPages, newerPages);
-    assert.equal(result.status, 0, `the newest commit: ${result.stdout}${result.stderr}`);
-  } finally {
-    rmSync(scratch, { recursive: true, force: true });
+  // GitHub skips a job whose needs were skipped unless its condition calls a status function, and
+  // in a re-run deploy and record-sources are skipped.
+  assert.match(String(job.if), /!\s*cancelled\(\)|\balways\(\)/);
+  for (const github of [
+    context('push', MASTER, { attempt: '2' }),
+    context('schedule', MASTER, { attempt: '2' }),
+    context('workflow_dispatch', MASTER, { attempt: '3' }),
+  ]) {
+    assert.equal(runs(job.if, github), true, `the rerun job runs for a re-run of a ${github.event_name} run on master`);
   }
+  for (const github of [
+    context('push', MASTER),
+    context('schedule', MASTER),
+    context('workflow_dispatch', MASTER),
+    pullRequest(38, { attempt: '2' }),
+    context('workflow_dispatch', 'refs/heads/try-a-build', { attempt: '2' }),
+  ]) {
+    assert.equal(runs(job.if, github), false, `the rerun job skips ${github.event_name} on ${github.ref}, attempt ${github.run_attempt}`);
+  }
+  // In the deploys' or the records' group it would replace a job waiting there, and with an
+  // environment it would record a deployment.
+  assert.equal(job.concurrency, undefined);
+  assert.equal(job.environment, undefined);
+
+  const script = job.steps.map((step) => step.run).filter(Boolean).join('\n');
+  const result = spawnSync('bash', ['--noprofile', '--norc', '-eo', 'pipefail', '-c', script], { encoding: 'utf8' });
+  assert.notEqual(result.status, 0, 'the rerun job fails');
+  const error = result.stdout.split('\n').find((line) => line.startsWith('::error::'));
+  assert.match(error ?? '', /start this workflow on master/, 'the error says how to deploy master');
 });
 
 test('the links workflow cancels a superseded run on its branch or pull request', () => {
