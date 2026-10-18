@@ -204,10 +204,12 @@ function runs(condition, github) {
 const MASTER = 'refs/heads/master';
 const OLDER = 'a'.repeat(40);
 const NEWER = 'b'.repeat(40);
+const RUN = '18000000001';
+const OTHER_RUN = '18000000002';
 
-// The github context of a run: its event, ref, commit and attempt.
-function context(event_name, ref, { sha = OLDER, attempt = '1', number } = {}) {
-  return { event_name, ref, sha, run_attempt: attempt, event: number ? { pull_request: { number } } : {} };
+// The github context of a run: its event, ref, commit, attempt and run id.
+function context(event_name, ref, { sha = OLDER, attempt = '1', number, runId = RUN } = {}) {
+  return { event_name, ref, sha, run_attempt: attempt, run_id: runId, event: number ? { pull_request: { number } } : {} };
 }
 const pullRequest = (number, options = {}) =>
   context('pull_request', `refs/pull/${number}/merge`, { ...options, number });
@@ -235,20 +237,37 @@ function assertCancelsOnlySupersededRuns(group) {
 test('the deploy workflow cancels a superseded build, never a deploy part way', () => {
   const workflow = loadWorkflow('deploy.yml');
 
-  // A group for the whole workflow cancels a run's deploy and record-sources jobs too, and a run
-  // stopped between them leaves the site live and deployed-sources.json naming older sources.
+  // A group for the whole workflow would cancel a run's deploy job too, and a deploy stopped between
+  // its deploy and its record leaves the site live and deployed-sources.json naming older sources.
   assert.equal(workflow.concurrency, undefined);
   assert.ok(workflow.jobs.build.concurrency, 'the build job sets a concurrency group');
   assert.equal(workflow.jobs.build.concurrency['cancel-in-progress'], true);
   assertCancelsOnlySupersededRuns(workflow.jobs.build.concurrency.group);
   // Deploys take turns: a newer run's deploy waits for the one running, and replaces an older one
   // that is still waiting.
-  assert.deepEqual(workflow.jobs.deploy.concurrency, { group: 'pages-deploy', 'cancel-in-progress': false });
-  // Source records take turns too, in the order their deploys finished, so an older run's record
-  // cannot land after a newer run's and name sources the live site was not built from. They wait in
-  // a group of their own: in the deploys' group a waiting record and a waiting deploy would replace
-  // each other.
-  assert.deepEqual(workflow.jobs['record-sources'].concurrency, { group: 'pages-record', 'cancel-in-progress': false });
+  const { deploy } = workflow.jobs;
+  assert.equal(deploy.concurrency['cancel-in-progress'], false);
+  const deployGroup = (github) => interpolate(deploy.concurrency.group, github);
+  for (const github of [context('push', MASTER), context('schedule', MASTER), context('workflow_dispatch', MASTER)]) {
+    assert.equal(deployGroup(github), 'pages-deploy', `a ${github.event_name} run on master deploys in pages-deploy`);
+  }
+  // A run that does not deploy keys a group of its own. GitHub's docs do not say whether a job its
+  // condition skips takes a place in its group, and in pages-deploy one would replace a deploy
+  // waiting there. Group names are compared without case, as GitHub compares them.
+  for (const github of [
+    pullRequest(38),
+    context('push', MASTER, { attempt: '2' }),
+    context('workflow_dispatch', 'refs/heads/try-a-build'),
+  ]) {
+    const group = deployGroup(github);
+    assert.notEqual(group.toLowerCase(), 'pages-deploy', `${github.event_name} on ${github.ref}, attempt ${github.run_attempt}`);
+    assert.notEqual(group, deployGroup({ ...github, run_id: OTHER_RUN }), 'each run that does not deploy has a group of its own');
+  }
+  // Records follow their deploys: the deploy job writes its record while it holds the group, so the
+  // last record written names the sources of the last deploy. A record job of its own would start
+  // waiting for its group a deploy's length after its deploy finished, and GitHub does not promise
+  // that a group's jobs run in the order they started waiting.
+  assert.equal(workflow.jobs['record-sources'], undefined);
 });
 
 test('the deploy workflow deploys a first attempt on master alone', () => {
@@ -257,7 +276,6 @@ test('the deploy workflow deploys a first attempt on master alone', () => {
   const parts = {
     'the artifact upload': upload.if,
     'the deploy job': workflow.jobs.deploy.if,
-    'the record-sources job': workflow.jobs['record-sources'].if,
   };
 
   for (const [part, condition] of Object.entries(parts)) {
@@ -276,17 +294,36 @@ test('the deploy workflow deploys a first attempt on master alone', () => {
   }
 });
 
+test('the deploy job records the sources it deployed, after the deploy and in the same job', () => {
+  const { deploy } = loadWorkflow('deploy.yml').jobs;
+  const index = (match) => deploy.steps.findIndex(match);
+  const pages = index((step) => step.uses?.startsWith('actions/deploy-pages@'));
+  const checkout = index((step) => step.uses?.startsWith('actions/checkout@'));
+  const record = index((step) => step.name === 'Update deployed-sources.json');
+  assert.ok(pages >= 0 && pages < checkout && checkout < record, 'the deploy job deploys, checks out master, then records');
+  // With no condition of their own, the steps after the deploy run only when it succeeded, so a
+  // failed deploy records nothing.
+  for (const step of deploy.steps.slice(pages + 1)) {
+    assert.equal(step.if, undefined, `${step.name ?? step.uses} runs only after a successful deploy`);
+  }
+  // master's ruleset exempts deploy keys alone from its required checks. The key is a secret of the
+  // github-pages environment, whose only allowed branch is master.
+  assert.equal(deploy.steps[checkout].with?.ref, 'master');
+  assert.equal(deploy.steps[checkout].with?.['ssh-key'], '${{ secrets.DEPLOYED_SOURCES_DEPLOY_KEY }}');
+  assert.equal(deploy.environment?.name, 'github-pages');
+});
+
 test('a re-run on master fails with the way to deploy, and waits in no group', () => {
   const job = loadWorkflow('deploy.yml').jobs.rerun;
   assert.ok(job, 'deploy.yml has a rerun job');
 
-  // GitHub re-runs a job's dependent jobs with it, so a re-run of build, deploy or record-sources
-  // takes this job along.
-  for (const need of ['build', 'deploy', 'record-sources']) {
+  // GitHub re-runs a job's dependent jobs with it, so a re-run of build or deploy takes this job
+  // along.
+  for (const need of ['build', 'deploy']) {
     assert.ok([job.needs].flat().includes(need), `the rerun job needs ${need}`);
   }
   // GitHub skips a job whose needs were skipped unless its condition calls a status function, and
-  // in a re-run deploy and record-sources are skipped.
+  // in a re-run the deploy job is skipped.
   assert.match(String(job.if), /!\s*cancelled\(\)|\balways\(\)/);
   for (const github of [
     context('push', MASTER, { attempt: '2' }),
@@ -304,8 +341,8 @@ test('a re-run on master fails with the way to deploy, and waits in no group', (
   ]) {
     assert.equal(runs(job.if, github), false, `the rerun job skips ${github.event_name} on ${github.ref}, attempt ${github.run_attempt}`);
   }
-  // In the deploys' or the records' group it would replace a job waiting there, and with an
-  // environment it would record a deployment.
+  // In the deploys' group it would replace a deploy waiting there, and with an environment it
+  // would record a deployment.
   assert.equal(job.concurrency, undefined);
   assert.equal(job.environment, undefined);
 
