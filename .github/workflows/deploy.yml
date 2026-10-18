@@ -15,14 +15,17 @@ on:
 permissions:
   contents: read
 
-concurrency:
-  # Each pull request builds in its own group, so a pull request never cancels a deploy.
-  group: ${{ github.event_name == 'pull_request' && format('pages-pr-{0}', github.event.pull_request.number) || 'pages' }}
-  cancel-in-progress: true
-
 jobs:
   build:
     runs-on: ubuntu-latest
+    # A newer run on the same branch or pull request cancels this job while it builds, so only the
+    # newest commit goes on to deploy. The deploy job stays out of the group, so a newer build never
+    # stops a deploy part way, or between the deploy and its record. A re-run builds the commit its
+    # first attempt built, which can be older than the branch, so it keys a group of its own and
+    # never cancels a newer run.
+    concurrency:
+      group: pages-build-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || github.ref }}${{ github.run_attempt != '1' && format('-rerun-{0}', github.sha) || '' }}
+      cancel-in-progress: true
     outputs:
       agentos_sha: ${{ steps.sources.outputs.agentos_sha }}
       extensions_sha: ${{ steps.sources.outputs.extensions_sha }}
@@ -88,7 +91,8 @@ jobs:
         run: npm ci
 
       # The publication manifest and pull contract, link rewriting, the search manifest plugin, the
-      # home page's star badge and the counting of the landing page's cookbook figures.
+      # home page's star badge, the counting of the landing page's cookbook figures, and the
+      # concurrency groups and deploy conditions of this workflow and links.yml.
       - name: Check the publication contract
         working-directory: apps/agentos-live-docs
         run: npm run test:publication
@@ -112,15 +116,44 @@ jobs:
         run: npm run test:built
 
       - name: Upload artifact
-        if: github.event_name != 'pull_request'
+        if: github.ref == 'refs/heads/master' && github.run_attempt == '1'
         uses: actions/upload-pages-artifact@v3
         with:
           path: apps/agentos-live-docs/build
 
+  # Only a first attempt on master deploys. A pull request, or a run started by hand on another
+  # branch, builds and checks the site and stops there; so does a re-run (see the rerun job).
+  #
+  # Deploys take turns: a newer run's deploy waits for the one running, which is never cancelled
+  # part way, and replaces an older deploy still waiting. GitHub runs the jobs waiting in a group
+  # in the order they started waiting, and does not promise that order. Deploys start waiting as
+  # their builds finish, at least one build apart, because master's build group holds one build at
+  # a time: a newer build cancels the one running. So an older build deploys after a newer one only
+  # if GitHub starts its deploy more than a build's length late.
+  #
+  # After the deploy, the job records which agentos and agentos-extensions commits the live site
+  # was built from, while it still holds the group, so the last record written names the sources of
+  # the last deploy. The commit is also the repository activity that keeps the daily run enabled:
+  # GitHub disables scheduled workflows in a public repository after 60 days without any. The file
+  # is rewritten when a source commit changed, and otherwise once its date is 30 days old.
+  #
+  # The record is pushed with the repository's deploy key, not the workflow token. master's ruleset
+  # requires the build and links checks, and deploy keys are the one actor it exempts: GitHub
+  # refuses the GitHub Actions app, which issues the workflow token, as a bypass actor. The key is a
+  # secret of the github-pages environment, which only master may use, so a run for a pull request
+  # or on any other branch cannot read it. GitHub's rule that a push starts no workflow run is
+  # written for the workflow token alone, so the commit message carries [skip ci] and the push
+  # starts no second build.
   deploy:
-    if: github.event_name != 'pull_request'
+    if: github.ref == 'refs/heads/master' && github.run_attempt == '1'
     needs: build
     runs-on: ubuntu-latest
+    concurrency:
+      # A run that does not deploy keys a group of its own. GitHub's docs do not say whether a job
+      # its condition skips takes a place in its group, and in pages-deploy one would replace a
+      # deploy waiting there.
+      group: ${{ github.ref == 'refs/heads/master' && github.run_attempt == '1' && 'pages-deploy' || format('pages-deploy-skipped-{0}', github.run_id) }}
+      cancel-in-progress: false
     permissions:
       contents: read
       pages: write
@@ -133,27 +166,8 @@ jobs:
         id: deployment
         uses: actions/deploy-pages@v4
 
-  # Records which agentos and agentos-extensions commits the live site was built from. The
-  # commit is also the repository activity that keeps the daily run enabled: GitHub disables
-  # scheduled workflows in a public repository after 60 days without any. The file is rewritten
-  # when a source commit changed, and otherwise once its date is 30 days old.
-  #
-  # The job pushes with the repository's deploy key, not the workflow token. master's ruleset
-  # requires the build and links checks, and deploy keys are the one actor it exempts: GitHub
-  # refuses the GitHub Actions app, which issues the workflow token, as a bypass actor. The key is
-  # a secret of the record-sources environment, which only master may use, so a run for a pull
-  # request or on any other branch cannot read it. GitHub's rule that a push starts no workflow
-  # run is written for the workflow token alone, so the commit message carries [skip ci] and the
-  # push starts no second build.
-  record-sources:
-    if: github.event_name != 'pull_request'
-    needs: [build, deploy]
-    runs-on: ubuntu-latest
-    environment: record-sources
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@v5
+      - name: Check out master to record the sources
+        uses: actions/checkout@v5
         with:
           ref: master
           # The private half of the deploy key "record-sources (deploy workflow)". Given a key,
@@ -199,10 +213,29 @@ jobs:
           # ruleset would reject the push.
           case "$(git remote get-url origin)" in
             git@github.com:*) ;;
-            *) echo "::error::The record-sources environment has no DEPLOYED_SOURCES_DEPLOY_KEY secret, so the push to master would be rejected. See AGENTS.md, Deployment."; exit 1 ;;
+            *) echo "::error::The github-pages environment has no DEPLOYED_SOURCES_DEPLOY_KEY secret, so the push to master would be rejected. See AGENTS.md, Deployment."; exit 1 ;;
           esac
           # master can move while the site builds; replay the one commit on top and push again.
           git push origin HEAD:master || {
             git pull --rebase origin master
             git push origin HEAD:master
           }
+
+  # A re-run does not deploy. A full re-run builds the commit its first attempt built, from the
+  # sources of the moment it runs, and a re-run of failed jobs runs those jobs and the jobs that
+  # need them, so a re-run deploy job would deploy the first attempt's build. Either can be older
+  # than what another run deployed in between, and its deploy, waiting in the deploys' group, would
+  # replace a newer deploy waiting there. On master this job fails the re-run and says how to
+  # deploy. It joins no concurrency group and names no environment, so it replaces no waiting job
+  # and records no deployment. It needs the other two jobs, so a re-run of either takes it along,
+  # and !cancelled() runs it although the deploy job was skipped.
+  rerun:
+    name: re-runs do not deploy
+    needs: [build, deploy]
+    if: ${{ !cancelled() && github.ref == 'refs/heads/master' && github.run_attempt != '1' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Say how to deploy master
+        run: |
+          echo "::error::A re-run does not deploy: it would deploy the commit its first attempt built, or that attempt's build, and either can be older than a deploy made since. To deploy master, start this workflow on master: Actions, Deploy Docusaurus to GitHub Pages, Run workflow."
+          exit 1
