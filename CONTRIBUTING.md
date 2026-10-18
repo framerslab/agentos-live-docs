@@ -67,7 +67,7 @@ npm ci
 npm run build
 ```
 
-CI ([`deploy.yml`](https://github.com/framerslab/agentos-live-docs/blob/master/.github/workflows/deploy.yml)) runs one job, "build", on every pull request, on every push to `master`, daily and on a manual run. It checks out the three repositories in that layout, taking agentos and agentos-extensions at their `master`. Then, in order: `pnpm install --frozen-lockfile --ignore-scripts` in `packages/agentos` so TypeDoc can resolve types (agentos installs with pnpm from its lockfile), `npm ci` here, `npm run test:publication` here (the `node --test` suites: the manifest and pull contract, link rewriting, the search manifest plugin, the home page's star badge and the landing page's cookbook counts), `npm run build` here with an 8 GB Node heap (`NODE_OPTIONS=--max-old-space-size=8192`), and `npm run test:built` here, which reads the built landing page and examples page and fails when their cookbook counts differ. A failure in any step stops the deploy.
+CI ([`deploy.yml`](https://github.com/framerslab/agentos-live-docs/blob/master/.github/workflows/deploy.yml)) runs one job, "build", on every pull request, on every push to `master`, daily and on a manual run. It checks out the three repositories in that layout, taking agentos and agentos-extensions at their `master`. Then, in order: `pnpm install --frozen-lockfile --ignore-scripts` in `packages/agentos` so TypeDoc can resolve types (agentos installs with pnpm from its lockfile), `npm ci` here, `npm run test:publication` here (the `node --test` suites: the manifest and pull contract, link rewriting, the search manifest plugin, the home page's star badge, the landing page's cookbook counts, and the workflows' concurrency groups and deploy conditions), `npm run build` here with an 8 GB Node heap (`NODE_OPTIONS=--max-old-space-size=8192`), and `npm run test:built` here, which reads the built landing page and examples page and fails when their cookbook counts differ. A failure in any step stops the deploy.
 
 `npm run build` runs `clean:cache` and `pull-docs` first, then `docusaurus build`. The build is strict: a broken link or a broken Markdown link stops it. The build job takes 25 to 40 minutes in CI.
 
@@ -101,6 +101,8 @@ Write the subject in the imperative mood and keep each commit to one change.
 ## Deployment
 
 A push to `master`, including a merged pull request, builds the site, checks the built pages and deploys it to GitHub Pages; a failed check stops the deploy. The workflow also runs daily at 07:23 UTC, and a maintainer can start it by hand. Every run builds from the latest agentos and agentos-extensions.
+
+Only `master` deploys: a run started by hand on another branch builds and checks the site. A newer run on the same branch or pull request cancels an older one while it builds, never while it deploys or records its sources, and deploys take turns. A re-run builds the commit its first attempt built, so it cancels no newer run, and it deploys only while `master` differs from that commit in `deployed-sources.json` alone. To deploy `master` again, start the workflow on `master`.
 
 Nothing in agentos or agentos-extensions can start the workflow, so a change merged there reaches the site at the next deploy, which the daily run provides. After a deploy the workflow commits `deployed-sources.json`, which names the agentos and agentos-extensions commits the live site was built from.
 

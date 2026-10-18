@@ -62,7 +62,7 @@ CI runs (job "build" in [`.github/workflows/deploy.yml`](https://github.com/fram
 
 1. `pnpm install --frozen-lockfile --ignore-scripts` in `packages/agentos` (TypeDoc needs the types; agentos installs with pnpm 10 from its lockfile)
 2. `npm ci` in this repository
-3. `npm run test:publication` in this repository: the `node --test` suites (the publication manifest and pull contract, link rewriting, the search manifest plugin, the star badge, the landing page's cookbook counts)
+3. `npm run test:publication` in this repository: the `node --test` suites (the publication manifest and pull contract, link rewriting, the search manifest plugin, the star badge, the landing page's cookbook counts, the workflows' concurrency groups and deploy conditions)
 4. `npm run build` in this repository, with `NODE_OPTIONS=--max-old-space-size=8192` (runs `clean:cache` and `pull-docs`, then `docusaurus build`)
 5. `npm run test:built` in this repository: reads the built landing page and examples page and fails when the landing page's cookbook counts are not the examples page's. A failure here stops the deploy.
 
@@ -97,6 +97,8 @@ To run one test file: `node --test scripts/pull-docs-links.test.mjs`.
 ## Deployment
 
 A push to `master` builds the site, checks the built pages and deploys it to GitHub Pages. A pull request runs the build and the checks and does not deploy. The workflow also runs daily and on a manual start. Every run builds from the latest agentos and agentos-extensions, so a change merged there reaches the site at the next run. After a deploy the workflow commits `deployed-sources.json`, which names the two source commits the live site was built from.
+
+A newer run on the same branch or pull request cancels an older run's `build` job; nothing cancels a `deploy` or `record-sources` job, and deploys take turns. Only `master` deploys: a run started by hand on another branch builds and checks the site and stops there. A re-run builds the commit its first attempt built, which can be older than `master`. Its `build` job keys a concurrency group of its own, so it never cancels a newer run, and its `deploy` job stops before deploying when `master` differs from that commit in any file but `deployed-sources.json`. To deploy `master` again, start the workflow on `master`.
 
 Two rulesets protect `master`. One blocks deleting the branch and force-pushing to it, with no exemption. The other requires the `build` and `links` checks to pass before a commit reaches `master`, admins included, so a pull request merges only when CI is green. A pull request need not be up to date with `master` to merge: the commit `record-sources` adds after each deploy would put every open pull request behind. The ruleset exempts deploy keys and nothing else: the `record-sources` job pushes `deployed-sources.json` with the repository's deploy key, because GitHub refuses the GitHub Actions app, which issues the workflow token, as a bypass actor. The key's private half is the secret `DEPLOYED_SOURCES_DEPLOY_KEY` of the `record-sources` environment, which only `master` may use, so a run for a pull request or on another branch cannot read it. That commit carries `[skip ci]`, so it starts no second build.
 

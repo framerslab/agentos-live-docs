@@ -11,6 +11,13 @@ on:
 permissions:
   contents: read
 
+# A newer run on the same branch or pull request cancels an older one. A re-run checks the commit
+# its first attempt checked, which can be older than the branch, so it keys a group of its own and
+# never cancels a newer run.
+concurrency:
+  group: links-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || github.ref }}${{ github.run_attempt != '1' && format('-rerun-{0}', github.sha) || '' }}
+  cancel-in-progress: true
+
 jobs:
   links:
     runs-on: ubuntu-latest

@@ -15,14 +15,17 @@ on:
 permissions:
   contents: read
 
-concurrency:
-  # Each pull request builds in its own group, so a pull request never cancels a deploy.
-  group: ${{ github.event_name == 'pull_request' && format('pages-pr-{0}', github.event.pull_request.number) || 'pages' }}
-  cancel-in-progress: true
-
 jobs:
   build:
     runs-on: ubuntu-latest
+    # A newer run on the same branch or pull request cancels this job while it builds, so only the
+    # newest commit goes on to deploy. The deploy and record-sources jobs stay out of the group: a
+    # cancel between the two would leave the site live and its record unwritten. A re-run builds
+    # the commit its first attempt built, which can be older than the branch, so it keys a group of
+    # its own and never cancels a newer run.
+    concurrency:
+      group: pages-build-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || github.ref }}${{ github.run_attempt != '1' && format('-rerun-{0}', github.sha) || '' }}
+      cancel-in-progress: true
     outputs:
       agentos_sha: ${{ steps.sources.outputs.agentos_sha }}
       extensions_sha: ${{ steps.sources.outputs.extensions_sha }}
@@ -88,7 +91,8 @@ jobs:
         run: npm ci
 
       # The publication manifest and pull contract, link rewriting, the search manifest plugin, the
-      # home page's star badge and the counting of the landing page's cookbook figures.
+      # home page's star badge, the counting of the landing page's cookbook figures, and the
+      # concurrency groups and deploy conditions of this workflow and links.yml.
       - name: Check the publication contract
         working-directory: apps/agentos-live-docs
         run: npm run test:publication
@@ -112,15 +116,21 @@ jobs:
         run: npm run test:built
 
       - name: Upload artifact
-        if: github.event_name != 'pull_request'
+        if: github.ref == 'refs/heads/master'
         uses: actions/upload-pages-artifact@v3
         with:
           path: apps/agentos-live-docs/build
 
+  # Only master deploys: a pull request, or a run started by hand on another branch, builds and
+  # checks the site and stops there. Deploys take turns: a newer run's deploy waits for the one
+  # running, which is never cancelled part way.
   deploy:
-    if: github.event_name != 'pull_request'
+    if: github.ref == 'refs/heads/master'
     needs: build
     runs-on: ubuntu-latest
+    concurrency:
+      group: pages-deploy
+      cancel-in-progress: false
     permissions:
       contents: read
       pages: write
@@ -129,6 +139,25 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
+      # A re-run deploys the commit its first attempt built. Once master holds a newer change, that
+      # commit's pages are older than master's, so the job stops before deploying them. The one file
+      # a deploy itself changes on master, deployed-sources.json, is not part of the site.
+      - name: Check out the run's commit
+        if: github.run_attempt != '1'
+        uses: actions/checkout@v5
+
+      - name: Check that master holds this re-run's pages
+        if: github.run_attempt != '1'
+        run: |
+          git fetch --quiet --depth=1 origin master
+          changed=$(git diff --name-only HEAD FETCH_HEAD -- . ':(exclude)deployed-sources.json')
+          if [ -n "$changed" ]; then
+            files=$(printf '%s\n' "$changed" | paste -sd ' ' -)
+            echo "::error::This re-run builds ${GITHUB_SHA}, and master has changed since in: ${files}. Deploying it would put older pages live. To deploy master, start this workflow on master."
+            exit 1
+          fi
+          echo "master holds the pages of ${GITHUB_SHA}; deploying."
+
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
@@ -146,7 +175,7 @@ jobs:
   # run is written for the workflow token alone, so the commit message carries [skip ci] and the
   # push starts no second build.
   record-sources:
-    if: github.event_name != 'pull_request'
+    if: github.ref == 'refs/heads/master'
     needs: [build, deploy]
     runs-on: ubuntu-latest
     environment: record-sources

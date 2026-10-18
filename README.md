@@ -76,7 +76,7 @@ Git ignores everything inside the folders under `docs/` except the committed fil
 
 ## Deployment
 
-Deployed via GitHub Actions on every push to `master`, daily at 07:23 UTC and on a manual run. The workflow checks out this repository at `apps/agentos-live-docs/`, and the `agentos` and `agentos-extensions` repos at `packages/agentos/` and `packages/agentos-extensions/`, the layout the build's relative paths expect, then builds, checks the built pages (`npm run test:built`) and deploys to GitHub Pages. A failed check stops the deploy.
+Deployed via GitHub Actions on every push to `master`, daily at 07:23 UTC and on a manual run on `master`. The workflow checks out this repository at `apps/agentos-live-docs/`, and the `agentos` and `agentos-extensions` repos at `packages/agentos/` and `packages/agentos-extensions/`, the layout the build's relative paths expect, then builds, checks the built pages (`npm run test:built`) and deploys to GitHub Pages. A failed check stops the deploy.
 
 ## Contributing and support
 
