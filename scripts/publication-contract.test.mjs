@@ -1,10 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { execFileSync } from 'node:child_process';
+import { execFileSync, spawnSync } from 'node:child_process';
 import { createRequire } from 'node:module';
-import { existsSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { dirname, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const MONO_ROOT = resolve(ROOT, '..');
@@ -163,6 +164,180 @@ test('a pull leaves no untracked file under docs/', () => {
     .filter(Boolean);
 
   assert.deepEqual(untracked, []);
+});
+
+// The deploy and links workflows, read from their files. GitHub evaluates their `${{ }}`
+// expressions; evaluate() below runs the parts of that language they use (string literals, the
+// github context, ==, !=, !, &&, || and format()) with JavaScript's operators, which give the same
+// result for them: && and || return an operand in both, and each comparison here is between
+// lowercase strings, where GitHub's case-insensitive == makes no difference.
+const WORKFLOWS = resolve(MONO_ROOT, 'apps/agentos-live-docs/.github/workflows');
+const loadWorkflow = (name) => require('js-yaml').load(readFileSync(resolve(WORKFLOWS, name), 'utf8'));
+
+function format(template, ...values) {
+  return template.replace(/\{(\d+)\}/g, (_, index) => String(values[Number(index)]));
+}
+
+function evaluate(source, github) {
+  const js = source.replace(/'((?:[^']|'')*)'/g, (_, text) => JSON.stringify(text.replaceAll("''", "'")));
+  return new Function('github', 'format', `return (${js});`)(github, format);
+}
+
+// A value with expressions in it, such as `links-${{ ... }}`.
+function interpolate(text, github) {
+  return String(text).replace(/\$\{\{([\s\S]*?)\}\}/g, (_, source) => {
+    const value = evaluate(source, github);
+    return value === null || value === undefined ? '' : String(value);
+  });
+}
+
+// An `if:`, with or without `${{ }}`. A job or step without one runs.
+function runs(condition, github) {
+  if (condition === undefined) return true;
+  return Boolean(evaluate(String(condition).trim().replace(/^\$\{\{([\s\S]*)\}\}$/, '$1'), github));
+}
+
+const MASTER = 'refs/heads/master';
+const OLDER = 'a'.repeat(40);
+const NEWER = 'b'.repeat(40);
+
+// The github context of a run: its event, ref, commit and attempt.
+function context(event_name, ref, { sha = OLDER, attempt = '1', number } = {}) {
+  return { event_name, ref, sha, run_attempt: attempt, event: number ? { pull_request: { number } } : {} };
+}
+const pullRequest = (number, options = {}) =>
+  context('pull_request', `refs/pull/${number}/merge`, { ...options, number });
+
+// A group with cancel-in-progress must hold one branch's runs, or one pull request's, so a newer run
+// cancels an older one there and nowhere else. A re-run builds the commit its first attempt built,
+// which can be older than the branch, so it keys a group of its own and never cancels a newer run.
+function assertCancelsOnlySupersededRuns(group) {
+  const groupOf = (github) => interpolate(group, github);
+  const master = groupOf(context('push', MASTER));
+  assert.equal(groupOf(context('push', MASTER, { sha: NEWER })), master);
+  assert.equal(groupOf(context('schedule', MASTER, { sha: NEWER })), master);
+  assert.equal(groupOf(context('workflow_dispatch', MASTER, { sha: NEWER })), master);
+  assert.notEqual(groupOf(context('workflow_dispatch', 'refs/heads/try-a-build')), master);
+  const pr = groupOf(pullRequest(38));
+  assert.notEqual(pr, master);
+  assert.equal(groupOf(pullRequest(38, { sha: NEWER })), pr);
+  assert.notEqual(groupOf(pullRequest(39)), pr);
+  const rerun = groupOf(context('push', MASTER, { attempt: '2' }));
+  assert.notEqual(rerun, master);
+  assert.notEqual(rerun, groupOf(context('push', MASTER, { attempt: '2', sha: NEWER })));
+  assert.notEqual(groupOf(pullRequest(38, { attempt: '2' })), pr);
+}
+
+test('the deploy workflow cancels a superseded build, never a deploy part way', () => {
+  const workflow = loadWorkflow('deploy.yml');
+
+  // A group for the whole workflow cancels a run's deploy and record-sources jobs too, and a run
+  // stopped between them leaves the site live and deployed-sources.json naming older sources.
+  assert.equal(workflow.concurrency, undefined);
+  assert.ok(workflow.jobs.build.concurrency, 'the build job sets a concurrency group');
+  assert.equal(workflow.jobs.build.concurrency['cancel-in-progress'], true);
+  assertCancelsOnlySupersededRuns(workflow.jobs.build.concurrency.group);
+  // Deploys take turns: a newer run's deploy waits for the one running.
+  assert.deepEqual(workflow.jobs.deploy.concurrency, { group: 'pages-deploy', 'cancel-in-progress': false });
+  assert.notEqual(workflow.jobs['record-sources'].concurrency?.['cancel-in-progress'], true);
+});
+
+test('the deploy workflow deploys from master alone', () => {
+  const workflow = loadWorkflow('deploy.yml');
+  const upload = workflow.jobs.build.steps.find((step) => step.uses?.startsWith('actions/upload-pages-artifact@'));
+  const parts = {
+    'the artifact upload': upload.if,
+    'the deploy job': workflow.jobs.deploy.if,
+    'the record-sources job': workflow.jobs['record-sources'].if,
+  };
+
+  for (const [part, condition] of Object.entries(parts)) {
+    for (const github of [
+      context('push', MASTER),
+      context('schedule', MASTER),
+      context('workflow_dispatch', MASTER),
+      context('push', MASTER, { attempt: '2' }),
+    ]) {
+      assert.equal(runs(condition, github), true, `${part} runs for a ${github.event_name} run on master`);
+    }
+    // The github-pages environment refuses a deploy from another branch, so such a run builds and
+    // checks the site and stops there.
+    assert.equal(runs(condition, context('workflow_dispatch', 'refs/heads/try-a-build')), false, `${part}, manual run elsewhere`);
+    assert.equal(runs(condition, pullRequest(38)), false, `${part}, pull request`);
+  }
+});
+
+test("a re-run deploys only while master holds the pages of the re-run's commit", () => {
+  const { steps } = loadWorkflow('deploy.yml').jobs.deploy;
+  const checkout = steps.findIndex((step) => step.uses?.startsWith('actions/checkout@'));
+  const check = steps.findIndex((step) => step.name === "Check that master holds this re-run's pages");
+  const deploy = steps.findIndex((step) => step.uses?.startsWith('actions/deploy-pages@'));
+  assert.ok(checkout >= 0 && checkout < check && check < deploy, 'the deploy job checks out, checks, then deploys');
+  // The run's own commit: a checkout of master would compare master with itself.
+  assert.equal(steps[checkout].with?.ref, undefined);
+  for (const step of [steps[checkout], steps[check]]) {
+    assert.equal(runs(step.if, context('push', MASTER)), false, `${step.name ?? step.uses} skips a first attempt`);
+    assert.equal(runs(step.if, context('push', MASTER, { attempt: '2' })), true, `${step.name ?? step.uses} runs for a re-run`);
+  }
+
+  const scratch = mkdtempSync(resolve(tmpdir(), 'deploy-rerun-'));
+  try {
+    const git = (cwd, ...args) =>
+      execFileSync(
+        'git',
+        ['-c', 'init.defaultBranch=master', '-c', 'user.name=CI', '-c', 'user.email=ci@example.invalid', '-c', 'commit.gpgsign=false', ...args],
+        { cwd, encoding: 'utf8', stdio: 'pipe' },
+      ).trim();
+    const origin = resolve(scratch, 'origin');
+    mkdirSync(origin);
+    git(origin, 'init', '--quiet');
+    // GitHub serves a commit asked for by its hash, which actions/checkout relies on.
+    git(origin, 'config', 'uploadpack.allowAnySHA1InWant', 'true');
+    const commit = (files, message) => {
+      for (const [path, text] of Object.entries(files)) writeFileSync(resolve(origin, path), text);
+      git(origin, 'add', '--all');
+      git(origin, 'commit', '--quiet', '--message', message);
+      return git(origin, 'rev-parse', 'HEAD');
+    };
+    const pages = commit({ 'index.md': 'one\n', 'deployed-sources.json': '{"recorded":"1"}\n' }, 'pages');
+    const recorded = commit({ 'deployed-sources.json': '{"recorded":"2"}\n' }, 'record the sources');
+    const newerPages = commit({ 'index.md': 'two\n' }, 'newer pages');
+
+    // The re-run's commit checked out one commit deep, as actions/checkout does, with master at masterAt.
+    const rerun = (sha, masterAt) => {
+      git(origin, 'update-ref', 'refs/heads/master', masterAt);
+      const work = mkdtempSync(resolve(scratch, 'run-'));
+      git(work, 'init', '--quiet');
+      git(work, 'remote', 'add', 'origin', pathToFileURL(origin).href);
+      git(work, 'fetch', '--quiet', '--depth=1', 'origin', `+${sha}:refs/remotes/origin/master`);
+      git(work, 'checkout', '--quiet', '--force', '-B', 'master', 'refs/remotes/origin/master');
+      return spawnSync('bash', ['--noprofile', '--norc', '-eo', 'pipefail', '-c', steps[check].run], {
+        cwd: work,
+        encoding: 'utf8',
+        env: { ...process.env, GITHUB_SHA: sha },
+      });
+    };
+
+    let result = rerun(pages, recorded);
+    assert.equal(result.status, 0, `master moved by its sources record alone: ${result.stdout}${result.stderr}`);
+    result = rerun(pages, newerPages);
+    assert.equal(result.status, 1, `master holds newer pages: ${result.stdout}${result.stderr}`);
+    const error = result.stdout.split('\n').find((line) => line.startsWith('::error::'));
+    assert.match(error ?? '', /\bindex\.md\b/, 'the error names the file master changed');
+    assert.doesNotMatch(error, /deployed-sources/);
+    result = rerun(newerPages, newerPages);
+    assert.equal(result.status, 0, `the newest commit: ${result.stdout}${result.stderr}`);
+  } finally {
+    rmSync(scratch, { recursive: true, force: true });
+  }
+});
+
+test('the links workflow cancels a superseded run on its branch or pull request', () => {
+  const { concurrency } = loadWorkflow('links.yml');
+
+  assert.ok(concurrency, 'links.yml sets a concurrency group');
+  assert.equal(concurrency['cancel-in-progress'], true);
+  assertCancelsOnlySupersededRuns(concurrency.group);
 });
 
 test("the landing page's tests badge reads the count agentos's release publishes", () => {
