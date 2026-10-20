@@ -97,3 +97,34 @@ test('rewriteMarkdownLinks turns relative source links of any depth into reposit
     'See [`src/api/agency.ts`](https://github.com/framerslab/agentos/blob/master/src/api/agency.ts) and [`src/api/hitl.ts`](https://github.com/framerslab/agentos/blob/master/src/api/hitl.ts).',
   );
 });
+
+test('rewriteMarkdownLinks turns a link to a file elsewhere in the source repository into its GitHub page', () => {
+  // agentos-extensions RELEASING.md links its CI script this way; the published page had no such route and the build failed.
+  const input = 'Guarded by [`.github/scripts/check-workflow-pushes.mjs`](.github/scripts/check-workflow-pushes.mjs).';
+  const output = rewriteMarkdownLinks(input, {
+    ...options,
+    sourceRepo: { blobBase: 'https://github.com/framerslab/agentos-extensions/blob/master/', dir: '' },
+  });
+
+  assert.equal(
+    output,
+    'Guarded by [`.github/scripts/check-workflow-pushes.mjs`](https://github.com/framerslab/agentos-extensions/blob/master/.github/scripts/check-workflow-pushes.mjs).',
+  );
+});
+
+test('rewriteMarkdownLinks resolves repository file links against the source file folder and leaves other links alone', () => {
+  const input = 'Run [the check](../scripts/verify.mjs), read [Getting Started](./GETTING_STARTED.md), see [data](./schema.json).';
+  const withRepo = rewriteMarkdownLinks(input, {
+    ...options,
+    sourceRepo: { blobBase: 'https://github.com/framerslab/agentos/blob/master/', dir: 'docs' },
+  });
+
+  assert.equal(
+    withRepo,
+    'Run [the check](https://github.com/framerslab/agentos/blob/master/scripts/verify.mjs), read [Getting Started](/getting-started), see [data](./schema.json).',
+  );
+  assert.equal(
+    rewriteMarkdownLinks(input, options),
+    'Run [the check](../scripts/verify.mjs), read [Getting Started](/getting-started), see [data](./schema.json).',
+  );
+});
