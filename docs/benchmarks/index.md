@@ -15,14 +15,14 @@ keywords:
   - longmemeval m variant
 ---
 
-AgentOS posts 85.6% on **[LongMemEval-S](https://arxiv.org/abs/2410.10813)** at `gpt-4o` reader: 0.4 points behind Emergence.ai's published 86% SOTA (closed-source SaaS) and +1.4 points above Mastra's 84.23% at the same reader. AgentOS is the only open-source memory library on the public record above 65% on the harder M variant.
+AgentOS posts 85.6% on **[LongMemEval-S](https://arxiv.org/abs/2410.10813)** with a per-category reader router: `gpt-4o` answers temporal-reasoning and single-session-user questions, `gpt-5-mini` the other four types. With `gpt-4o` reading every question, the same retrieval scores 84.2%, level with Mastra's 84.23% at that reader. AgentOS is the only open-source memory library on the public record above 65% on the harder M variant.
 
 This page is the canonical comparison table. Every cell links to its primary source. Cross-provider configurations (e.g. Mastra's gpt-5-mini reader + gemini-2.5-flash observer) are excluded because their results cannot be reproduced from public methodology disclosures.
 
 ## TL;DR
 
-- **LongMemEval-S at full N=500, gpt-4o reader**: AgentOS at **85.6%** is 0.4 points behind Emergence.ai SOTA (86%, closed-source SaaS) and +1.4 points above Mastra OM gpt-4o (84.23%). $0.0090 per correct, 3.6-second median latency.
-- **LongMemEval-M at full N=500, gpt-4o reader**: AgentOS at **70.2%** is competitive with the strongest published M results in the LongMemEval paper ([Wu et al. ICLR 2025, Table 3](https://arxiv.org/abs/2410.10813)). The paper's three primary GPT-4o configurations: round Top-5 65.7% (we're +4.5), session Top-5 71.4% (we're 1.2 below), round Top-10 72.0% (we're 1.8 below at the harder Top-5 retrieval budget). First open-source library above 65% on M with publicly reproducible methodology. Closest published external number is AgentBrain's 71.7% from their closed-source SaaS.
+- **LongMemEval-S at full N=500, reader router**: AgentOS at **85.6%**, $0.0090 per correct, 3.6-second median latency, with `gpt-4o` and `gpt-5-mini` readers routed per question type. With `gpt-4o` reading every question it scores 84.2%, level with Mastra OM gpt-4o (84.23%).
+- **LongMemEval-M at full N=500, reader router**: AgentOS at **70.2%** is competitive with the strongest published M results in the LongMemEval paper ([Wu et al. ICLR 2025, Table 3](https://arxiv.org/abs/2410.10813)). The paper's three primary GPT-4o configurations: round Top-5 65.7% (we're +4.5), session Top-5 71.4% (we're 1.2 below), round Top-10 72.0% (we're 1.8 below at the harder Top-5 retrieval budget). First open-source library above 65% on M with publicly reproducible methodology. Closest published external number is AgentBrain's 71.7% from their closed-source SaaS.
 - **15 adjacent stress-tested configurations all regress** against the 85.6% headline. Locally Pareto-optimal in the tested parameter space.
 
 :::tip Read the writeups
@@ -36,19 +36,20 @@ The 12-axis methodology audit. Reader-model swaps that swing aggregate accuracy 
 
 ## LongMemEval-S Phase B (115K tokens, 50 sessions per haystack)
 
-Same dataset (`data/longmemeval/longmemeval_s.json`), full N=500, same `gpt-4o-2024-08-06` judge, same `gpt-4o` reader across every row.
+Same dataset (`data/longmemeval/longmemeval_s.json`), full N=500, same `gpt-4o-2024-08-06` judge. Every row uses a `gpt-4o` reader except the AgentOS reader-router row, which routes `gpt-5-mini` on four of the six question types; the AgentOS `gpt-4o` row shows the same retrieval with `gpt-4o` on every question.
 
 | System | Accuracy | $/correct | p50 latency | Source |
 |---|---:|---:|---:|---|
 | EmergenceMem Internal (closed-source SaaS) | 86.0% | not published | 5,650 ms | [emergence.ai](https://www.emergence.ai/blog/sota-on-longmemeval-with-rag) |
 | **🚀 AgentOS canonical-hybrid + reader-router (Apache-2.0)** | **85.6%** | **$0.0090** | **3,558 ms** | [85.6% Pareto-win post](https://agentos.sh/en/blog/agentos-memory-sota-longmemeval) |
 | Mastra OM gpt-4o (gemini-flash observer) | 84.23% | not published | not published | [mastra.ai](https://mastra.ai/research/observational-memory) |
+| AgentOS canonical-hybrid, `gpt-4o` on every question (Apache-2.0) | 84.2% | see LEADERBOARD.md | see LEADERBOARD.md | [LEADERBOARD.md](https://github.com/framerslab/agentos-bench/blob/master/results/LEADERBOARD.md) |
 | Supermemory gpt-4o | 81.6% | not published | not published | [supermemory.ai](https://supermemory.ai/research/) |
 | EmergenceMem Simple Fast (no-license public repo, rerun in agentos-bench) | 80.6% | $0.0586 | 3,703 ms | [vendor reproduction adapter](https://github.com/framerslab/agentos-bench/blob/master/vendors/emergence-simple-fast/) |
 | Zep self-reported | 71.2% | not published | 632 ms p95 search | [getzep.com](https://blog.getzep.com/state-of-the-art-agent-memory/) |
 | Zep independently reproduced | 63.8% | not published | not published | [arXiv:2512.13564](https://arxiv.org/abs/2512.13564) |
 
-**+1.4 points above Mastra OM gpt-4o (84.23%).** AgentOS at 85.6% is the highest published number from a permissively licensed memory framework that anyone can install, fork, and embed in commercial products without a SaaS contract. EmergenceMem Internal posts 86.0% (0.4 above us, statistically tied — their point estimate sits inside our [82.4%, 88.6%] CI), but **EmergenceMem Internal is closed-source SaaS at [emergence.ai/web-automation-api](https://www.emergence.ai/web-automation-api) — it is not a library you can install, fork, self-host, or audit**. Their public reference repo `emergence_simple_fast` ships with **no LICENSE file** (default copyright applies; publicly readable but not legally redistributable). AgentOS ships the full architecture under [Apache-2.0](https://github.com/framerslab/agentos/blob/master/LICENSE) — install, fork, redistribute, embed in commercial products without restriction or fee. AgentOS p50 latency 3,558 ms vs EmergenceMem's published median 5,650 ms (1.6× faster on the median).
+**At a matched `gpt-4o` reader, AgentOS (84.2%) is level with Mastra OM (84.23%).** Mastra OM reports 94.87% with a `gpt-5-mini` actor. EmergenceMem Internal posts 86.0%, statistically tied with the 85.6% headline (their point estimate sits inside our [82.4%, 88.6%] CI), but **EmergenceMem Internal is closed-source SaaS at [emergence.ai/web-automation-api](https://www.emergence.ai/web-automation-api) — it is not a library you can install, fork, self-host, or audit**. Their public reference repo `emergence_simple_fast` ships with **no LICENSE file** (default copyright applies; publicly readable but not legally redistributable). AgentOS ships the full architecture under [Apache-2.0](https://github.com/framerslab/agentos/blob/master/LICENSE) — install, fork, redistribute, embed in commercial products without restriction or fee. AgentOS p50 latency 3,558 ms vs EmergenceMem's published median 5,650 ms (1.6× faster on the median).
 
 **Cost at scale**: $/correct is the run's total cost divided by its correct answers. $0.0090 per correct answer at 85.6% accuracy is about $0.0077 per memory-grounded answer, or about $7.70 per 1,000 calls; a chatbot averaging 5 such calls per conversation across 1,000 conversations spends about $39.
 

@@ -26,10 +26,10 @@ On the full runtime, `AgentOS.create({ emergent: true })` gives its agents a `fo
 
 [100+ first-party extensions](https://www.npmjs.com/package/@framers/agentos-extensions) (channel adapters, tool packs, guardrail packs) and [88 curated `SKILL.md` skills](https://www.npmjs.com/package/@framers/agentos-skills) ship as separate packages, each with a registry package that loads them. Extensions load from the manifest a host passes to `AgentOS.create({ extensionManifest })`: `createCuratedManifest()` from `@framers/agentos-extensions-registry` builds one from the curated extensions that are installed, and a runtime without a manifest loads none. Skills reach an agent through `agent({ skills })` or the runtime's capability discovery sources.
 
-The benchmarks below measure this runtime against alternative memory libraries at the same `gpt-4o` answer model.
+The benchmarks below measure this runtime against alternative memory libraries; each result names its reader model.
 
-:::tip Memory benchmarks (full N=500, gpt-4o reader)
-**85.6% on LongMemEval-S** at $0.0090 per correct, 0.4 points behind [Emergence.ai](https://www.emergence.ai/blog/sota-on-longmemeval-with-rag)'s **closed-source SaaS** at 86% and +1.4 points above [Mastra](https://mastra.ai) Observational Memory (84.23%) at matched `gpt-4o` reader. AgentOS ships under [Apache-2.0](https://github.com/framerslab/agentos/blob/master/LICENSE), free to install, fork, and self-host.
+:::tip Memory benchmarks (full N=500, reader router)
+**85.6% on LongMemEval-S** at $0.0090 per correct, with a per-category reader router: `gpt-4o` answers temporal-reasoning and single-session-user questions, `gpt-5-mini` the other four types. With `gpt-4o` reading every question, the same retrieval scores 84.2%, level with [Mastra](https://mastra.ai) Observational Memory (84.23%) at that reader. AgentOS ships under [Apache-2.0](https://github.com/framerslab/agentos/blob/master/LICENSE), free to install, fork, and self-host.
 
 **70.2% on LongMemEval-M** at $0.0078 per correct on the 1.5M-token / 500-session haystack — the only open-source library on the public record above 65% on M with publicly reproducible methodology. Competitive with the strongest published M results in the LongMemEval paper ([Wu et al., ICLR 2025](https://arxiv.org/abs/2410.10813): round Top-5 65.7%, session Top-5 71.4%, round Top-10 72.0%).
 
