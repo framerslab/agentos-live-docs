@@ -43,7 +43,7 @@ Same dataset (`data/longmemeval/longmemeval_s.json`), full N=500, same `gpt-4o-2
 | EmergenceMem Internal (closed-source SaaS) | 86.0% | not published | 5,650 ms | [emergence.ai](https://www.emergence.ai/blog/sota-on-longmemeval-with-rag) |
 | **🚀 AgentOS canonical-hybrid + reader-router (Apache-2.0)** | **85.6%** | **$0.0090** | **3,558 ms** | [85.6% Pareto-win post](https://agentos.sh/en/blog/agentos-memory-sota-longmemeval) |
 | Mastra OM gpt-4o (gemini-flash observer) | 84.23% | not published | not published | [mastra.ai](https://mastra.ai/research/observational-memory) |
-| AgentOS canonical-hybrid, `gpt-4o` on every question (Apache-2.0) | 84.2% | see LEADERBOARD.md | see LEADERBOARD.md | [LEADERBOARD.md](https://github.com/framerslab/agentos-bench/blob/master/results/LEADERBOARD.md) |
+| AgentOS canonical-hybrid, `gpt-4o` on every question (Apache-2.0) | 84.2% | not published | not published | [LEADERBOARD.md](https://github.com/framerslab/agentos-bench/blob/master/results/LEADERBOARD.md), footnote `canonical-reader-router-pb` (run 18-41) |
 | Supermemory gpt-4o | 81.6% | not published | not published | [supermemory.ai](https://supermemory.ai/research/) |
 | EmergenceMem Simple Fast (no-license public repo, rerun in agentos-bench) | 80.6% | $0.0586 | 3,703 ms | [vendor reproduction adapter](https://github.com/framerslab/agentos-bench/blob/master/vendors/emergence-simple-fast/) |
 | Zep self-reported | 71.2% | not published | 632 ms p95 search | [getzep.com](https://blog.getzep.com/state-of-the-art-agent-memory/) |
