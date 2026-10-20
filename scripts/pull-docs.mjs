@@ -9,7 +9,7 @@
  */
 
 import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync, rmSync } from 'node:fs';
-import { resolve, dirname } from 'node:path';
+import { resolve, dirname, posix } from 'node:path';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { rewriteMarkdownLinks } from './pull-docs-links.mjs';
@@ -67,6 +67,22 @@ const exactLinkRewrites = {
   '../../src/core/tools/ITool.ts': '/api/interfaces/ITool',
   '../../src/extensions/ExtensionManager.ts': '/api/classes/ExtensionManager',
 };
+
+/** The public repository each source tree is published from, for links to files outside the docs. */
+const SOURCE_REPOS = [
+  ['packages/agentos-extensions/', 'https://github.com/framerslab/agentos-extensions/blob/master/'],
+  ['packages/agentos/', 'https://github.com/framerslab/agentos/blob/master/'],
+];
+
+function sourceRepoFor(sourcePath) {
+  for (const [prefix, blobBase] of SOURCE_REPOS) {
+    if (String(sourcePath || '').startsWith(prefix)) {
+      const dir = posix.dirname(sourcePath.slice(prefix.length));
+      return { blobBase, dir: dir === '.' ? '' : dir };
+    }
+  }
+  return null;
+}
 
 // ── Helpers ──────────────────────────────────────────────────────────
 
@@ -126,10 +142,10 @@ function stripBadgeHtml(content) {
     .replace(/\[!\[GitHub\]\(https:\/\/img\.shields\.io[^\]]*\)\]\([^)]*\)/g, '');
 }
 
-function processMarkdown(content, title, position) {
+function processMarkdown(content, title, position, sourceRepo = null) {
   let result = content;
   result = stripBadgeHtml(result);
-  result = rewriteMarkdownLinks(result, { linkRewrites, exactLinkRewrites, curatedLinkRewrites });
+  result = rewriteMarkdownLinks(result, { linkRewrites, exactLinkRewrites, curatedLinkRewrites, sourceRepo });
   result = injectFrontmatter(result, title, position);
   return result;
 }
@@ -245,7 +261,7 @@ This extension has no README to publish. Its source is in [agentos-extensions](h
     });
   }
 
-  syncManagedFile(destPath, processMarkdown(content, title, position));
+  syncManagedFile(destPath, processMarkdown(content, title, position, sourceRepoFor(sourcePath)));
   copied++;
 }
 
