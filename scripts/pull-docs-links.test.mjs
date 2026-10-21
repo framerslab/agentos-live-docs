@@ -128,3 +128,25 @@ test('rewriteMarkdownLinks resolves repository file links against the source fil
     'Run [the check](../scripts/verify.mjs), read [Getting Started](/getting-started), see [data](./schema.json).',
   );
 });
+
+test('rewriteMarkdownLinks keeps a query string on a rewritten repository file link', () => {
+  const input = 'See [raw](../scripts/verify.mjs?raw=1#L3).';
+  const output = rewriteMarkdownLinks(input, {
+    ...options,
+    sourceRepo: { blobBase: 'https://github.com/framerslab/agentos/blob/master/', dir: 'docs' },
+  });
+
+  assert.equal(output, 'See [raw](https://github.com/framerslab/agentos/blob/master/scripts/verify.mjs?raw=1#L3).');
+});
+
+test('rewriteMarkdownLinks accepts names that begin with two dots and refuses paths that leave the repository', () => {
+  const sourceRepo = { blobBase: 'https://github.com/framerslab/agentos-extensions/blob/master/', dir: '' };
+  assert.equal(
+    rewriteMarkdownLinks('See [odd](..foo/bar.mjs).', { ...options, sourceRepo }),
+    'See [odd](https://github.com/framerslab/agentos-extensions/blob/master/..foo/bar.mjs).',
+  );
+  assert.equal(
+    rewriteMarkdownLinks('See [outside](../../outside.mjs).', { ...options, sourceRepo: { ...sourceRepo, dir: 'docs' } }),
+    'See [outside](../../outside.mjs).',
+  );
+});

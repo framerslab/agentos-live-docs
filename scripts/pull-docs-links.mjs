@@ -59,12 +59,12 @@ function toSourceRepoBlob(hrefPath, sourceRepo) {
   const path = String(hrefPath || '').trim();
   if (!path || path.startsWith('/')) return null;
 
-  const clean = path.replace(/^\.\//, '');
-  if (!clean.startsWith('.github/') && !REPO_FILE_PATTERN.test(clean)) return null;
+  const [filePath, query] = path.replace(/^\.\//, '').split('?');
+  if (!filePath.startsWith('.github/') && !REPO_FILE_PATTERN.test(filePath)) return null;
 
-  const inRepo = posix.normalize(posix.join(sourceRepo.dir || '', clean));
-  if (inRepo.startsWith('..')) return null;
-  return `${sourceRepo.blobBase}${inRepo}`;
+  const inRepo = posix.normalize(posix.join(sourceRepo.dir || '', filePath));
+  if (inRepo === '..' || inRepo.startsWith('../')) return null;
+  return `${sourceRepo.blobBase}${inRepo}${query === undefined ? '' : `?${query}`}`;
 }
 
 function stripLegacyDocsPrefix(hrefPath) {
