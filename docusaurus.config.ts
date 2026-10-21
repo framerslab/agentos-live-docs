@@ -503,9 +503,9 @@ const config = (githubStarsBadge: { src: string; alt: string }): Config => ({
   themeConfig: {
     image: 'img/og-image-v2.png',
     announcementBar: {
-      id: 'longmemeval-sm-2026-04-30',
+      id: 'longmemeval-reader-router-2026-10-20',
       content:
-        'New benchmarks: 85.6% on LongMemEval-S (+1.4 above <a href="https://mastra.ai" target="_blank" rel="noopener noreferrer">Mastra</a> at gpt-4o) and 70.2% on LongMemEval-M. <a href="https://agentos.sh/en/blog/agentos-memory-sota-longmemeval">Read the post →</a>',
+        'New benchmarks: 85.6% on LongMemEval-S and 70.2% on LongMemEval-M, with gpt-4o and gpt-5-mini readers routed per question type. <a href="https://agentos.sh/en/blog/agentos-memory-sota-longmemeval">Read the post →</a>',
       backgroundColor: 'var(--ifm-color-primary-darkest)',
       textColor: 'var(--ifm-color-white)',
       isCloseable: true,
