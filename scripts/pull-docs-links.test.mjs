@@ -150,3 +150,12 @@ test('rewriteMarkdownLinks accepts names that begin with two dots and refuses pa
     'See [outside](../../outside.mjs).',
   );
 });
+
+test('rewriteMarkdownLinks decides on the resolved path, so a .github file reached through ../ is rewritten', () => {
+  const output = rewriteMarkdownLinks('See [owners](../.github/CODEOWNERS).', {
+    ...options,
+    sourceRepo: { blobBase: 'https://github.com/framerslab/agentos/blob/master/', dir: 'docs' },
+  });
+
+  assert.equal(output, 'See [owners](https://github.com/framerslab/agentos/blob/master/.github/CODEOWNERS).');
+});

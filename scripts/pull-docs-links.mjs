@@ -60,10 +60,11 @@ function toSourceRepoBlob(hrefPath, sourceRepo) {
   if (!path || path.startsWith('/')) return null;
 
   const [filePath, query] = path.replace(/^\.\//, '').split('?');
-  if (!filePath.startsWith('.github/') && !REPO_FILE_PATTERN.test(filePath)) return null;
-
   const inRepo = posix.normalize(posix.join(sourceRepo.dir || '', filePath));
   if (inRepo === '..' || inRepo.startsWith('../')) return null;
+
+  const inGithubDir = inRepo.startsWith('.github/') || inRepo.includes('/.github/');
+  if (!inGithubDir && !REPO_FILE_PATTERN.test(inRepo)) return null;
   return `${sourceRepo.blobBase}${inRepo}${query === undefined ? '' : `?${query}`}`;
 }
 
