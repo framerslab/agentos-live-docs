@@ -1,4 +1,4 @@
-import { basename } from 'node:path';
+import { basename, posix } from 'node:path';
 
 const AGENTOS_BLOB_BASE = 'https://github.com/framerslab/agentos/blob/master/';
 const MONOREPO_BLOB_BASE = 'https://github.com/manicinc/voice-chat-assistant/blob/master/';
@@ -49,6 +49,25 @@ function toMonorepoSourceBlob(hrefPath) {
   return null;
 }
 
+// Source and config files a guide can link to inside its own repository. A relative link to one of them resolves
+// on GitHub but not on this site, so it is rewritten to the file's GitHub page. JSON and images are left alone:
+// the site can serve those from static/.
+const REPO_FILE_PATTERN = /\.(?:mjs|cjs|js|jsx|ts|tsx|sh|py|ya?ml|toml)$/i;
+
+function toSourceRepoBlob(hrefPath, sourceRepo) {
+  if (!sourceRepo?.blobBase) return null;
+  const path = String(hrefPath || '').trim();
+  if (!path || path.startsWith('/')) return null;
+
+  const [filePath, query] = path.replace(/^\.\//, '').split('?');
+  const inRepo = posix.normalize(posix.join(sourceRepo.dir || '', filePath));
+  if (inRepo === '..' || inRepo.startsWith('../')) return null;
+
+  const inGithubDir = inRepo.startsWith('.github/') || inRepo.includes('/.github/');
+  if (!inGithubDir && !REPO_FILE_PATTERN.test(inRepo)) return null;
+  return `${sourceRepo.blobBase}${inRepo}${query === undefined ? '' : `?${query}`}`;
+}
+
 function stripLegacyDocsPrefix(hrefPath) {
   const path = String(hrefPath || '').trim();
   if (path === '/docs') return '/';
@@ -84,6 +103,7 @@ export function rewriteMarkdownLinks(content, {
   linkRewrites = {},
   exactLinkRewrites = {},
   curatedLinkRewrites = {},
+  sourceRepo = null,
 } = {}) {
   const normalizedDocRewrites = Object.fromEntries(
     Object.entries(linkRewrites).map(([from, to]) => [normalizeDocKey(from), to]),
@@ -124,6 +144,9 @@ export function rewriteMarkdownLinks(content, {
 
     const rewrittenDoc = normalizedDocRewrites[normalizeDocKey(hrefPath)];
     if (rewrittenDoc) return `[${text}](${rewrittenDoc}${anchor})`;
+
+    const rewrittenRepoFile = toSourceRepoBlob(hrefPath, sourceRepo);
+    if (rewrittenRepoFile) return `[${text}](${rewrittenRepoFile}${anchor})`;
 
     return match;
   });
