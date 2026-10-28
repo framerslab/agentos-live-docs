@@ -1434,6 +1434,17 @@ article img {
   }
 }
 
+/* Hide the GMIs menu below 1400px (above the 996px mobile breakpoint). The
+   row has no room for it there: the brand box shrinks and the logo runs
+   under the first items. The Guides menu links both GMI pages at every
+   width. On a dropdown the class lands on its link, so the rule hides the
+   item that holds the link. */
+@media (max-width: 1399px) and (min-width: 997px) {
+  .navbar__item.dropdown:has(> .navbar-collapse-lg) {
+    display: none !important;
+  }
+}
+
 /* -- Mermaid brand variables (paired with src/mermaid-theme.js) ----------- */
 :root {
   --mer-bg:               #ffffff;

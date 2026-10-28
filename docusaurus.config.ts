@@ -547,6 +547,8 @@ const config = (githubStarsBadge: { src: string; alt: string }): Config => ({
               to: '/architecture/system-architecture',
               className: 'dropdown-separator',
             },
+            { label: 'GMIs', to: '/architecture/gmi' },
+            { label: 'GMI vs agent: the study', to: '/benchmarks/gmi-vs-agent' },
             { label: 'System Architecture', to: '/architecture/system-architecture' },
             { label: 'Tool Calling', to: '/architecture/tool-calling-and-loading' },
             { label: 'Capability Discovery', to: '/features/capability-discovery' },
@@ -556,6 +558,17 @@ const config = (githubStarsBadge: { src: string; alt: string }): Config => ({
               className: 'dropdown-separator',
             },
             { label: 'All Guides & Docs', type: 'docSidebar', sidebarId: 'guideSidebar' },
+          ],
+        },
+        {
+          type: 'dropdown',
+          label: 'GMIs',
+          position: 'left',
+          to: '/architecture/gmi',
+          className: 'navbar-collapse-lg',
+          items: [
+            { label: 'What a GMI is', to: '/architecture/gmi' },
+            { label: 'GMI vs agent: the study', to: '/benchmarks/gmi-vs-agent' },
           ],
         },
         ...(!guidesOnly
