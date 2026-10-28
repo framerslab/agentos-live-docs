@@ -548,6 +548,7 @@ const config = (githubStarsBadge: { src: string; alt: string }): Config => ({
               className: 'dropdown-separator',
             },
             { label: 'GMIs', to: '/architecture/gmi' },
+            { label: 'GMI vs agent: the study', to: '/benchmarks/gmi-vs-agent' },
             { label: 'System Architecture', to: '/architecture/system-architecture' },
             { label: 'Tool Calling', to: '/architecture/tool-calling-and-loading' },
             { label: 'Capability Discovery', to: '/features/capability-discovery' },
@@ -564,6 +565,7 @@ const config = (githubStarsBadge: { src: string; alt: string }): Config => ({
           label: 'GMIs',
           position: 'left',
           to: '/architecture/gmi',
+          className: 'navbar-collapse-lg',
           items: [
             { label: 'What a GMI is', to: '/architecture/gmi' },
             { label: 'GMI vs agent: the study', to: '/benchmarks/gmi-vs-agent' },
