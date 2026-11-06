@@ -15,20 +15,20 @@ keywords:
   - longmemeval m variant
 ---
 
-AgentOS posts 85.6% on **[LongMemEval-S](https://arxiv.org/abs/2410.10813)** with a per-category reader router: `gpt-4o` answers temporal-reasoning and single-session-user questions, `gpt-5-mini` the other four types. With `gpt-4o` reading every question, the same retrieval scores 84.2%, level with Mastra's 84.23% at that reader. AgentOS is the only open-source memory library on the public record above 65% on the harder M variant.
+AgentOS posts 85.6% on **[LongMemEval-S](https://arxiv.org/abs/2410.10813)** with a per-category reader router: `gpt-4o` answers temporal-reasoning and single-session-user questions, `gpt-5-mini` the other four types. The router was calibrated on the same 500 questions the 85.6% is scored on, with no hold-out set. With `gpt-4o` reading every question, the same retrieval scores 84.2%, level with Mastra's 84.23% at that reader. AgentOS is the only open-source memory library on the public record above 65% on the harder M variant.
 
 This page is the canonical comparison table. Every cell links to its primary source. Cross-provider configurations (e.g. Mastra's gpt-5-mini reader + gemini-2.5-flash observer) are excluded because their results cannot be reproduced from public methodology disclosures.
 
 ## TL;DR
 
-- **LongMemEval-S at full N=500, reader router**: AgentOS at **85.6%**, $0.0090 per correct, 3.6-second median latency, with `gpt-4o` and `gpt-5-mini` readers routed per question type. With `gpt-4o` reading every question it scores 84.2%, level with Mastra OM gpt-4o (84.23%).
+- **LongMemEval-S at full N=500, reader router**: AgentOS at **85.6%**, $0.0090 per correct (LLM reader and judge tokens only), 3.6-second median latency, with `gpt-4o` and `gpt-5-mini` readers routed per question type; the routing table was calibrated on the same 500 questions, with no hold-out set. With `gpt-4o` reading every question it scores 84.2%, level with Mastra OM gpt-4o (84.23%).
 - **LongMemEval-M at full N=500, reader router**: AgentOS at **70.2%** is competitive with the strongest published M results in the LongMemEval paper ([Wu et al. ICLR 2025, Table 3](https://arxiv.org/abs/2410.10813)). The paper's three primary GPT-4o configurations: round Top-5 65.7% (we're +4.5), session Top-5 71.4% (we're 1.2 below), round Top-10 72.0% (we're 1.8 below at the harder Top-5 retrieval budget). First open-source library above 65% on M with publicly reproducible methodology. Closest published external number is AgentBrain's 71.7% from their closed-source SaaS.
-- **15 adjacent stress-tested configurations all regress** against the 85.6% headline. Locally Pareto-optimal in the tested parameter space.
+- **12 single-variable variants of the 85.6% configuration all regress** against it, per the agentos-bench leaderboard as of 6 November 2026. Locally Pareto-optimal in the tested parameter space.
 
 :::tip Read the writeups
 
 **[How AgentOS hit 85.6% on LongMemEval-S and 70.2% on LongMemEval-M →](https://agentos.sh/en/blog/agentos-memory-sota-longmemeval)**
-Per-category cost-accuracy breakdown, the canonical-hybrid retrieval stack, and the per-category reader router that earned the +9 pp lift over the prior CharHash baseline. Includes 8 documented negative findings (Stage L Anthropic Contextual Retrieval, Stage I Mem0-v3-style entity-linking, hierarchical retrieval, etc.) that disqualified each adjacent design.
+Per-category cost-accuracy breakdown, the canonical-hybrid retrieval stack, and the per-category reader router that earned the +9 pp lift over the prior CharHash baseline. Includes the 12 single-variable variants that regressed against the 85.6% configuration and the four one-knob probes run on the 70.2% M configuration.
 
 **[Why LongMemEval and LOCOMO numbers don't compare across vendors →](https://agentos.sh/en/blog/memory-benchmark-transparency-audit)**
 The 12-axis methodology audit. Reader-model swaps that swing aggregate accuracy 10+ pp without changing the architecture, judge-FPR probes (LOCOMO's default `gpt-4o-mini` accepts 62.81% of intentionally wrong answers), the 6.4% LOCOMO answer-key error rate, and the Mem0-vs-Zep comparison gaming case study.
@@ -45,13 +45,13 @@ Same dataset (`data/longmemeval/longmemeval_s.json`), full N=500, same `gpt-4o-2
 | Mastra OM gpt-4o (gemini-flash observer) | 84.23% | not published | not published | [mastra.ai](https://mastra.ai/research/observational-memory) |
 | AgentOS canonical-hybrid, `gpt-4o` on every question (Apache-2.0) | 84.2% | not published | not published | [LEADERBOARD.md](https://github.com/framerslab/agentos-bench/blob/master/results/LEADERBOARD.md), footnote `canonical-reader-router-pb` (run 18-41) |
 | Supermemory gpt-4o | 81.6% | not published | not published | [supermemory.ai](https://supermemory.ai/research/) |
-| EmergenceMem Simple Fast (no-license public repo, rerun in agentos-bench) | 80.6% | $0.0586 | 3,703 ms | [vendor reproduction adapter](https://github.com/framerslab/agentos-bench/blob/master/vendors/emergence-simple-fast/) |
+| EmergenceMem Simple Fast (no-license public repo, rerun in agentos-bench) | 80.6% | $0.0581 | 3,703 ms | [vendor reproduction adapter](https://github.com/framerslab/agentos-bench/blob/master/vendors/emergence-simple-fast/) |
 | Zep self-reported | 71.2% | not published | 632 ms p95 search | [getzep.com](https://blog.getzep.com/state-of-the-art-agent-memory/) |
 | Zep independently reproduced | 63.8% | not published | not published | [arXiv:2512.13564](https://arxiv.org/abs/2512.13564) |
 
 **At a matched `gpt-4o` reader, AgentOS (84.2%) is level with Mastra OM (84.23%).** Mastra OM reports 94.87% with a `gpt-5-mini` actor. EmergenceMem Internal posts 86.0%, statistically tied with the 85.6% headline (their point estimate sits inside our [82.4%, 88.6%] CI), but **EmergenceMem Internal is closed-source SaaS at [emergence.ai/web-automation-api](https://www.emergence.ai/web-automation-api) — it is not a library you can install, fork, self-host, or audit**. Their public reference repo `emergence_simple_fast` ships with **no LICENSE file** (default copyright applies; publicly readable but not legally redistributable). AgentOS ships the full architecture under [Apache-2.0](https://github.com/framerslab/agentos/blob/master/LICENSE) — install, fork, redistribute, embed in commercial products without restriction or fee. AgentOS p50 latency 3,558 ms vs EmergenceMem's published median 5,650 ms (1.6× faster on the median).
 
-**Cost at scale**: $/correct is the run's total cost divided by its correct answers. $0.0090 per correct answer at 85.6% accuracy is about $0.0077 per memory-grounded answer, or about $7.70 per 1,000 calls; a chatbot averaging 5 such calls per conversation across 1,000 conversations spends about $39.
+**Cost at scale**: $/correct is the run's total cost divided by its correct answers, and the total counts LLM reader and judge tokens only; Cohere rerank fees and embedding API cost are not in it. $0.0090 per correct answer is about $9 per 1,000 correct answers. Per question asked, the run spent $3.84 on 500 questions, about $7.67 per 1,000 questions; a chatbot averaging 5 such calls per conversation across 1,000 conversations spends about $38.
 
 ### Why other Mastra and managed-platform numbers are not in this table
 
