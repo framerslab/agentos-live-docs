@@ -503,9 +503,9 @@ const config = (githubStarsBadge: { src: string; alt: string }): Config => ({
   themeConfig: {
     image: 'img/og-image-v2.png',
     announcementBar: {
-      id: 'longmemeval-reader-router-2026-10-20',
+      id: 'longmemeval-rerun-2026-11-09',
       content:
-        'New benchmarks: 85.6% on LongMemEval-S and 70.2% on LongMemEval-M, with gpt-4o and gpt-5-mini readers routed per question type. <a href="https://agentos.sh/en/blog/agentos-memory-sota-longmemeval">Read the post →</a>',
+        'The AgentOS LongMemEval results are being re-run without a remote reranker. <a href="/benchmarks">See the benchmarks page →</a>',
       backgroundColor: 'var(--ifm-color-primary-darkest)',
       textColor: 'var(--ifm-color-white)',
       isCloseable: true,
