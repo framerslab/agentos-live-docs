@@ -2,12 +2,11 @@
 title: "Memory Benchmarks"
 sidebar_position: 1
 displayed_sidebar: guideSidebar
-description: AgentOS performance on LongMemEval-S, LongMemEval-M, and LOCOMO. Cross-vendor comparison vs Mem0, Mastra, Hindsight, EmergenceMem, Supermemory, Zep, AgentBrain. Confidence intervals, judge-FPR probes, per-case run JSONs.
+description: Memory library results on LongMemEval-S, LongMemEval-M and LOCOMO, each with its source, from Mem0, Mastra, Hindsight, EmergenceMem, Supermemory, Zep and AgentBrain. AgentOS LOCOMO results and judge-FPR probes; its LongMemEval results are being re-run without a remote reranker.
 keywords:
   - longmemeval benchmark
   - locomo benchmark
   - ai memory benchmark
-  - agentos sota
   - memory library comparison
   - mem0 vs agentos
   - mastra vs agentos
