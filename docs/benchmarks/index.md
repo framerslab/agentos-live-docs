@@ -41,7 +41,6 @@ Same dataset (`data/longmemeval/longmemeval_s.json`), full N=500, same `gpt-4o-2
 | Supermemory gpt-4o | 81.6% | not published | not published | [supermemory.ai](https://supermemory.ai/research/) |
 | EmergenceMem Simple Fast (no-license public repo, rerun in agentos-bench) | 80.6% | $0.0581 reader only; $0.0587 with judge | 3,703 ms | [vendor reproduction adapter](https://github.com/framerslab/agentos-bench/blob/master/vendors/emergence-simple-fast/), run `2026-04-28T21-48-40` |
 | Zep self-reported | 71.2% | not published | 632 ms p95 search | [getzep.com](https://blog.getzep.com/state-of-the-art-agent-memory/) |
-| Zep independently reproduced | 63.8% | not published | not published | [arXiv:2512.13564](https://arxiv.org/abs/2512.13564) |
 
 Mastra OM reports 94.87% with a `gpt-5-mini` actor. EmergenceMem Internal posts 86.0%, but **EmergenceMem Internal is closed-source SaaS at [emergence.ai/web-automation-api](https://www.emergence.ai/web-automation-api) — it is not a library you can install, fork, self-host, or audit**. Their public reference repo `emergence_simple_fast` ships with **no LICENSE file** (default copyright applies; publicly readable but not legally redistributable). AgentOS ships the full architecture under [Apache-2.0](https://github.com/framerslab/agentos/blob/master/LICENSE) — install, fork, redistribute, embed in commercial products without restriction or fee.
 
@@ -65,7 +64,7 @@ The harder variant. An M haystack runs to about 1.5M tokens, far past GPT-4o's 1
 | LongMemEval paper, strongest GPT-4o (round, Top-10) | 72.0% | open repo | [Wu et al. ICLR 2025, Table 3](https://arxiv.org/abs/2410.10813) |
 | LongMemEval paper, GPT-4o session Top-5 | 71.4% | open repo | [Wu et al. ICLR 2025, Table 3](https://arxiv.org/abs/2410.10813) |
 | LongMemEval paper, GPT-4o round Top-5 | 65.7% | open repo | [Wu et al. ICLR 2025, Table 3](https://arxiv.org/abs/2410.10813) |
-| Mem0 | not stated | Apache 2.0 | [docs.mem0.ai](https://docs.mem0.ai/core-concepts/memory-evaluation): 94.4% overall, LongMemEval variant and reader not named |
+| Mem0 | variant not named | Apache 2.0 for the open-source SDK; the 94.4% is from the managed platform | [docs.mem0.ai](https://docs.mem0.ai/core-concepts/memory-evaluation): 94.4% overall, LongMemEval variant and reader not named |
 | Mastra OM | not published | Apache 2.0 | reports S only |
 | Hindsight | not published | open repo | reports S only |
 | Zep | not published | Apache 2.0 | "due to gpt-4o's 128K context window we chose S over M" |
@@ -127,7 +126,7 @@ pnpm install && pnpm build
 node dist/cli.js setup --benchmark longmemeval-s
 ```
 
-Each run writes a per-case run JSON under `results/runs/`. `--seed 42` fixes the bootstrap resampling behind the confidence intervals; without `--seed` the resampling draws from `Math.random`, so the intervals differ from run to run. The full bench leaderboard is at [`results/LEADERBOARD.md`](https://github.com/framerslab/agentos-bench/blob/master/results/LEADERBOARD.md) in agentos-bench.
+Each run writes a per-case run JSON under `results/runs/`. `--seed 42` fixes the bootstrap resampling behind the confidence intervals; without `--seed` the resampling draws from `Math.random`, so the intervals differ from run to run. The bench leaderboard at [`results/LEADERBOARD.md`](https://github.com/framerslab/agentos-bench/blob/master/results/LEADERBOARD.md) in agentos-bench records earlier runs, among them the runs that used a remote reranker; its AgentOS LongMemEval figures are not the current results.
 
 ## Related blog posts
 
