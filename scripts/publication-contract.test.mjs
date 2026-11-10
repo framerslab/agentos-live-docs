@@ -419,7 +419,7 @@ test('publication verification scripts are wired into the docs packages', () => 
 
   assert.equal(
     liveDocsPackage.scripts['test:publication'],
-    'node --test scripts/publication-contract.test.mjs scripts/pull-docs-links.test.mjs plugins/search-manifest.test.js plugins/github-stars.test.js plugins/landing-counts.test.js',
+    'node --test scripts/publication-contract.test.mjs scripts/pull-docs-links.test.mjs plugins/search-manifest.test.js plugins/github-stars.test.js plugins/landing-counts.test.js scripts/diagrams.test.mjs',
   );
   assert.equal(
     liveDocsPackage.scripts['verify:publication'],

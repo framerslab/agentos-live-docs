@@ -62,7 +62,7 @@ CI runs (job "build" in [`.github/workflows/deploy.yml`](https://github.com/fram
 
 1. `pnpm install --frozen-lockfile --ignore-scripts` in `packages/agentos` (TypeDoc needs the types; agentos installs with pnpm 10 from its lockfile)
 2. `npm ci` in this repository
-3. `npm run test:publication` in this repository: the `node --test` suites (the publication manifest and pull contract, link rewriting, the search manifest plugin, the star badge, the landing page's cookbook counts, the workflows' concurrency groups and deploy conditions)
+3. `npm run test:publication` in this repository: the `node --test` suites (the publication manifest and pull contract, link rewriting, the search manifest plugin, the star badge, the landing page's cookbook counts, the workflows' concurrency groups and deploy conditions, the soul-files diagram's labels)
 4. `npm run build` in this repository, with `NODE_OPTIONS=--max-old-space-size=8192` (runs `clean:cache` and `pull-docs`, then `docusaurus build`)
 5. `npm run test:built` in this repository: reads the built landing page and examples page and fails when the landing page's cookbook counts are not the examples page's. A failure here stops the deploy.
 
