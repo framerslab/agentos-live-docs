@@ -4,20 +4,30 @@ import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-// Checks the words of the soul-files diagram against what agentos's docs/SOUL_FILES.md says the
-// loader and the agent do with each file of a soul workspace. The page shows the diagram, so a
-// label the page contradicts misleads the reader of the page.
+// Checks the words of the soul-files diagram against fixed statements taken from agentos's
+// docs/SOUL_FILES.md about what the loader and the agent do with each file of a soul workspace.
+// The test holds those statements itself and does not read the docs, so a change to that page
+// that changes what the diagram should say means changing the assertions here as well. The page
+// shows the diagram, so a label the page contradicts misleads the reader of the page.
 
 const DIAGRAMS = resolve(dirname(fileURLToPath(import.meta.url)), '../static/img/diagrams');
 const SOUL = ['soul-files-anatomy.svg', 'soul-files-anatomy-dark.svg'];
 
-/** The words a diagram shows: its title, its description and every text element, in order. */
-function words(file) {
-  const svg = readFileSync(resolve(DIAGRAMS, file), 'utf8');
+/** The words an SVG shows: its title, its description and every text element, in order. */
+function wordsOf(svg) {
   return [...svg.matchAll(/<(title|desc|text)\b[^>]*>([\s\S]*?)<\/\1>/g)].map(([, , inner]) =>
     inner.replace(/\s+/g, ' ').trim(),
   );
 }
+
+/** The words a diagram file shows. */
+function words(file) {
+  return wordsOf(readFileSync(resolve(DIAGRAMS, file), 'utf8'));
+}
+
+test('the word reader keeps an empty self-closing text element apart from the next label', () => {
+  assert.deepEqual(wordsOf('<svg><text x="1"/><text x="2">memory/</text></svg>'), ['memory/']);
+});
 
 test('the soul-files diagram says the same in both themes', () => {
   assert.deepEqual(words(SOUL[1]), words(SOUL[0]));
@@ -27,7 +37,8 @@ for (const file of SOUL) {
   const text = () => words(file).join('\n');
 
   test(`${file} draws the memory/ wiki and its index.md, not a MEMORY.md of facts and daily logs`, () => {
-    assert.match(text(), /memory\//);
+    assert.ok(words(file).includes('memory/'), 'a label reads exactly memory/');
+    assert.doesNotMatch(text(), /MEMORY\.md/);
     assert.match(text(), /index\.md/);
     assert.match(text(), /entities\/ · concepts\/ · log\//);
     assert.doesNotMatch(text(), /long-term facts/);
