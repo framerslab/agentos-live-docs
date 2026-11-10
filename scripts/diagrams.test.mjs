@@ -15,7 +15,8 @@ const SOUL = ['soul-files-anatomy.svg', 'soul-files-anatomy-dark.svg'];
 
 /** The words an SVG shows: its title, its description and every text element, in order. */
 function wordsOf(svg) {
-  return [...svg.matchAll(/<(title|desc|text)\b[^>]*>([\s\S]*?)<\/\1>/g)].map(([, , inner]) =>
+  // The opening tag may not end in "/": a self-closing element holds no words of its own.
+  return [...svg.matchAll(/<(title|desc|text)\b(?:[^>]*[^>/])?>([\s\S]*?)<\/\1>/g)].map(([, , inner]) =>
     inner.replace(/\s+/g, ' ').trim(),
   );
 }
