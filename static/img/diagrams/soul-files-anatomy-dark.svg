@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 620" role="img" aria-labelledby="soul-files-title soul-files-desc" font-family="ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif">
   <title id="soul-files-title">AgentOS Soul Files anatomy</title>
-  <desc id="soul-files-desc">An anatomy diagram of the soul workspace under ~/.agentos/agents/&lt;agent-id&gt;/. On the left, six entries: SOUL.md (required), the optional STYLE.md, IDENTITY.md, AGENTS.md and examples/, and the auto-managed memory/ wiki (index.md, entities/, concepts/, log/). All but examples/ feed the soul loader, which reads the workspace when the agent is built and throws when SOUL.md is missing, unless the soul is optional. The loader splits SOUL.md into two lanes: YAML frontmatter (HEXACO traits, voice, mood, hard limits) that maps to IPersonaDefinition, and the prose body that opens the system prompt, followed by STYLE.md and the memory index. A bottom band shows what the built agent gets: a persona card whose HEXACO traits render as its trait paragraph; the hard limits as the last block of the system prompt, which only recalled memory or a plan follows, and which is prompt text, not an enforced check; memory/index.md in the prompt, with the wiki's traces keyed by the soul's id; and AGENTS.md and IDENTITY.md returned to the host without being applied. The loader does not read examples/.</desc>
+  <desc id="soul-files-desc">An anatomy diagram of the soul workspace under ~/.agentos/agents/&lt;agent-id&gt;/. On the left, six entries: SOUL.md (required), the optional STYLE.md, IDENTITY.md, AGENTS.md and examples/, and the auto-managed memory/ wiki (index.md, entities/, concepts/, log/). All but examples/ feed the soul loader, which reads the workspace when the agent is built and throws when SOUL.md is missing, unless the soul is optional. The loader splits SOUL.md into two lanes: YAML frontmatter (HEXACO traits, voice, mood, hard limits) that maps to IPersonaDefinition, and the prose body that opens the system prompt, followed by STYLE.md, the memory index and the agent's options, all of which systemBlocks from the host replace. A bottom band shows what the agent and the host get: persona fields whose HEXACO traits render as the trait paragraph on every path, with mood applied on gmi and the full runtime; the hard limits as the last block of the system prompt, which only recalled memory or a plan follows, and which is prompt text, not an enforced check; memory/index.md in the prompt, with the wiki's traces keyed by the soul's id; and AGENTS.md and IDENTITY.md, which loadSoul() returns and nothing applies. The loader does not read examples/.</desc>
 
   <defs>
     <style>
@@ -117,22 +117,22 @@
   <text x="620" y="350" class="small">## Who You Are</text>
   <text x="620" y="368" class="small">## Tone</text>
   <text x="620" y="386" class="small">## How You Help</text>
-  <text x="620" y="404" class="micro">opens the system prompt · STYLE.md follows</text>
-  <text x="620" y="418" class="micro">then the memory index and the agent's options</text>
+  <text x="620" y="404" class="micro">opens the prompt · then STYLE.md, the memory index</text>
+  <text x="620" y="418" class="micro">and the options · systemBlocks replace them all</text>
 
   <!-- Runtime → outputs -->
   <path class="arrow-line" d="M 540,260 L 600,180" marker-end="url(#soul-arrow)"/>
   <path class="arrow-line" d="M 540,300 L 600,360" marker-end="url(#soul-arrow)"/>
 
   <!-- ============ BOTTOM: CONSOLIDATED ENVELOPE ============ -->
-  <text x="40" y="465" class="lane-label">WHAT THE BUILT AGENT GETS</text>
+  <text x="40" y="465" class="lane-label">WHAT THE AGENT AND THE HOST GET</text>
   <rect x="40" y="478" width="880" height="100" rx="10" class="envelope"/>
 
   <!-- Inner sections -->
   <rect x="60" y="498" width="200" height="64" rx="6" fill="none" stroke-dasharray="2 2" stroke="#94a3b8"/>
-  <text x="160" y="518" class="heading" text-anchor="middle">Persona Card</text>
-  <text x="160" y="536" class="small" text-anchor="middle">HEXACO traits · mood · voice</text>
-  <text x="160" y="552" class="micro" text-anchor="middle">traits render as the trait paragraph</text>
+  <text x="160" y="518" class="heading" text-anchor="middle">Persona Fields</text>
+  <text x="160" y="536" class="small" text-anchor="middle">trait paragraph on every path</text>
+  <text x="160" y="552" class="micro" text-anchor="middle">mood on gmi and the full runtime</text>
 
   <rect x="280" y="498" width="200" height="64" rx="6" fill="none" stroke-dasharray="2 2" stroke="#94a3b8"/>
   <text x="380" y="518" class="heading" text-anchor="middle">Hard Limits</text>
@@ -145,7 +145,7 @@
   <text x="600" y="552" class="micro" text-anchor="middle">wiki traces keyed by the soul's id</text>
 
   <rect x="720" y="498" width="180" height="64" rx="6" fill="none" stroke-dasharray="2 2" stroke="#94a3b8"/>
-  <text x="810" y="518" class="heading" text-anchor="middle">Returned to Host</text>
+  <text x="810" y="518" class="heading" text-anchor="middle">From loadSoul()</text>
   <text x="810" y="536" class="small" text-anchor="middle">AGENTS.md · IDENTITY.md</text>
   <text x="810" y="552" class="micro" text-anchor="middle">not applied · examples/ not read</text>
 
