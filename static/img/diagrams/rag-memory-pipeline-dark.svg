@@ -191,5 +191,5 @@
   <path class="arrow-line" d="M 880,480 L 880,555" marker-end="url(#rag-arrow)"/>
 
   <!-- Footer caption -->
-  <text x="480" y="640" class="micro" text-anchor="middle">Hybrid retrieval = dense + sparse, fused with RRF. Rerank is optional: a local cross-encoder, Cohere's Rerank API or an LLM judge. The same store powers both retrieval rails.</text>
+  <text x="480" y="640" class="micro" text-anchor="middle">Hybrid retrieval = dense + sparse, fused with RRF. Rerank is optional. The same store powers both retrieval rails.</text>
 </svg>
