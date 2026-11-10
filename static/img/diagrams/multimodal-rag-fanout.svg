@@ -104,7 +104,7 @@
   <text x="40" y="312" class="lane-label">TEXT-FIRST RAG PIPELINE (canonical)</text>
   <rect x="40" y="324" width="700" height="76" rx="10" class="rag-pipeline"/>
   <text x="390" y="348" class="heading" text-anchor="middle">EmbeddingManager → VectorStoreManager → RetrievalAugmentor</text>
-  <text x="390" y="368" class="small" text-anchor="middle">Hybrid dense + sparse · RRF fusion · optional Cohere rerank · GraphRAG · MultimodalIndexer.indexText()</text>
+  <text x="390" y="368" class="small" text-anchor="middle">Hybrid dense + sparse · RRF fusion · optional rerank · GraphRAG · MultimodalIndexer.indexText()</text>
   <text x="390" y="384" class="micro" text-anchor="middle">Same retrieval pipeline that powers all text RAG · derived text becomes a normal RAG document</text>
 
   <!-- All 4 derivers → rag pipeline -->
