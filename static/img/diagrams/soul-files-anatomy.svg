@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 620" role="img" aria-labelledby="soul-files-title soul-files-desc" font-family="ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif">
   <title id="soul-files-title">AgentOS Soul Files anatomy</title>
-  <desc id="soul-files-desc">An anatomy diagram of the 6-file Soul workspace. On the left, a directory tree shows the workspace layout under ~/.agentos/agents/&lt;agent-id&gt;/. The six files (SOUL.md required, STYLE / IDENTITY / AGENTS / MEMORY / examples optional) feed into a central runtime-load step. The right side splits SOUL.md into two output lanes: structured YAML frontmatter fields (HEXACO traits, voice provider, default mood, hard limits) that map to IPersonaDefinition, and prose body that becomes the system message prelude. A bottom band shows what each file contributes to the final agent identity.</desc>
+  <desc id="soul-files-desc">An anatomy diagram of the soul workspace under ~/.agentos/agents/&lt;agent-id&gt;/. On the left, six entries: SOUL.md (required), the optional STYLE.md, IDENTITY.md, AGENTS.md and examples/, and the auto-managed memory/ wiki (index.md, entities/, concepts/, log/). All but examples/ feed the soul loader, which reads the workspace when the agent is built and throws when SOUL.md is missing, unless the soul is optional. The loader splits SOUL.md into two lanes: YAML frontmatter (HEXACO traits, voice, mood, hard limits) that maps to IPersonaDefinition, and the prose body that opens the system prompt, followed by STYLE.md and the memory index. A bottom band shows what the built agent gets: a persona card whose HEXACO traits render as its trait paragraph; the hard limits as the last block of the system prompt, which only recalled memory or a plan follows, and which is prompt text, not an enforced check; memory/index.md in the prompt, with the wiki's traces keyed by the soul's id; and AGENTS.md and IDENTITY.md returned to the host without being applied. The loader does not read examples/.</desc>
 
   <defs>
     <style>
@@ -35,7 +35,7 @@
 
   <!-- Title -->
   <text x="480" y="32" class="title" text-anchor="middle">Anatomy of a Soul File Workspace</text>
-  <text x="480" y="52" class="small" text-anchor="middle">Markdown-based agent identity · YAML frontmatter for structured fields · prose body as system prelude</text>
+  <text x="480" y="52" class="small" text-anchor="middle">Markdown-based agent identity · YAML frontmatter for persona fields · prose body opens the system prompt</text>
 
   <!-- ============ LEFT: WORKSPACE TREE ============ -->
   <text x="40" y="90" class="lane-label">WORKSPACE</text>
@@ -64,87 +64,90 @@
   <text x="60" y="302" class="heading">AGENTS.md</text>
   <text x="60" y="316" class="small">procedural rules · workflows</text>
 
-  <!-- MEMORY.md -->
+  <!-- memory/ wiki -->
   <rect x="40" y="334" width="240" height="40" rx="6" class="file-opt"/>
-  <text x="60" y="352" class="heading">MEMORY.md</text>
-  <text x="60" y="366" class="small">long-term facts · daily logs</text>
+  <text x="60" y="352" class="heading">memory/</text>
+  <text x="60" y="366" class="small">index.md · entities/ · concepts/ · log/</text>
+  <rect x="220" y="342" width="50" height="14" rx="3" class="badge-opt"/>
+  <text x="245" y="352" class="badge-opt-text" text-anchor="middle">AUTO</text>
 
   <!-- examples/ -->
   <rect x="40" y="384" width="240" height="40" rx="6" class="file-opt"/>
   <text x="60" y="402" class="heading">examples/</text>
   <text x="60" y="416" class="small">good-outputs.md · bad-outputs.md</text>
+  <rect x="212" y="392" width="60" height="14" rx="3" class="badge-opt"/>
+  <text x="242" y="402" class="badge-opt-text" text-anchor="middle">NOT READ</text>
 
   <!-- Opt badge -->
   <rect x="220" y="192" width="50" height="14" rx="3" class="badge-opt"/>
   <text x="245" y="202" class="badge-opt-text" text-anchor="middle">OPTIONAL</text>
 
-  <!-- ============ MIDDLE: RUNTIME LOAD ============ -->
+  <!-- ============ MIDDLE: SOUL LOADER ============ -->
   <rect x="340" y="220" width="200" height="120" rx="10" class="runtime"/>
-  <text x="440" y="250" class="heading" text-anchor="middle">Runtime Load</text>
-  <text x="440" y="270" class="small" text-anchor="middle">Persona loader walks</text>
-  <text x="440" y="286" class="small" text-anchor="middle">the workspace at boot</text>
-  <text x="440" y="306" class="micro" text-anchor="middle">parse YAML · scan body · merge files</text>
-  <text x="440" y="322" class="micro" text-anchor="middle">cache to per-agent state</text>
+  <text x="440" y="250" class="heading" text-anchor="middle">Soul Loader</text>
+  <text x="440" y="270" class="small" text-anchor="middle">the loader reads the workspace</text>
+  <text x="440" y="286" class="small" text-anchor="middle">when the agent is built</text>
+  <text x="440" y="306" class="micro" text-anchor="middle">parse YAML · split fields and body</text>
+  <text x="440" y="322" class="micro" text-anchor="middle">no SOUL.md: throws unless optional</text>
 
-  <!-- Arrows from files into runtime -->
+  <!-- Arrows from files into the loader; examples/ has none, the loader does not read it -->
   <path class="arrow-line" d="M 280,152 Q 310,180 340,250" marker-end="url(#soul-arrow)"/>
   <path class="arrow-line" d="M 280,204 Q 310,220 340,260" marker-end="url(#soul-arrow)"/>
   <path class="arrow-line" d="M 280,254 L 340,280" marker-end="url(#soul-arrow)"/>
   <path class="arrow-line" d="M 280,304 L 340,295" marker-end="url(#soul-arrow)"/>
   <path class="arrow-line" d="M 280,354 Q 310,330 340,310" marker-end="url(#soul-arrow)"/>
-  <path class="arrow-line" d="M 280,404 Q 310,370 340,325" marker-end="url(#soul-arrow)"/>
 
   <!-- ============ RIGHT: TWO OUTPUT LANES ============ -->
   <text x="600" y="90" class="lane-label">STRUCTURED → IPersonaDefinition</text>
   <rect x="600" y="100" width="320" height="170" rx="8" class="output-struct"/>
   <text x="620" y="124" class="heading">YAML Frontmatter</text>
   <text x="620" y="146" class="mono">hexaco:</text>
-  <text x="620" y="162" class="micro">  H 0.85 · E 0.55 · X 0.70 · A 0.85 · C 0.90 · O 0.65</text>
+  <text x="620" y="162" class="micro">  → personalityTraits · rendered as the trait paragraph</text>
   <text x="620" y="182" class="mono">voice:</text>
-  <text x="620" y="198" class="micro">  provider · voiceId · prosody hints</text>
+  <text x="620" y="198" class="micro">  provider · voiceId · languageCode · full runtime only</text>
   <text x="620" y="218" class="mono">defaultMood, allowedMoods:</text>
-  <text x="620" y="234" class="micro">  PAD-tagged mood transitions</text>
+  <text x="620" y="234" class="micro">  → moodAdaptation · gmi and the full runtime</text>
   <text x="620" y="254" class="mono">hardLimits:</text>
-  <text x="620" y="266" class="micro">  enforced as content-policy guardrails</text>
+  <text x="620" y="266" class="micro">  the last block of prompt text · not enforced</text>
 
-  <text x="600" y="295" class="lane-label">PROSE → System Prelude</text>
+  <text x="600" y="295" class="lane-label">PROSE → System Prompt</text>
   <rect x="600" y="305" width="320" height="120" rx="8" class="output-prose"/>
   <text x="620" y="328" class="heading">Markdown Body</text>
   <text x="620" y="350" class="small">## Who You Are</text>
   <text x="620" y="368" class="small">## Tone</text>
   <text x="620" y="386" class="small">## How You Help</text>
-  <text x="620" y="404" class="micro">injected as the first system message · per-turn</text>
-  <text x="620" y="418" class="micro">drives in-context grounding alongside HEXACO</text>
+  <text x="620" y="404" class="micro">opens the system prompt · STYLE.md follows</text>
+  <text x="620" y="418" class="micro">then the memory index and the agent's options</text>
 
   <!-- Runtime → outputs -->
   <path class="arrow-line" d="M 540,260 L 600,180" marker-end="url(#soul-arrow)"/>
   <path class="arrow-line" d="M 540,300 L 600,360" marker-end="url(#soul-arrow)"/>
 
   <!-- ============ BOTTOM: CONSOLIDATED ENVELOPE ============ -->
-  <text x="40" y="465" class="lane-label">RESOLVED AGENT IDENTITY (per turn)</text>
+  <text x="40" y="465" class="lane-label">WHAT THE BUILT AGENT GETS</text>
   <rect x="40" y="478" width="880" height="100" rx="10" class="envelope"/>
 
   <!-- Inner sections -->
   <rect x="60" y="498" width="200" height="64" rx="6" fill="none" stroke-dasharray="2 2" stroke="#94a3b8"/>
   <text x="160" y="518" class="heading" text-anchor="middle">Persona Card</text>
-  <text x="160" y="536" class="small" text-anchor="middle">HEXACO + voice + mood</text>
-  <text x="160" y="552" class="micro" text-anchor="middle">drives encoding + style</text>
+  <text x="160" y="536" class="small" text-anchor="middle">HEXACO traits · mood · voice</text>
+  <text x="160" y="552" class="micro" text-anchor="middle">traits render as the trait paragraph</text>
 
   <rect x="280" y="498" width="200" height="64" rx="6" fill="none" stroke-dasharray="2 2" stroke="#94a3b8"/>
-  <text x="380" y="518" class="heading" text-anchor="middle">Behavioral Rules</text>
-  <text x="380" y="536" class="small" text-anchor="middle">AGENTS.md procedures</text>
-  <text x="380" y="552" class="micro" text-anchor="middle">hard limits as guardrails</text>
+  <text x="380" y="518" class="heading" text-anchor="middle">Hard Limits</text>
+  <text x="380" y="536" class="small" text-anchor="middle">last block of the system prompt</text>
+  <text x="380" y="552" class="micro" text-anchor="middle">prompt text, not an enforced check</text>
 
   <rect x="500" y="498" width="200" height="64" rx="6" fill="none" stroke-dasharray="2 2" stroke="#94a3b8"/>
   <text x="600" y="518" class="heading" text-anchor="middle">Persistent Memory</text>
-  <text x="600" y="536" class="small" text-anchor="middle">MEMORY.md + daily logs</text>
-  <text x="600" y="552" class="micro" text-anchor="middle">warm-start every session</text>
+  <text x="600" y="536" class="small" text-anchor="middle">memory/index.md in the prompt</text>
+  <text x="600" y="552" class="micro" text-anchor="middle">wiki traces keyed by the soul's id</text>
 
   <rect x="720" y="498" width="180" height="64" rx="6" fill="none" stroke-dasharray="2 2" stroke="#94a3b8"/>
-  <text x="810" y="518" class="heading" text-anchor="middle">Output Calibration</text>
-  <text x="810" y="536" class="small" text-anchor="middle">examples/ pairs</text>
-  <text x="810" y="552" class="micro" text-anchor="middle">good vs bad templates</text>
+  <text x="810" y="518" class="heading" text-anchor="middle">Returned to Host</text>
+  <text x="810" y="536" class="small" text-anchor="middle">AGENTS.md · IDENTITY.md</text>
+  <text x="810" y="552" class="micro" text-anchor="middle">not applied · examples/ not read</text>
 
   <!-- Footer -->
-  <text x="480" y="602" class="micro" text-anchor="middle">Personality lives in SOUL.md · procedures in AGENTS.md · don't mix them. Memory auto-writes daily logs to memory/YYYY-MM-DD.md.</text>
+  <text x="480" y="602" class="micro" text-anchor="middle">Personality lives in SOUL.md · procedures in AGENTS.md · don't mix them. memory/ is a markdown wiki: index.md catalogs its pages.</text>
 </svg>
