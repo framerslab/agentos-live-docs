@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 660" role="img" aria-labelledby="rag-pipeline-title rag-pipeline-desc" font-family="ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif">
   <title id="rag-pipeline-title">AgentOS RAG memory pipeline</title>
-  <desc id="rag-pipeline-desc">A two-lane pipeline diagram. The top lane (ingestion) flows left to right: Documents → Chunker → Embedder → Writer. The Writer fans down into five swappable storage backends: SQLite with HNSW, Postgres with pgvector, Pinecone, Qdrant, and Neo4j. The bottom lane (retrieval) starts from a Query card, fans out to Dense HNSW search and Sparse BM25 search in parallel, both feeding into RRF fusion, then optionally through a Cohere rerank-v3.5 stage, terminating in a Top-K context block. A final Prompt Assembly bar at the bottom shows token-budgeted context with source attribution feeding the LLM.</desc>
+  <desc id="rag-pipeline-desc">A two-lane pipeline diagram. The top lane (ingestion) flows left to right: Documents → Chunker → Embedder → Writer. The Writer fans down into five swappable storage backends: SQLite with HNSW, Postgres with pgvector, Pinecone, Qdrant, and Neo4j. The bottom lane (retrieval) starts from a Query card, fans out to Dense HNSW search and Sparse BM25 search in parallel, both feeding into RRF fusion, then optionally through a rerank stage (a local cross-encoder, Cohere's Rerank API or an LLM judge, the provider picked per request), terminating in a Top-K context block. A final Prompt Assembly bar at the bottom shows token-budgeted context with source attribution feeding the LLM.</desc>
 
   <defs>
     <style>
@@ -149,11 +149,11 @@
   <text x="505" y="444" class="small" text-anchor="middle">Reciprocal rank fusion</text>
   <text x="505" y="462" class="micro" text-anchor="middle">k = 60 · dense + sparse merge</text>
 
-  <!-- Cohere rerank (optional) -->
+  <!-- Rerank (optional): local cross-encoder, Cohere or LLM judge -->
   <rect x="620" y="400" width="170" height="80" rx="8" class="stage accent-rerank"/>
-  <text x="705" y="424" class="heading" text-anchor="middle">Cohere Rerank</text>
-  <text x="705" y="444" class="small" text-anchor="middle">rerank-v3.5 · neural relevance</text>
-  <text x="705" y="462" class="micro" text-anchor="middle">cross-encoder · top-N → top-K</text>
+  <text x="705" y="424" class="heading" text-anchor="middle">Rerank</text>
+  <text x="705" y="444" class="small" text-anchor="middle">local · Cohere · LLM judge</text>
+  <text x="705" y="462" class="micro" text-anchor="middle">provider per request · top-N</text>
   <!-- Optional badge -->
   <rect x="715" y="384" width="50" height="14" rx="3" class="opt-tag"/>
   <text x="740" y="394" class="opt-tag-text" text-anchor="middle">OPTIONAL</text>
@@ -172,13 +172,13 @@
   <path class="arrow-line" d="M 390,411 Q 405,411 405,425 L 420,425" marker-end="url(#rag-arrow)"/>
   <path class="arrow-line" d="M 390,469 Q 405,469 405,455 L 420,455" marker-end="url(#rag-arrow)"/>
 
-  <!-- RRF → Cohere -->
+  <!-- RRF → Rerank -->
   <path class="arrow-line" d="M 590,440 L 620,440" marker-end="url(#rag-arrow)"/>
 
-  <!-- Cohere → Top-K -->
+  <!-- Rerank → Top-K -->
   <path class="arrow-line" d="M 790,440 L 820,440" marker-end="url(#rag-arrow)"/>
 
-  <!-- Skip-cohere bypass arrow (dotted): RRF directly to Top-K -->
+  <!-- Skip-rerank bypass arrow (dotted): RRF directly to Top-K -->
   <path class="arrow-thin" d="M 590,470 Q 705,505 820,470" stroke-dasharray="4 4" marker-end="url(#rag-arrow-thin)"/>
   <text x="705" y="525" class="micro" text-anchor="middle" font-style="italic">bypass when rerank disabled</text>
 
@@ -191,5 +191,5 @@
   <path class="arrow-line" d="M 880,480 L 880,555" marker-end="url(#rag-arrow)"/>
 
   <!-- Footer caption -->
-  <text x="480" y="640" class="micro" text-anchor="middle">Hybrid retrieval = dense + sparse, fused with RRF. Rerank is optional and pays for itself when context budget is tight. The same store powers both retrieval rails.</text>
+  <text x="480" y="640" class="micro" text-anchor="middle">Hybrid retrieval = dense + sparse, fused with RRF. Rerank is optional: a local cross-encoder, Cohere's Rerank API or an LLM judge. The same store powers both retrieval rails.</text>
 </svg>

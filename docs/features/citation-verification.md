@@ -291,6 +291,6 @@ The `ClaimExtractor` of [`@framers/agentos-ext-grounding-guard`](https://www.npm
 ## Related Features
 
 - [Grounding Guard](/extensions/built-in/grounding-guard): NLI verification of claims as a guardrail
-- [Reranker Chain](/features/rag-memory#reranker-chain): multi-stage result ranking before citation
+- [Reranker Chain](/features/rag-memory#reranker-chain): multi-stage result ranking before citation, each stage one registered provider: the local cross-encoder, Cohere's Rerank API, the LLM judge or a host's own
 - [Deep Research](/features/rag-memory#query-classification): the research step whose sources and synthesis feed QueryRouter's answer
 - [Content Policy Rewriter](/extensions/built-in/content-policy-rewriter): content filtering guardrail

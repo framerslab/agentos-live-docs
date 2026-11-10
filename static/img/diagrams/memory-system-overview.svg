@@ -90,7 +90,7 @@
 
   <!-- Optional rerank -->
   <rect x="200" y="572" width="600" height="50" rx="8" class="stage acc-rerank"/>
-  <text x="500" y="592" text-anchor="middle" class="stage-title">Optional reranker · Cohere rerank-v3.5 in the benchmark runs</text>
+  <text x="500" y="592" text-anchor="middle" class="stage-title">Optional reranker · a local cross-encoder, Cohere or an LLM judge</text>
   <text x="500" y="610" text-anchor="middle" class="stage-text">score = 0.7 × composite + 0.3 × rerank score · without one, the RRF order stands</text>
   <line class="arrow-line" x1="500" y1="622" x2="500" y2="638" marker-end="url(#memsys-arrow)"/>
 
