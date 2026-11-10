@@ -53,10 +53,12 @@ for (const file of SOUL) {
     assert.match(text(), /not an enforced check/);
   });
 
-  test(`${file} draws AGENTS.md and IDENTITY.md as returned to the host, and examples/ as not read`, () => {
+  test(`${file} draws AGENTS.md and IDENTITY.md as returned by loadSoul(), not by the agent, and examples/ as not read`, () => {
     assert.doesNotMatch(text(), /Behavioral Rules/);
     assert.doesNotMatch(text(), /Output Calibration/);
-    assert.match(text(), /Returned to Host/);
+    assert.doesNotMatch(text(), /Returned to Host/);
+    assert.ok(words(file).includes('From loadSoul()'), 'a panel heading reads exactly From loadSoul()');
+    assert.doesNotMatch(text(), /WHAT THE BUILT AGENT GETS/);
     assert.match(text(), /examples\/ not read/);
   });
 
@@ -64,5 +66,17 @@ for (const file of SOUL) {
     assert.doesNotMatch(text(), /PAD-tagged/);
     assert.doesNotMatch(text(), /prosody/);
     assert.doesNotMatch(text(), /cache to per-agent state/);
+  });
+
+  test(`${file} draws mood and voice only on the paths that apply them`, () => {
+    // agent() renders the traits but has no renderer for mood or voice; gmi applies mood, the
+    // full runtime takes every field.
+    assert.doesNotMatch(text(), /HEXACO traits · mood · voice/);
+    assert.doesNotMatch(text(), /Persona Card/);
+    assert.match(text(), /mood on gmi and the full runtime/);
+  });
+
+  test(`${file} says systemBlocks replace the assembled prompt`, () => {
+    assert.match(text(), /systemBlocks replace/);
   });
 }
