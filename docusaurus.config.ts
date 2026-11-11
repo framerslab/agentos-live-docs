@@ -198,18 +198,20 @@ const config = (githubStarsBadge: { src: string; alt: string }): Config => ({
         codeRepository: 'https://github.com/framerslab/agentos',
       }),
     },
-    // Microsoft Clarity. Same project ID as agentos.sh main site so
-    // session recordings + heatmaps roll up into one Clarity dashboard
-    // across the agentos.sh ecosystem. GA already lives below in
-    // `presets.gtag` (G-4KEEK15KWZ).
+    // Analytics choices. static/consent/consent.js (the same file agentos.sh serves) shows the bar
+    // and loads Google Analytics or Microsoft Clarity only after the visitor turns that purpose on.
+    // The ids come from the repository variables GA_MEASUREMENT_ID and CLARITY_PROJECT_ID at build
+    // time; a purpose whose id is missing is not offered.
     {
       tagName: 'script',
-      attributes: { type: 'text/javascript' },
-      innerHTML: `(function(c,l,a,r,i,t,y){
-        c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
-        t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
-        y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
-      })(window, document, "clarity", "script", "ukky5yykaj");`,
+      attributes: {
+        src: '/consent/consent.js',
+        defer: true,
+        'data-policy': 'https://agentos.sh/en/legal/cookies/',
+        'data-site': 'docs.agentos.sh',
+        ...(process.env.GA_MEASUREMENT_ID ? { 'data-ga': process.env.GA_MEASUREMENT_ID } : {}),
+        ...(process.env.CLARITY_PROJECT_ID ? { 'data-clarity': process.env.CLARITY_PROJECT_ID } : {}),
+      },
     },
   ],
 
@@ -456,10 +458,6 @@ const config = (githubStarsBadge: { src: string; alt: string }): Config => ({
         theme: {
           customCss: './src/css/custom.css',
         },
-        gtag: {
-          trackingID: 'G-4KEEK15KWZ',
-          anonymizeIP: true,
-        },
         sitemap: {
           // Keep sitemap generation decoupled from git tracking state. Generated
           // TypeDoc pages may exist locally before they are committed, and
@@ -666,6 +664,9 @@ const config = (githubStarsBadge: { src: string; alt: string }): Config => ({
             { label: 'Terms of Service', href: 'https://agentos.sh/en/legal/terms' },
             { label: 'Security', href: 'https://agentos.sh/en/legal/security' },
             { label: 'Cookies', href: 'https://agentos.sh/en/legal/cookies' },
+            {
+              html: '<button type="button" class="footer__link-item footer__choices" data-analytics-choices>Analytics choices</button>',
+            },
           ],
         },
       ],

@@ -43,3 +43,7 @@ docs/*-plan-phase*.md
 
 # macOS
 .DS_Store
+
+# Playwright output (e2e/consent.spec.mjs)
+e2e/playwright-report/
+e2e/test-results/

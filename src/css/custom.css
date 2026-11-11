@@ -1501,3 +1501,18 @@ article img {
   --mer-external-border:  #c4b5fd;
   --mer-external-text:    #ddd6fe;
 }
+
+/* The footer's Analytics choices control (static/consent/consent.js opens the choices). */
+.footer__choices {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+
+.footer__choices:hover {
+  text-decoration: underline;
+}

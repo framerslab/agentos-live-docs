@@ -49,3 +49,29 @@ test("the landing page's cookbook counts are the examples page's", () => {
   );
   assert.doesNotMatch(landing, /\{\{[^}]*\}\}/, 'the landing page shows a {{...}} placeholder');
 });
+
+test('no built page loads Google Analytics or Clarity before a choice, and every page offers the choices', async () => {
+  const { readdirSync, statSync } = await import('node:fs');
+  const { join } = await import('node:path');
+  const pages = [];
+  const walk = (dir) => {
+    for (const name of readdirSync(dir)) {
+      const path = join(dir, name);
+      if (statSync(path).isDirectory()) walk(path);
+      else if (name.endsWith('.html')) pages.push(path);
+    }
+  };
+  walk(BUILD);
+  assert.ok(pages.length > 0, 'the build wrote no pages; run npm run build first');
+  const loadsVendor = [];
+  const missingChoices = [];
+  for (const page of pages) {
+    const html = readFileSync(page, 'utf8');
+    // Redirect stubs from plugin-client-redirects carry no layout.
+    if (!/<div id="__docusaurus"/.test(html)) continue;
+    if (/googletagmanager\.com\/gtag|clarity\.ms\/tag|gtag\(\s*['"]config/.test(html)) loadsVendor.push(page);
+    if (!/<script[^>]+src="\/consent\/consent\.js"/.test(html)) missingChoices.push(page);
+  }
+  assert.deepEqual(loadsVendor, [], 'these pages load a vendor before any choice');
+  assert.deepEqual(missingChoices, [], 'these pages do not load the analytics choices');
+});
