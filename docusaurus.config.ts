@@ -206,7 +206,7 @@ const config = (githubStarsBadge: { src: string; alt: string }): Config => ({
       tagName: 'script',
       attributes: {
         src: '/consent/consent.js',
-        defer: true,
+        defer: 'defer',
         'data-policy': 'https://agentos.sh/en/legal/cookies/',
         'data-site': 'docs.agentos.sh',
         ...(process.env.GA_MEASUREMENT_ID ? { 'data-ga': process.env.GA_MEASUREMENT_ID } : {}),

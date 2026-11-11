@@ -202,8 +202,8 @@
     '.aoc-switch[aria-checked="true"] .aoc-track{background:var(--aoc-on)}' +
     '.aoc-switch[aria-checked="true"] .aoc-track::after{transform:translateX(18px)}' +
     '.aoc-keys{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:10px}' +
-    '.aoc-key{min-height:44px;padding:0 10px;border:1px solid var(--aoc-fg);border-radius:10px;background:var(--aoc-bg);color:var(--aoc-fg);' +
-    'font:inherit;font-size:14px;font-weight:600;cursor:pointer;white-space:nowrap}' +
+    '.aoc-key{min-height:44px;padding:4px 8px;border:1px solid var(--aoc-fg);border-radius:10px;background:var(--aoc-bg);color:var(--aoc-fg);' +
+    'font:inherit;font-size:14px;font-weight:600;line-height:1.2;cursor:pointer}' +
     '.aoc-key:hover{background:var(--aoc-soft)}' +
     '.aoc-key:focus-visible,.aoc-switch:focus-visible,.aoc-link:focus-visible{outline:3px solid var(--aoc-focus);outline-offset:2px}' +
     '.aoc-keys-one{grid-template-columns:minmax(0,1fr)}' +
