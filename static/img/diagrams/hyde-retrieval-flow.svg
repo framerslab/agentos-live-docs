@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 600" role="img" aria-labelledby="hyde-title hyde-desc" font-family="ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif">
   <title id="hyde-title">HyDE retrieval flow</title>
-  <desc id="hyde-desc">A side-by-side comparison of standard vector retrieval versus HyDE retrieval. The top lane shows standard retrieval: a query is embedded directly, then matched against documents. A small inset shows the embedding-space distance between a question and its answer-style document is large because questions and answers live in different regions of the space. The bottom lane shows HyDE retrieval: the query is first sent to an LLM to generate a hypothetical answer, then the hypothesis is embedded, and the embedding matches better against actual answer-style documents. The right side shows benchmark results: on LongMemEval-S (single-session) HyDE hurts by 1.9 points; on LongMemEval-M (multi-session, 1.5 million token haystack) HyDE helps by 1 point. The footer captures the rule of thumb: HyDE is opt-in, useful when the haystack is too large for direct retrieval.</desc>
+  <desc id="hyde-desc">A side-by-side comparison of standard vector retrieval versus HyDE retrieval. The top lane shows standard retrieval: a query is embedded directly, then matched against documents. A small inset shows the embedding-space distance between a question and its answer-style document is large because questions and answers live in different regions of the space. The bottom lane shows HyDE retrieval: the query is first sent to an LLM to generate a hypothetical answer, then the hypothesis is embedded, and the embedding matches better against actual answer-style documents. The right side shows benchmark results: on LongMemEval-S, on the headline configuration, HyDE lowers accuracy from 85.2% to 79.6%, 5.6 points, on a Phase A sample of 54 cases, 9 per question type; on LongMemEval-M (multi-session, 1.5 million token haystack) HyDE helps by 1 point. The footer captures the rule of thumb: HyDE is opt-in, useful when the haystack is too large for direct retrieval.</desc>
 
   <defs>
     <style>
@@ -130,8 +130,8 @@
   <!-- LongMemEval-S (HyDE hurts) -->
   <rect x="60" y="395" width="400" height="100" rx="10" class="bench-bad"/>
   <text x="260" y="421" class="heading" text-anchor="middle">LongMemEval-S · 115K tokens · 50 sessions</text>
-  <text x="260" y="445" class="bench-bad-text" text-anchor="middle">HyDE OFF: 85.2% · HyDE ON: 83.3% (N=54)</text>
-  <text x="260" y="463" class="bench-bad-text" text-anchor="middle">Δ −1.9 points · HyDE HURTS at this scale</text>
+  <text x="260" y="445" class="bench-bad-text" text-anchor="middle">HyDE OFF: 85.2% · HyDE ON: 79.6% (Phase A, N=54)</text>
+  <text x="260" y="463" class="bench-bad-text" text-anchor="middle">Δ −5.6 points · HyDE HURTS at this scale</text>
   <text x="260" y="478" class="micro" text-anchor="middle">Single-session haystack rewards precision.</text>
   <text x="260" y="491" class="micro" text-anchor="middle">Hypothesis-induced drift hurts exact-span recall.</text>
 
