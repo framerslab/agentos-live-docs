@@ -16,7 +16,65 @@ permissions:
   contents: read
 
 jobs:
+  # A scheduled run ends here, in seconds, when nothing it would build has moved: this repository
+  # is at the commit the newest earlier run on master took (whatever its result, a cancelled run
+  # aside), or past it by the deploy job's deployed-sources.json commit alone, and agentos and
+  # agentos-extensions are at the commits deployed-sources.json names. A record 30 days old or more
+  # builds anyway, so the deploy job rewrites it before GitHub's 60 days without activity disable
+  # the schedule. Any other event always builds, and a lookup that fails builds. The deploy and
+  # rerun jobs need the build job, so they skip with it.
+  changed:
+    name: Skip an unchanged scheduled run
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    permissions:
+      actions: read
+      contents: read
+    outputs:
+      run: ${{ steps.check.outputs.run }}
+    steps:
+      - name: Compare with the last run and the deployed sources
+        id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT: ${{ github.event_name }}
+          REPO: ${{ github.repository }}
+          RUN_ID: ${{ github.run_id }}
+          SHA: ${{ github.sha }}
+          BRANCH: ${{ github.ref_name }}
+        run: |
+          set -uo pipefail
+          decide() {
+            wf=$(gh api "repos/$REPO/actions/runs/$RUN_ID" --jq .workflow_id) || return 1
+            last=$(gh api "repos/$REPO/actions/workflows/$wf/runs?branch=$BRANCH&per_page=20" \
+              --jq "[.workflow_runs[] | select(.id != $RUN_ID and .conclusion != \"cancelled\" and .event != \"pull_request\")][0].head_sha // \"\"") || return 1
+            if [ -z "$last" ]; then echo "No earlier run on $BRANCH."; return 1; fi
+            if [ "$last" != "$SHA" ]; then
+              files=$(gh api "repos/$REPO/compare/$last...$SHA" --jq '[.files[].filename] | unique | join(" ")') || return 1
+              if [ "$files" != deployed-sources.json ]; then
+                echo "$BRANCH moved from $last to $SHA: ${files:-no file list}."; return 1
+              fi
+            fi
+            record=$(gh api "repos/$REPO/contents/deployed-sources.json?ref=$SHA" -H 'Accept: application/vnd.github.raw') || return 1
+            rec_agentos=$(jq -r '.agentos // ""' <<< "$record")
+            rec_extensions=$(jq -r '."agentos-extensions" // ""' <<< "$record")
+            recorded=$(jq -r '.recorded // ""' <<< "$record")
+            agentos=$(gh api repos/framerslab/agentos/commits/master --jq .sha) || return 1
+            extensions=$(gh api repos/framerslab/agentos-extensions/commits/master --jq .sha) || return 1
+            if [ "$agentos" != "$rec_agentos" ] || [ "$extensions" != "$rec_extensions" ]; then
+              echo "The sources moved: agentos $rec_agentos to $agentos, agentos-extensions $rec_extensions to $extensions."; return 1
+            fi
+            age=$(( ( $(date -u +%s) - $(date -u -d "$recorded" +%s 2>/dev/null || echo 0) ) / 86400 ))
+            if [ "$age" -ge 30 ]; then echo "deployed-sources.json is $age days old; the run rewrites it."; return 1; fi
+            echo "$BRANCH is at $SHA and the sources at the deployed commits (recorded $recorded): nothing changed, the run ends here."
+          }
+          run=true
+          if [ "$EVENT" = schedule ] && decide; then run=false; fi
+          echo "run=$run" >> "$GITHUB_OUTPUT"
+
   build:
+    needs: changed
+    if: needs.changed.outputs.run == 'true'
     runs-on: ubuntu-latest
     # A newer run on the same branch or pull request cancels this job while it builds, so only the
     # newest commit goes on to deploy. The deploy job stays out of the group, so a newer build never
