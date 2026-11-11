@@ -130,7 +130,7 @@
   <!-- LongMemEval-S (HyDE hurts) -->
   <rect x="60" y="395" width="400" height="100" rx="10" class="bench-bad"/>
   <text x="260" y="421" class="heading" text-anchor="middle">LongMemEval-S · 115K tokens · 50 sessions</text>
-  <text x="260" y="445" class="bench-bad-text" text-anchor="middle">HyDE OFF: 85.6% · HyDE ON: 83.3%</text>
+  <text x="260" y="445" class="bench-bad-text" text-anchor="middle">HyDE OFF: 85.2% · HyDE ON: 83.3% (N=54)</text>
   <text x="260" y="463" class="bench-bad-text" text-anchor="middle">Δ −1.9 points · HyDE HURTS at this scale</text>
   <text x="260" y="478" class="micro" text-anchor="middle">Single-session haystack rewards precision.</text>
   <text x="260" y="491" class="micro" text-anchor="middle">Hypothesis-induced drift hurts exact-span recall.</text>
