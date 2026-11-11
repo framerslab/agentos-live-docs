@@ -91,6 +91,9 @@
     }
   }
 
+  // A vendor may write its cookie host-only or on any parent domain (Google Analytics writes _ga on
+  // the top domain it can reach), so the cookie is expired once without a domain and once on each
+  // parent domain. A domain the browser refuses is ignored.
   function dropCookie(name) {
     var parts = location.hostname.split('.');
     var domains = [''];
@@ -100,6 +103,7 @@
     }
   }
 
+  // Removes every cookie named exactly as a prefix or starting with prefix + "_" (_ga_<property id>).
   function clearCookies(prefixes) {
     var cookies = document.cookie ? document.cookie.split(';') : [];
     for (var i = 0; i < cookies.length; i++) {
@@ -142,6 +146,7 @@
     document.head.appendChild(tag);
   }
 
+  // Google's documented opt-out: with window['ga-disable-<id>'] true, gtag.js sends nothing more.
   function stopGoogle(id) {
     if (id) window['ga-disable-' + id] = true;
     if (typeof window.gtag === 'function') window.gtag('consent', 'update', { analytics_storage: 'denied' });
@@ -165,9 +170,12 @@
     window.clarity('consentv2', { ad_Storage: 'denied', analytics_Storage: 'granted' });
   }
 
+  // consentv2 with analytics_Storage denied makes Clarity drop its cookies; stop ends the recording on
+  // this page, which otherwise carries on cookieless until a full page load.
   function stopClarity() {
     if (typeof window.clarity === 'function') {
       window.clarity('consentv2', { ad_Storage: 'denied', analytics_Storage: 'denied' });
+      if (loaded.record) window.clarity('stop');
     }
     clearCookies(CLARITY_COOKIES);
   }
@@ -373,6 +381,13 @@
     if (!trigger) return;
     event.preventDefault();
     open();
+  });
+
+  // A choice saved in another tab applies here too, so withdrawing in one tab stops the vendors in all.
+  window.addEventListener('storage', function (event) {
+    if (event.key !== KEY) return;
+    apply(effective());
+    if (root && readStored() !== null) close();
   });
 
   document.addEventListener('keydown', function (event) {

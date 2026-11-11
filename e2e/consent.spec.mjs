@@ -119,6 +119,32 @@ for (const path of PAGES) {
       expect(seen).toEqual([]);
     });
 
+    test('turning a purpose off in one tab stops it in another open tab', async ({ context, page }) => {
+      await watch(context, page);
+      await page.goto(BASE + path);
+      await key(page, 'Accept all').click();
+      await settle(page);
+      const other = await context.newPage();
+      await other.goto(BASE + path);
+      await settle(other);
+      await other.evaluate(() => {
+        window.__clarityCalls = [];
+        const original = window.clarity;
+        window.clarity = function (...args) {
+          window.__clarityCalls.push(args[0]);
+          return original.apply(this, args);
+        };
+      });
+      await page.locator('[data-analytics-choices]').first().click();
+      await bar(page).getByRole('switch', { name: 'Measurement' }).click();
+      await bar(page).getByRole('switch', { name: 'Session recordings' }).click();
+      await key(page, 'Save choices').click();
+      await expect
+        .poll(() => other.evaluate(() => window['ga-disable-' + document.querySelector('script[src*="/consent/consent.js"]').dataset.ga]))
+        .toBe(true);
+      await expect.poll(() => other.evaluate(() => window.__clarityCalls.includes('stop'))).toBe(true);
+    });
+
     test('Global Privacy Control shows no bar and loads nothing, even over an earlier yes', async ({ context, page }) => {
       await context.addInitScript(() => {
         Object.defineProperty(Navigator.prototype, 'globalPrivacyControl', { get: () => true });
