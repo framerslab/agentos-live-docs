@@ -163,7 +163,7 @@
     <circle cx="52" cy="70" r="24" class="disc-3" filter="url(#sa-disc-glow)" />
     <text x="52" y="77" text-anchor="middle" class="num">3</text>
     <text x="92" y="48" class="layer-title">Memory + RAG pipeline</text>
-    <text x="92" y="74" class="layer-sub">5 trace types · HyDE + GraphRAG</text>
+    <text x="92" y="74" class="layer-sub">5 trace types · HyDE + GraphRAG · 70.2% LongMemEval-M</text>
     <text x="92" y="108" class="lbl">Cognitive memory</text>
 
     <!-- Sub-row: memory -->
