@@ -21,7 +21,7 @@ jobs:
   # aside), or past it by the deploy job's deployed-sources.json commit alone, and agentos and
   # agentos-extensions are at the commits deployed-sources.json names. A record 30 days old or more
   # builds anyway, so the deploy job rewrites it before GitHub's 60 days without activity disable
-  # the schedule. Any other event always builds, and a lookup that fails builds. The deploy and
+  # the schedule. Any other event, a re-run, and a lookup or a check that fails build. The deploy and
   # rerun jobs need the build job, so they skip with it.
   changed:
     name: Skip an unchanged scheduled run
@@ -40,13 +40,14 @@ jobs:
           EVENT: ${{ github.event_name }}
           REPO: ${{ github.repository }}
           RUN_ID: ${{ github.run_id }}
+          RUN_ATTEMPT: ${{ github.run_attempt }}
           SHA: ${{ github.sha }}
           BRANCH: ${{ github.ref_name }}
         run: |
           set -uo pipefail
           decide() {
             wf=$(gh api "repos/$REPO/actions/runs/$RUN_ID" --jq .workflow_id) || return 1
-            last=$(gh api "repos/$REPO/actions/workflows/$wf/runs?branch=$BRANCH&per_page=20" \
+            last=$(gh api "repos/$REPO/actions/workflows/$wf/runs?branch=$BRANCH&per_page=100" \
               --jq "[.workflow_runs[] | select(.id != $RUN_ID and .conclusion != \"cancelled\" and .event != \"pull_request\")][0].head_sha // \"\"") || return 1
             if [ -z "$last" ]; then echo "No earlier run on $BRANCH."; return 1; fi
             if [ "$last" != "$SHA" ]; then
@@ -69,12 +70,12 @@ jobs:
             echo "$BRANCH is at $SHA and the sources at the deployed commits (recorded $recorded): nothing changed, the run ends here."
           }
           run=true
-          if [ "$EVENT" = schedule ] && decide; then run=false; fi
+          if [ "$EVENT" = schedule ] && [ "$RUN_ATTEMPT" = 1 ] && decide; then run=false; fi
           echo "run=$run" >> "$GITHUB_OUTPUT"
 
   build:
     needs: changed
-    if: needs.changed.outputs.run == 'true'
+    if: ${{ !cancelled() && needs.changed.outputs.run != 'false' }}
     runs-on: ubuntu-latest
     # A newer run on the same branch or pull request cancels this job while it builds, so only the
     # newest commit goes on to deploy. The deploy job stays out of the group, so a newer build never
