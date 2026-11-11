@@ -29,11 +29,13 @@ On the full runtime, `AgentOS.create({ emergent: true })` gives its agents a `fo
 The benchmarks below measure this runtime against alternative memory libraries; each result names its reader model.
 
 :::tip Memory benchmarks (full N=500, reader router)
-**85.6% on LongMemEval-S** at $0.0090 per correct, with a per-category reader router: `gpt-4o` answers temporal-reasoning and single-session-user questions, `gpt-5-mini` the other four types. With `gpt-4o` reading every question, the same retrieval scores 84.2%, level with [Mastra](https://mastra.ai) Observational Memory (84.23%) at that reader. AgentOS ships under [Apache-2.0](https://github.com/framerslab/agentos/blob/master/LICENSE), free to install, fork, and self-host.
+**85.6% on LongMemEval-S** at $0.0090 per correct, with a per-category reader router: `gpt-4o` answers temporal-reasoning and single-session-user questions, `gpt-5-mini` the other four types. The router table was calibrated on the same 500 questions, with no hold-out set. With `gpt-4o` reading every question, the same retrieval scores 84.2%, level with [Mastra](https://mastra.ai) Observational Memory (84.23%) at that reader. AgentOS ships under [Apache-2.0](https://github.com/framerslab/agentos/blob/master/LICENSE), free to install, fork, and self-host.
 
-**70.2% on LongMemEval-M** at $0.0078 per correct on the 1.5M-token / 500-session haystack — the only open-source library on the public record above 65% on M with publicly reproducible methodology. Competitive with the strongest published M results in the LongMemEval paper ([Wu et al., ICLR 2025](https://arxiv.org/abs/2410.10813): round Top-5 65.7%, session Top-5 71.4%, round Top-10 72.0%).
+**70.2% on LongMemEval-M** at $0.0078 per correct on the 1.5M-token / 500-session haystack, with the same router table — the only open-source library on the public record above 65% on M with publicly reproducible methodology. Competitive with the strongest published M results in the LongMemEval paper ([Wu et al., ICLR 2025](https://arxiv.org/abs/2410.10813): round Top-5 65.7%, session Top-5 71.4%, round Top-10 72.0%).
 
-**[Benchmarks reference](/benchmarks)** · **[Reproducible run JSONs](https://github.com/framerslab/agentos-bench/tree/master/results/runs)** · **[SOTA writeup](https://agentos.sh/en/blog/agentos-memory-sota-longmemeval/)**
+Both cost figures count LLM reader and judge tokens; embedding and Cohere rerank fees are not in them.
+
+**[Benchmarks reference](/benchmarks)** · **[Run footnotes](https://github.com/framerslab/agentos-bench/blob/02ef75e40a67456b80d08a0d6d80e4c59249b7e2/results/LEADERBOARD.md)** · **[SOTA writeup](https://agentos.sh/en/blog/agentos-memory-sota-longmemeval/)**
 :::
 
 ## How recall works
@@ -48,7 +50,7 @@ AgentOS routes memory with small LLM-as-judge classifier calls, up to three per 
 | 2 | `MemoryRouter` | canonical-hybrid · observational-memory-v10 · v11 |
 | 3 | `selectReader()` (ReaderRouter) | gpt-4o vs gpt-5-mini per category, from Stage 2's category |
 
-`CognitivePipeline.recallAndRead()` makes two classifier calls per query, the MemoryRouter's and the ReadRouter's, and the gate adds one when the host runs it; Stage 3 is a table lookup. With the `min-cost-best-cat-2026-04-28` preset, the reader lookup sends four of the six LongMemEval categories to gpt-5-mini, whose [list price](https://developers.openai.com/api/docs/pricing) is a tenth of gpt-4o's per input token and a fifth per output token, and lifts single-session-preference by 10 points in the benchmark runs; the gate gives queries that need no memory a path that skips retrieval. Reproducible run JSONs in [agentos-bench](https://github.com/framerslab/agentos-bench).
+`CognitivePipeline.recallAndRead()` makes two classifier calls per query, the MemoryRouter's and the ReadRouter's, and the gate adds one when the host runs it; Stage 3 is a table lookup. With the `min-cost-best-cat-2026-04-28` preset, the reader lookup sends four of the six LongMemEval categories to gpt-5-mini, whose [list price](https://developers.openai.com/api/docs/pricing) is a tenth of gpt-4o's per input token and a fifth per output token, and lifts single-session-preference by 10 points in the benchmark runs; the gate gives queries that need no memory a path that skips retrieval. The runner and its run footnotes are in [agentos-bench](https://github.com/framerslab/agentos-bench).
 
 ## Where to start
 
