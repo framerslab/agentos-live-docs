@@ -145,6 +145,44 @@ for (const path of PAGES) {
       await expect.poll(() => other.evaluate(() => window.__clarityCalls.includes('stop'))).toBe(true);
     });
 
+    test('Session recordings turned off and on again on one page resumes Clarity', async ({ context, page }) => {
+      await watch(context, page);
+      await page.goto(BASE + path);
+      await key(page, 'Accept all').click();
+      await settle(page);
+      await page.evaluate(() => {
+        window.__clarityCalls = [];
+        const original = window.clarity;
+        window.clarity = function (...args) {
+          window.__clarityCalls.push(args[0]);
+          return original.apply(this, args);
+        };
+      });
+      const record = () => bar(page).getByRole('switch', { name: 'Session recordings' });
+      await page.locator('[data-analytics-choices]').first().click();
+      await record().click();
+      await key(page, 'Save choices').click();
+      await page.locator('[data-analytics-choices]').first().click();
+      await record().click();
+      await key(page, 'Save choices').click();
+      expect(await page.evaluate(() => window.__clarityCalls)).toEqual(['consentv2', 'stop', 'start', 'consentv2']);
+    });
+
+    test('with storage blocked the choice still holds on the page', async ({ context, page }) => {
+      await context.addInitScript(() => {
+        Storage.prototype.setItem = () => {
+          throw new Error('blocked');
+        };
+      });
+      await watch(context, page);
+      await page.goto(BASE + path);
+      await key(page, 'Accept all').click();
+      await settle(page);
+      await page.locator('[data-analytics-choices]').first().click();
+      await expect(bar(page).getByRole('switch', { name: 'Measurement' })).toHaveAttribute('aria-checked', 'true');
+      await expect(bar(page).getByRole('switch', { name: 'Session recordings' })).toHaveAttribute('aria-checked', 'true');
+    });
+
     test('Global Privacy Control shows no bar and loads nothing, even over an earlier yes', async ({ context, page }) => {
       await context.addInitScript(() => {
         Object.defineProperty(Navigator.prototype, 'globalPrivacyControl', { get: () => true });

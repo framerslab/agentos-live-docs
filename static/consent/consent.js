@@ -58,15 +58,18 @@
     return n.globalPrivacyControl === true || n.doNotTrack === '1' || n.doNotTrack === 'yes' || window.doNotTrack === '1';
   }
 
+  // The choice made on this page, kept in memory too, so it holds here when storage is blocked.
+  var remembered = null;
+
   function readStored() {
     try {
       var raw = localStorage.getItem(KEY);
-      if (!raw) return null;
+      if (!raw) return remembered;
       var value = JSON.parse(raw);
       if (!value || typeof value.purposes !== 'object' || value.purposes === null) return null;
       return { measure: value.purposes.measure === true, record: value.purposes.record === true };
     } catch (e) {
-      return null;
+      return remembered;
     }
   }
 
@@ -76,6 +79,7 @@
   }
 
   function store(purposes) {
+    remembered = { measure: purposes.measure === true, record: purposes.record === true };
     try {
       localStorage.setItem(
         KEY,
@@ -118,6 +122,7 @@
   }
 
   var loaded = { measure: false, record: false };
+  var clarityStopped = false;
 
   function startGoogle(id) {
     window['ga-disable-' + id] = false;
@@ -166,7 +171,11 @@
       tag.async = true;
       tag.src = 'https://www.clarity.ms/tag/' + encodeURIComponent(id);
       document.head.appendChild(tag);
+    } else if (clarityStopped) {
+      // Turned off and on again on the same page: stop ended the recording, so start resumes it.
+      window.clarity('start');
     }
+    clarityStopped = false;
     window.clarity('consentv2', { ad_Storage: 'denied', analytics_Storage: 'granted' });
   }
 
@@ -175,7 +184,10 @@
   function stopClarity() {
     if (typeof window.clarity === 'function') {
       window.clarity('consentv2', { ad_Storage: 'denied', analytics_Storage: 'denied' });
-      if (loaded.record) window.clarity('stop');
+      if (loaded.record && !clarityStopped) {
+        window.clarity('stop');
+        clarityStopped = true;
+      }
     }
     clearCookies(CLARITY_COOKIES);
   }
