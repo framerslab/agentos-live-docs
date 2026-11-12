@@ -178,9 +178,47 @@ for (const path of PAGES) {
       await page.goto(BASE + path);
       await key(page, 'Accept all').click();
       await settle(page);
-      await page.locator('[data-analytics-choices]').first().click();
+      // The site's own scripts may stop rendering without storage, so this opens the choices through
+      // the same call the footer control makes.
+      await page.evaluate(() => window.agentosConsent.open());
       await expect(bar(page).getByRole('switch', { name: 'Measurement' })).toHaveAttribute('aria-checked', 'true');
       await expect(bar(page).getByRole('switch', { name: 'Session recordings' })).toHaveAttribute('aria-checked', 'true');
+    });
+
+    test('with storage refusing writes, a changed choice wins over the older stored one', async ({ context, page }) => {
+      await context.addInitScript(() => {
+        Storage.prototype.getItem = function (key) {
+          return key === 'analytics_consent_purposes'
+            ? JSON.stringify({ purposes: { measure: true, record: true }, chosenAt: '2026-11-11T00:00:00Z', version: 'test' })
+            : null;
+        };
+        Storage.prototype.setItem = () => {
+          throw new Error('blocked');
+        };
+      });
+      await watch(context, page);
+      await page.goto(BASE + path);
+      await settle(page);
+      await page.evaluate(() => window.agentosConsent.open());
+      await bar(page).getByRole('switch', { name: 'Measurement' }).click();
+      await key(page, 'Save choices').click();
+      await page.evaluate(() => window.agentosConsent.open());
+      await expect(bar(page).getByRole('switch', { name: 'Measurement' })).toHaveAttribute('aria-checked', 'false');
+      await expect(bar(page).getByRole('switch', { name: 'Session recordings' })).toHaveAttribute('aria-checked', 'true');
+    });
+
+    test('clearing the choice in another tab stops the vendors here', async ({ context, page }) => {
+      await watch(context, page);
+      await page.goto(BASE + path);
+      await key(page, 'Accept all').click();
+      await settle(page);
+      const other = await context.newPage();
+      await other.goto(BASE + path);
+      await settle(other);
+      await other.evaluate(() => localStorage.removeItem('analytics_consent_purposes'));
+      await expect
+        .poll(() => page.evaluate(() => window['ga-disable-' + document.querySelector('script[src*="/consent/consent.js"]').dataset.ga]))
+        .toBe(true);
     });
 
     test('Global Privacy Control shows no bar and loads nothing, even over an earlier yes', async ({ context, page }) => {
