@@ -102,6 +102,10 @@ jobs:
         run: npm run build
         env:
           NODE_OPTIONS: --max-old-space-size=8192
+          # Google Analytics and Microsoft Clarity ids for static/consent/consent.js. They are repository
+          # variables so no id is committed; the vendors load only after a visitor's yes.
+          GA_MEASUREMENT_ID: ${{ vars.GA_MEASUREMENT_ID }}
+          CLARITY_PROJECT_ID: ${{ vars.CLARITY_PROJECT_ID }}
           # PAT that plugins/github-stars.js sends when it reads the GitHub star
           # count for the home page's badge at build time. Without it the read is
           # unauthenticated; when the read fails, the badge names the repository
@@ -114,6 +118,35 @@ jobs:
       - name: Check the built site
         working-directory: apps/agentos-live-docs
         run: npm run test:built
+
+      # In Chromium, against the built site: nothing reaches Google or Microsoft before a choice,
+      # Reject all and Global Privacy Control keep both off, Accept all loads both, and the footer's
+      # Analytics choices turns them off again (e2e/consent.spec.mjs). Every vendor request is
+      # answered inside the runner, so the ids the build carries never reach Google or Microsoft.
+      # Playwright is installed outside the site's dependencies, so package-lock.json is unchanged.
+      - name: Check the analytics choices in a browser
+        working-directory: apps/agentos-live-docs
+        env:
+          CONSENT_BASE: http://127.0.0.1:4173
+          CONSENT_PAGES: /getting-started
+          CONSENT_PICTURES: ${{ runner.temp }}/consent-pictures
+        run: |
+          pw="$RUNNER_TEMP/pw"
+          mkdir -p "$pw/e2e"
+          npm install --no-save --no-audit --no-fund --prefix "$pw" @playwright/test@1.49.1
+          "$pw/node_modules/.bin/playwright" install --with-deps chromium
+          cp e2e/consent.spec.mjs e2e/playwright.config.mjs "$pw/e2e/"
+          node e2e/serve.mjs build 4173 > "$RUNNER_TEMP/serve.log" 2>&1 &
+          for i in $(seq 1 30); do curl -sf http://127.0.0.1:4173/getting-started > /dev/null && break; sleep 1; done
+          "$pw/node_modules/.bin/playwright" test --config "$pw/e2e/playwright.config.mjs"
+
+      - name: Keep the pictures of the analytics choices
+        if: always() && github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: consent-${{ github.run_id }}
+          path: ${{ runner.temp }}/consent-pictures
+          if-no-files-found: ignore
 
       - name: Upload artifact
         if: github.ref == 'refs/heads/master' && github.run_attempt == '1'
