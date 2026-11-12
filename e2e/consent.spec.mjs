@@ -3,7 +3,8 @@
 // The same spec runs in agentos.sh and agentos-live-docs; keep the two copies identical.
 // CONSENT_BASE is where the built site is served, CONSENT_PAGES the paths to load (comma-separated),
 // CONSENT_PICTURES a folder for screenshots of the bar. The build under test must carry both vendor ids
-// (made-up ones or the site's own); a build without one fails here by name.
+// (made-up ones or the site's own). A build without the Google Analytics id fails here by name; one
+// without the Clarity id fails the Clarity checks.
 // Every request to Google or Microsoft is answered here with an empty script, so nothing leaves the runner.
 import { test, expect } from '@playwright/test';
 import { mkdirSync } from 'node:fs';
