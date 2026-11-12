@@ -2,7 +2,8 @@
 //
 // The same spec runs in agentos.sh and agentos-live-docs; keep the two copies identical.
 // CONSENT_BASE is where the built site is served, CONSENT_PAGES the paths to load (comma-separated),
-// CONSENT_PICTURES a folder for screenshots of the bar. The build under test carries made-up vendor ids.
+// CONSENT_PICTURES a folder for screenshots of the bar. The build under test must carry both vendor ids
+// (made-up ones or the site's own); a build without one fails here by name.
 // Every request to Google or Microsoft is answered here with an empty script, so nothing leaves the runner.
 import { test, expect } from '@playwright/test';
 import { mkdirSync } from 'node:fs';
@@ -39,6 +40,18 @@ const key = (page, name) => bar(page).getByRole('button', { name, exact: true })
 
 async function analyticsCookies(context) {
   return (await context.cookies()).filter((c) => ANALYTICS_COOKIE.test(c.name)).map((c) => c.name);
+}
+
+// The Google Analytics id the consent script was built with. A build without it fails here by name
+// instead of timing out on a ga-disable flag that can never be set.
+async function gaId(page) {
+  const id = await page.evaluate(() => document.querySelector('script[src*="/consent/consent.js"]')?.dataset.ga || '');
+  expect(id, 'the built site carries no Google Analytics id (GA_MEASUREMENT_ID)').not.toBe('');
+  return id;
+}
+
+async function gaDisabled(page, id) {
+  return page.evaluate((ga) => window['ga-disable-' + ga] === true, id);
 }
 
 async function settle(page) {
@@ -131,7 +144,7 @@ for (const path of PAGES) {
         window.__clarityCalls = [];
         const original = window.clarity;
         window.clarity = function (...args) {
-          window.__clarityCalls.push(args[0]);
+          window.__clarityCalls.push(args);
           return original.apply(this, args);
         };
       });
@@ -139,10 +152,9 @@ for (const path of PAGES) {
       await bar(page).getByRole('switch', { name: 'Measurement' }).click();
       await bar(page).getByRole('switch', { name: 'Session recordings' }).click();
       await key(page, 'Save choices').click();
-      await expect
-        .poll(() => other.evaluate(() => window['ga-disable-' + document.querySelector('script[src*="/consent/consent.js"]').dataset.ga]))
-        .toBe(true);
-      await expect.poll(() => other.evaluate(() => window.__clarityCalls.includes('stop'))).toBe(true);
+      const id = await gaId(other);
+      await expect.poll(() => gaDisabled(other, id)).toBe(true);
+      await expect.poll(() => other.evaluate(() => window.__clarityCalls.some((c) => c[0] === 'stop'))).toBe(true);
     });
 
     test('Session recordings turned off and on again on one page resumes Clarity', async ({ context, page }) => {
@@ -154,7 +166,7 @@ for (const path of PAGES) {
         window.__clarityCalls = [];
         const original = window.clarity;
         window.clarity = function (...args) {
-          window.__clarityCalls.push(args[0]);
+          window.__clarityCalls.push(args);
           return original.apply(this, args);
         };
       });
@@ -165,7 +177,10 @@ for (const path of PAGES) {
       await page.locator('[data-analytics-choices]').first().click();
       await record().click();
       await key(page, 'Save choices').click();
-      expect(await page.evaluate(() => window.__clarityCalls)).toEqual(['consentv2', 'stop', 'start', 'consentv2']);
+      const calls = await page.evaluate(() => window.__clarityCalls);
+      expect(calls.map((c) => c[0])).toEqual(['consentv2', 'stop', 'start', 'consentv2']);
+      expect(calls[0][1]).toEqual({ ad_Storage: 'denied', analytics_Storage: 'denied' });
+      expect(calls[3][1]).toEqual({ ad_Storage: 'denied', analytics_Storage: 'granted' });
     });
 
     test('with storage blocked the choice still holds on the page', async ({ context, page }) => {
@@ -215,10 +230,9 @@ for (const path of PAGES) {
       const other = await context.newPage();
       await other.goto(BASE + path);
       await settle(other);
+      const id = await gaId(page);
       await other.evaluate(() => localStorage.removeItem('analytics_consent_purposes'));
-      await expect
-        .poll(() => page.evaluate(() => window['ga-disable-' + document.querySelector('script[src*="/consent/consent.js"]').dataset.ga]))
-        .toBe(true);
+      await expect.poll(() => gaDisabled(page, id)).toBe(true);
     });
 
     test('Global Privacy Control shows no bar and loads nothing, even over an earlier yes', async ({ context, page }) => {
