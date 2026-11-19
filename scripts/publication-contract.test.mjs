@@ -433,10 +433,21 @@ test('publication verification scripts are wired into the docs packages', () => 
     liveDocsPackage.scripts['start:guides'],
     'AGENTOS_DOCS_GUIDES_ONLY=1 AGENTOS_DOCS_DISABLE_LOCAL_SEARCH=1 AGENTOS_DOCS_DISABLE_SEARCH_MANIFEST=1 AGENTOS_DOCS_STRICT=0 npm run start',
   );
-  assert.equal(
-    agentosPackage.scripts['docs:verify'],
-    'node scripts/build-publication-inventory.mjs && pnpm --dir ../../ --filter @framers/agentos-live-docs run verify:publication && npx vitest run src/api/runtime/__tests__/docs-alignment.test.ts',
-  );
+  // agentos owns this script and adds a docs-alignment suite to it as its guides grow. The site
+  // checks the wiring it relies on: the inventory is built, this site's verification runs, and
+  // every suite the script names is a docs-alignment suite, the base one among them. A suite
+  // added there (docs-alignment.<topic>.test.ts) passes here without a change to this file.
+  const docsVerify = agentosPackage.scripts['docs:verify'];
+  const docsVerifyStart =
+    'node scripts/build-publication-inventory.mjs && pnpm --dir ../../ --filter @framers/agentos-live-docs run verify:publication && npx vitest run ';
+  assert.equal(typeof docsVerify, 'string');
+  assert.equal(docsVerify.slice(0, docsVerifyStart.length), docsVerifyStart);
+  const docsVerifySuites = docsVerify.slice(docsVerifyStart.length).split(' ');
+  assert.equal(docsVerifySuites.includes('src/api/runtime/__tests__/docs-alignment.test.ts'), true);
+  for (const suite of docsVerifySuites) {
+    assert.match(suite, /^src\/api\/runtime\/__tests__\/docs-alignment(\.[a-z0-9-]+)?\.test\.ts$/);
+  }
+  assert.equal(new Set(docsVerifySuites).size, docsVerifySuites.length);
   assert.match(docusaurusConfig, /AGENTOS_DOCS_GUIDES_ONLY/);
   assert.match(docusaurusConfig, /exclude:\s*guidesOnly\s*\?\s*\['api\/\*\*',\s*'paracosm\/\*\*'\]\s*:\s*\[\]/);
   // Blog consolidation (Track G, 2026-04-30): canonical blog moved to
